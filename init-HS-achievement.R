@@ -1,6 +1,6 @@
 load("data/ACT/act.Rdata")
 
-##correction for wrong cuts
+##correction for too liberal cuts for proficiency on ACT reading a math
 nrow(act[act$ACT_SCALE_SCORE_READING == '15' & act$WDE_PERFORMANCE_LEVEL_READING == '3',])
 act$WDE_PERFORMANCE_LEVEL_READING <- ifelse(act$ACT_SCALE_SCORE_READING == '15', '2', act$WDE_PERFORMANCE_LEVEL_READING)
 nrow(act[act$ACT_SCALE_SCORE_READING == '15' & act$WDE_PERFORMANCE_LEVEL_READING == '3',])
