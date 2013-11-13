@@ -82,20 +82,26 @@ small.schools.subgroup.additional.consolidated.subgroup.df <- do.call(rbind, app
 consolidated.subgroup.df <- rbind(consolidated.subgroup.df, small.schools.subgroup.additional.consolidated.subgroup.df)
 
 
+schools <- schools[, !(names(schools) %in% small.school.labels.equity)]
 
-schools$YEARS_BACK_SUBGROUP <- apply(schools[,c("SCHOOL_ID",                                                     
+
+schools <- cbind(schools, data.frame(t(apply(schools[,c("SCHOOL_ID",                                                     
                                                         "SCHOOL_YEAR")], c(1),                                                                                      
                                              FUN=function (school) {
-                                               small.school <- with(small.schools.fix.subgroup, 
-                                                                    small.schools.fix.subgroup[SCHOOL_ID == school[["SCHOOL_ID"]] &
+                                               small.school <- with(small.schools.subgroup, 
+                                                                    small.schools.subgroup[SCHOOL_ID == school[["SCHOOL_ID"]] &
                                                                                                  SCHOOL_YEAR == school[["SCHOOL_YEAR"]],])
                                                if (nrow(small.school) == 0)
-                                                 result <- c(NA)
+                                                 result <- c('F', NA)
                                                else 
-                                                 result <- c(small.school[,"YEARS_BACK"])                                               
+                                                 result <- c('T', small.school[,"YEARS_BACK"]) 
+                                               names(result) <- small.school.labels.equity
                                                result
-                                             })
+                                             }))))
 
+
+
+schools$YEARS_BACK_EQUITY <- as.numeric(schools$YEARS_BACK_EQUITY)
 
 #redo the equity calculation with the augmented data.frame
 

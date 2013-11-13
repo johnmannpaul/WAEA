@@ -364,3 +364,7 @@ hs.equity.np.labels <- c("Minus", "Neutral", "Plus")
 ##small schools
 small.school.labels <- c("SMALL_SCHOOL", "YEARS_BACK")
 small.school.hs.labels <- c("SMALL_SCHOOL_HS", "YEARS_BACK_HS")
+
+small.school.labels.achievement <- c("SMALL_SCHOOL_ACHIEVEMENT", "YEARS_BACK_ACHIEVEMENT")
+small.school.labels.growth <- c("SMALL_SCHOOL_GROWTH", "YEARS_BACK_GROWTH")
+small.school.labels.equity <- c("SMALL_SCHOOL_EQUITY", "YEARS_BACK_EQUITY")
