@@ -46,7 +46,7 @@
 #save(grads_nongrads_corrected, file="data/grads_nongrads_corrected.Rdata")
 
 
-load(file="data/grads_nongrads_corrected_full.Rdata")  #don't really need to load this one
+#load(file="data/grads_nongrads_corrected_full.Rdata")  #don't really need to load this one
 load(file="data/grads_nongrads_corrected.Rdata")
 
 grads_nongrads_corrected$INDEX <- apply(grads_nongrads_corrected[,c("GRAD_TYPE", "VALUE")],
