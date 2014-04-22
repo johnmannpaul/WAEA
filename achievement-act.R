@@ -54,7 +54,7 @@ act.participation$PARTICIPATION_RATE_ACHIEVEMENT <- apply(act.participation[,c("
                                            
                                          })
 
-write.csv(act.participation, file="results/2012-13/act-participation.csv")
+#write.csv(act.participation, file="results/2012-13/act-participation.csv")
 
 ##calculate the percent proficient...
 act.achievement <- aggregate(data.frame(MATH_TESTED = ifelse(act.df$TESTING_STATUS_CODE_MATH == "T", 1, 0),
