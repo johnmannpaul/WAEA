@@ -10,8 +10,8 @@ schools$N_INDICATORS_HS <- apply(schools[,c("ACHIEVEMENT_TARGET_LEVEL_HS",
 
 
 
-schools$PARTICIPATION_RATE_HS <- apply(schools[,c("PARTICIPATION_RATE_ACHIEVEMENT_HS",
-                                                  "PARTICIPATION_RATE_TESTED_READINESS")], c(1),
+schools$PARTICIPATION_RATE_HS <- apply(schools[,c(act.achievement.labels["part.rate"],
+                                                  tested.readiness.labels["part.rate"])], c(1),
                                        function (school) {
                                          
                                          if (sum(is.na(school)) < 2)
