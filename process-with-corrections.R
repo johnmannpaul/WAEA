@@ -17,10 +17,10 @@ choose.outcome <- function (idx) {
   
     
   if (!is.na(school$SPL) & school$SPL < school.multiyear.subgroup$SPL)
-    cbind(school.multiyear.subgroup[,names(school)], YEARS_BACK_SUBGROUP=school.multiyear.subgroup$YEARS_BACK_SUBGROUP, SMALL_SUBGROUP="T")
+    cbind(school.multiyear.subgroup[,names(school)], YEARS_BACK_EQUITY=school.multiyear.subgroup$YEARS_BACK_EQUITY, SMALL_SUBGROUP="T")
   else {
     
-    cbind(school, YEARS_BACK_SUBGROUP=NA, SMALL_SUBGROUP="F")
+    cbind(school, YEARS_BACK_EQUITY=NA, SMALL_SUBGROUP="F")
     
   }
   
@@ -38,9 +38,9 @@ with(schools, schools[SMALL_SCHOOL=='T' & N_INDICATORS==3,])
 #how many small schools ended up with an equity indicator under the original implementation (0)
 with(schools, schools[SMALL_SCHOOL=='T' & N_INDICATORS==3 & SCHOOL_YEAR==current.school.year,])
 #how many small schools ended up with an equity indicator in the multiyear correction scheme (0)
-with(schools.multiyear.subgroup, schools.multiyear.subgroup[!is.na(YEARS_BACK_SUBGROUP) & 
-                                                              !is.na(YEARS_BACK), c("YEARS_BACK_SUBGROUP", "YEARS_BACK")])
-#compare YEARS_BACK and YEARS_BACK_SUBGROUP
+with(schools.multiyear.subgroup, schools.multiyear.subgroup[!is.na(YEARS_BACK_EQUITY) & 
+                                                              !is.na(YEARS_BACK), c("YEARS_BACK_EQUITY", "YEARS_BACK")])
+#compare YEARS_BACK and YEARS_BACK_EQUITY
 #these are the small schools that had some consolidated subgroup members during the last three years
 smalls <- merge(small.schools, small.schools.subgroup, by=c("SCHOOL_YEAR", "SCHOOL_ID"))
 schools[schools$SCHOOL_YEAR==current.school.year & schools$SCHOOL_ID %in% smalls[smalls$SCHOOL_YEAR == current.school.year & smalls$YEARS_BACK.x < Inf,"SCHOOL_ID"], c("DISTRICT_NAME", "NAME")]
@@ -50,10 +50,10 @@ other.smalls <- merge(small.schools, small.schools.subgroup, by=c("SCHOOL_YEAR",
 
 #Then we have to build a consolidated.subgroup.df dataframe for reporting that has the correct records
 #for each school's result (whether original or multiyear corrected)
-consolidated.subgroup.df.orig.keep <-  merge(with(schools, schools[is.na(YEARS_BACK_SUBGROUP), c("SCHOOL_YEAR", "SCHOOL_ID")]),
+consolidated.subgroup.df.orig.keep <-  merge(with(schools, schools[is.na(YEARS_BACK_EQUITY), c("SCHOOL_YEAR", "SCHOOL_ID")]),
                                              consolidated.subgroup.df)
 
-consolitdated.subgroup.df.corrected.keep <- merge(with(schools, schools[!is.na(YEARS_BACK_SUBGROUP), c("SCHOOL_YEAR", "SCHOOL_ID")]),
+consolitdated.subgroup.df.corrected.keep <- merge(with(schools, schools[!is.na(YEARS_BACK_EQUITY), c("SCHOOL_YEAR", "SCHOOL_ID")]),
                                                   consolidated.subgroup.df.multiyear)
 #this is the number of records we added 
 nrow(with(consolitdated.subgroup.df.corrected.keep, consolitdated.subgroup.df.corrected.keep[SCHOOL_YEAR==current.school.year & SCHOOL_YEAR != SCHOOL_YEAR_ORIGINAL,]))
