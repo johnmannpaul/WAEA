@@ -153,7 +153,7 @@ schools[is.na(schools$EQUITY_TARGET_LEVEL) &
 #write.csv(schools, file="results/2012-13/schools-with-indicators-M.csv", na="", row.names=FALSE)
 #write.csv(schools, file="results/2012-13/schools-with-indicators-N.csv", na="", row.names=FALSE, quote=FALSE)
 #write.csv(schools, file="results/2012-13/schools-with-indicators-O.csv", na="", row.names=FALSE)
-write.csv(schools, file="results/2012-13/schools-with-indicators-Q.csv", na="", row.names=FALSE)
+#write.csv(schools, file="results/2012-13/schools-with-indicators-Q.csv", na="", row.names=FALSE)
 #save(schools, file="results/2012-13/schools-through-hs-readiness.Rdata")
 
 #write.csv(with(schools, schools[SCHOOL_YEAR=='2012-13' & SMALL_SCHOOL=='T',]), file="results/2012-13/small-schools-2012-13.csv", na="", row.names=FALSE)

@@ -218,7 +218,9 @@ pip-log.txt
 # WAEA
 data/
 results/
-reporting/
+reporting/*
+##could allow just the *.sql files in reporting by uncommenting the line below
+#!reporting/*.sql
 *.Rdata
 *.Rproj
 junk/
