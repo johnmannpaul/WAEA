@@ -150,10 +150,10 @@ SPL.labels <- c("Not Meeting Expectations",
                 "Exceeding Expectations")
 
 #reflect the 2012-13 PJP matrix decisions
-SPL.lookup <- list( nonHS = list( `3` = cast(read.csv(file="data/AGE.csv"), ACHIEVEMENT~GROWTH~EQUITY),
-                                  `2` = as.matrix(cast(read.csv(file="data/AG.csv"), ACHIEVEMENT~GROWTH))),
-                    HS = list( `3` = cast(read.csv(file="data/ARE.csv"), ACHIEVEMENT~READINESS~EQUITY),
-                               `2` = as.matrix(cast(read.csv(file="data/AR.csv"), ACHIEVEMENT~READINESS))))
+SPL.lookup <- list( nonHS = list( `3` = cast(read.csv(file="const/AGE.csv"), ACHIEVEMENT~GROWTH~EQUITY),
+                                  `2` = as.matrix(cast(read.csv(file="const/AG.csv"), ACHIEVEMENT~GROWTH))),
+                    HS = list( `3` = cast(read.csv(file="const/ARE.csv"), ACHIEVEMENT~READINESS~EQUITY),
+                               `2` = as.matrix(cast(read.csv(file="const/AR.csv"), ACHIEVEMENT~READINESS))))
 
 
 #achievement
@@ -241,7 +241,7 @@ act.achievement.level.lookup.year <- list(`2012-13` = c(63, 78)) #equipercentile
 act.achievement.level.lookup <- act.achievement.level.lookup.year[[current.school.year]]
 
 
-act.achievement.labels <- c(cut.1="ACHIEVEMENT_CUT_1_HS", cut.2="ACHIEVEMENT_CUT_2_HS", "PERCENT_PROFICIENT_HS", N="N_ACHIEVEMENT_HS", "PARTICIPATION_RATE_ACHIEVEMENT_HS", "ACHIEVEMENT_TARGET_LEVEL_HS")
+act.achievement.labels <- c(cut.1="ACHIEVEMENT_CUT_1_HS", cut.2="ACHIEVEMENT_CUT_2_HS", "PERCENT_PROFICIENT_HS", N="N_ACHIEVEMENT_HS", part.rate="PART_RATE_ACHIEVEMENT_HS", "ACHIEVEMENT_TARGET_LEVEL_HS")
 
 #act readiness
 calc.index <- function (domain.runs, range) {
@@ -282,7 +282,7 @@ alt_index <- calc.index(alt.index.runs, alt.index.range)
 tested.readiness.labels <- c( 
   "TESTED_READINESS", 
   N="N_TESTED_READINESS", 
-  "PARTICIPATION_RATE_TESTED_READINESS")
+  part.rate="PART_RATE_TESTED_READINESS")
 
 
 ##grad rate index
@@ -340,8 +340,8 @@ hs.equity.precision  <- 3
 hs.equity.level.lookup <- hs.equity.level.lookup.year[[current.school.year]]
 
 
-hs.equity.labels <- c(N="N_EQUITY_HS", "N_ACHIEVEMENT_HS_PRIOR", "PERCENT_NONPROFICIENT", "PERCENT_NONPROFICIENT_PRIOR", "PERCENT_NONPROFICIENT_CUT_LOW_REVERSED", 
-                      "PERCENT_NONPROFICIENT_CUT_HIGH_REVERSED", "IMPROVEMENT_SCORE", cut.2="IMPROVEMENT_CUT_LOW_REVERSED",
+hs.equity.labels <- c(N="N_EQUITY_HS", "N_ACHIEVEMENT_HS_PRIOR", "PERCENT_NONPROFICIENT", "PERCENT_NONPROFICIENT_PRIOR", "PERCENT_NONPROF_CUT_LOW_REV", 
+                      "PERCENT_NONPROF_CUT_HIGH_REV", "IMPROVEMENT_SCORE", cut.2="IMPROVEMENT_CUT_LOW_REVERSED",
                       cut.1="IMPROVEMENT_CUT_HIGH_REVERSED", "PERCENT_NONPROFICIENT_CATEGORY", 
                       "IMPROVEMENT_CATEGORY", "EQUITY_TARGET_LEVEL_HS")
 
