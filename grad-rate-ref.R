@@ -27,9 +27,28 @@
 
 
 ##correction 10/10/2013
-##based on data/2013-10-10-grad-index-students-all-corrected.csv
+##based on data/2013-10-10-grad-index-students-all-corrected.csv sent through RExcel
+# names(grads_nongrads_corrected_full) <- unlist(lapply(names(grads_nongrads_corrected_full), 
+#                                                       function (x) 
+#                                                         toupper(do.call(
+#                                                           paste, as.list(c(strsplit(x,"[.]")[[1]],sep="_"))))))
+
+##relabel any 0706055 grads as 0706056 grads because the school was issued the new id (i.e. 0706056) in 2012-13
+##TODO: need a general mechanism to relabel grads when school ids change ...a list of these changes is really 
+##an input to the model
+# table(grads_nongrads_corrected_full[grads_nongrads_corrected_full$SCHOOL_ID %in% c('0706055', '0706056'),]$SCHOOL_ID)
+# grads_nongrads_corrected_full$SCHOOL_ID <- ifelse(grads_nongrads_corrected_full$SCHOOL_ID == '0706055', '0706056', 
+#                                                   grads_nongrads_corrected_full$SCHOOL_ID)
+# table(grads_nongrads_corrected_full[grads_nongrads_corrected_full$SCHOOL_ID %in% c('0706055', '0706056'),]$SCHOOL_ID)
+#save(grads_nongrads_corrected_full, file="data/grads_nongrads_corrected_full.Rdata")
+# grads_nongrads_corrected <- grads_nongrads_corrected_full[,c("SCHOOL_YEAR", "SCHOOL_ID", "COHORT_GRAD_TYPE", "WAEA_GRAD_INDEX_POINTS")]
+# names(grads_nongrads_corrected) <- c("SCHOOL_YEAR", "SCHOOL_ID", "GRAD_TYPE", "VALUE")
 #save(grads_nongrads_corrected, file="data/grads_nongrads_corrected.Rdata")
+
+
+load(file="data/grads_nongrads_corrected_full.Rdata")  #don't really need to load this one
 load(file="data/grads_nongrads_corrected.Rdata")
+
 grads_nongrads_corrected$INDEX <- apply(grads_nongrads_corrected[,c("GRAD_TYPE", "VALUE")],
                                         c(1),
                                         function (student) {
@@ -40,6 +59,7 @@ grads_nongrads_corrected$INDEX <- apply(grads_nongrads_corrected[,c("GRAD_TYPE",
                                                         'Returning',
                                                         'Non-Graduate'))
                                         })
+
 table(grads_nongrads_corrected[grads_nongrads_corrected$SCHOOL_ID %in% c('0706055', '0706056'),]$SCHOOL_ID)
 grads_nongrads_corrected$SCHOOL_ID <- ifelse(grads_nongrads_corrected$SCHOOL_ID == '0706055', '0706056', grads_nongrads_corrected$SCHOOL_ID)
 table(grads_nongrads_corrected[grads_nongrads_corrected$SCHOOL_ID %in% c('0706055', '0706056'),]$SCHOOL_ID)
