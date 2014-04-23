@@ -224,3 +224,4 @@ reporting/*
 *.Rdata
 *.Rproj
 junk/
+const/private/
