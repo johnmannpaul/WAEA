@@ -1,4 +1,7 @@
 require(RODBC)
+source('const/private/db.R')
+
+
 estimate.varchar.lengths <- function (df) {
 
   estimate.varchar.lengths.aux <- function (x) {
@@ -24,7 +27,8 @@ estimate.varchar.lengths <- function (df) {
 } 
 
 
-testing <- odbcConnect(dsn="", uid='ACCOUNTABILITY', pwd='') #provide password and the production dsn
+testing <- odbcConnect(dsn=db.dsn, uid=account.user, pwd=account.pwd)
+
 #sqlTables(testing, schema="ACCOUNTABILITY")
 source("constants.R")
 source("function-defs.R")

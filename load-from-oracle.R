@@ -1,4 +1,5 @@
 require(RODBC)
+source('const/private/db.R')
 
 as.is.vector <- function (conn, table) {
   
@@ -21,7 +22,7 @@ Oracle.to.Rdata <- function(conn, data.dir="data-ora", Rdata.filename="schools.o
 
 data.dir = "data-ora"
 
-testing <- odbcConnect(dsn="", uid='ACCOUNTABILITY', pwd='')  #provide password and the production dsn
+testing <- odbcConnect(dsn=db.dsn, uid=account.user, pwd=account.pwd)
 
 Oracle.to.Rdata(testing, Rdata.filename="schools.orig.Rdata", oracle.object.name="ACCOUNTABILITY.R13_SCHOOLS", R.object.name="schools")
 Oracle.to.Rdata(testing, Rdata.filename="schools-other-attributes.Rdata", oracle.object.name="ACCOUNTABILITY.R13_SCHOOLS_OTHER_ATTRIBUTES", R.object.name="schools_other_attributes")
