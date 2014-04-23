@@ -26,7 +26,7 @@ paws$YEAR <- as.numeric(sapply(paws$SCHOOL_YEAR, function (y) {
 })) + 1
 
 #should be undefined
-with(paws, paws[WISER_ID=='19627793' & SUBJECT_CODE=='SC',]$ACCOUNTABILITY_PERF_LEVEL)
+
 
 #more blanks than should be becuase of missing science
 with(paws, table(paws[SCHOOL_YEAR=='2012-13' & SCHOOL_ID=='0101001',]$ACCOUNTABILITY_PERF_LEVEL))
@@ -48,7 +48,7 @@ paws <- with(paws, paws[order(SCHOOL_YEAR, SCHOOL_ID, WISER_ID, SUBJECT_CODE),])
 
 #check corrections
 with(paws, table(paws[SCHOOL_YEAR=='2012-13' & SCHOOL_ID=='0101001',]$ACCOUNTABILITY_PERF_LEVEL))
-with(paws.merged, paws.merged[WISER_ID=='19627793' & SUBJECT_CODE=='SC',])
+
 
 
 
