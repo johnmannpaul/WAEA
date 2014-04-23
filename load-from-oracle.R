@@ -13,14 +13,14 @@ as.is.vector <- function (conn, table) {
 
 ##Oracle -> Rdata
 Oracle.to.Rdata <- function(conn, data.dir="data-ora", Rdata.filename="schools.orig.Rdata", oracle.object.name="ACCOUNTABILITY.R13_SCHOOLS", R.object.name="schools", use.verbose=FALSE) {
-  assign(R.object.name, sqlFetch(testing, oracle.object.name, as.is=as.is.vector(testing, oracle.object.name)))
+  assign(R.object.name, sqlFetch(testing, oracle.object.name, as.is=as.is.vector(testing, oracle.object.name), nullstring=""))
   if (!file.exists(data.dir))
     dir.create(file.path(getwd(), data.dir))
   save(list=R.object.name, file=paste(data.dir, Rdata.filename, sep="/"))
 }
 
 
-data.dir = "data-ora"
+data.dir = "data"
 
 testing <- odbcConnect(dsn=db.dsn, uid=account.user, pwd=account.pwd)
 
