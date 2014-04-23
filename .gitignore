@@ -220,7 +220,7 @@ data/
 results/
 reporting/*
 ##could allow just the *.sql files in reporting by uncommenting the line below
-#!reporting/*.sql
+!reporting/*.sql
 *.Rdata
 *.Rproj
 junk/
