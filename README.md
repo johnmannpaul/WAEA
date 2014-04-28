@@ -22,7 +22,7 @@ Specific steps to reproduce 2012-13 pilot results
 5) in R source load-from-RDBMS.R
 6) in R source process-with-corrections.R
 7) mkdir results
-8) in R write.csv(schools, file="results/2012-13-Pilot.csv", na="", row.names=FALSE))
+8) in R write.csv(schools, file="results/2012-13-Pilot.csv", na="", row.names=FALSE)
 
 TODO for 2013-14:
 
