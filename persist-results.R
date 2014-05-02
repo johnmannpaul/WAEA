@@ -2,6 +2,11 @@ require(RODBC)
 source('const/private/db.R')
 
 
+object.name <- function (schema, simple.name) {
+  paste(schema, simple.name, sep=".")  
+}
+
+
 estimate.varchar.lengths <- function (df) {
 
   estimate.varchar.lengths.aux <- function (x) {
@@ -27,32 +32,31 @@ estimate.varchar.lengths <- function (df) {
 } 
 
 
-testing <- odbcConnect(dsn=db.dsn, uid=account.user, pwd=account.pwd)
+testing <- odbcConnect(dsn=db.dsn, uid=rdbms.name, pwd=rdbms.pwd)
 
-#sqlTables(testing, schema="ACCOUNTABILITY")
 source("constants.R")
 source("function-defs.R")
 source("services.R")
 source("initialize-schools.R")
 sqlSave(channel=testing, 
         dat=schools, 
-        tablename='ACCOUNTABILITY.DM2013_SCHOOL',
+        tablename=object.name(model.schema,'DM2013_SCHOOL'),
         verbose=TRUE,
         rownames=FALSE,
         varTypes=c(estimate.varchar.lengths(schools), c(WAEA_SCHOOL_TYPE='integer', YEAR='integer', ENROLLMENT='integer'))
 )
 sqlQuery(channel=testing,
-         query="ALTER TABLE ACCOUNTABILITY.DM2013_SCHOOL ADD CONSTRAINT SCHOOL_PK PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID)")
+         query=paste("ALTER TABLE", object.name(model.schema,'DM2013_SCHOOL'), "ADD CONSTRAINT SCHOOL_PK PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID)"))
 source("initialize-paws.R")
 sqlSave(channel=testing, 
         dat=paws, 
-        tablename='ACCOUNTABILITY.DM2013_PAWS_3_THRU_8',
+        tablename=object.name(model.schema,'DM2013_PAWS_3_THRU_8'),
         #verbose=TRUE,
         rownames=FALSE,
         varTypes=c(estimate.varchar.lengths(paws), c(GRADE_BAND='integer', YEAR='integer'))
 )
 sqlQuery(channel=testing,
-         query="ALTER TABLE ACCOUNTABILITY.DM2013_PAWS_3_THRU_8 ADD CONSTRAINT DM2013_PAWS_3_THRU_8_PK PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID, SUBJECT_CODE)")
+         query=paste("ALTER TABLE",  object.name(model.schema,'DM2013_PAWS_3_THRU_8'), "ADD CONSTRAINT DM2013_PAWS_3_THRU_8_PK PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID, SUBJECT_CODE)"))
 source("small-schools.R")
 source("achievement-bands.R")
 source("growth.R")
@@ -62,68 +66,68 @@ source("SPL-nonHS.R")
 source("init-HS-achievement.R")
 sqlSave(channel=testing, 
         dat=act, 
-        tablename='ACCOUNTABILITY.DM2013_ACT',
+        tablename=object.name(model.schema,'DM2013_ACT'),
         #verbose=TRUE,
         rownames=FALSE,
         varTypes = c(estimate.varchar.lengths(act))
 )
 sqlQuery(channel=testing,
-         query="ALTER TABLE ACCOUNTABILITY.DM2013_ACT ADD CONSTRAINT DM2013_ACT_PK PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID)")
+         query=paste("ALTER TABLE", object.name(model.schema,'DM2013_ACT'), "ADD CONSTRAINT DM2013_ACT_PK PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID)"))
 
 sqlSave(channel=testing, 
         dat=paws_11_achievement,
-        tablename='ACCOUNTABILITY.DM2013_PAWS_11_WIDE',
+        tablename=object.name(model.schema,'DM2013_PAWS_11_WIDE'),
         #verbose=TRUE,
         rownames=FALSE,
         varTypes = c(estimate.varchar.lengths(paws_11_achievement)) 
 )
 sqlQuery(channel=testing,
-         query="ALTER TABLE ACCOUNTABILITY.DM2013_PAWS_11_WIDE ADD CONSTRAINT DM2013_PAWS_11_WIDE_PK PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID)")
+         query=paste("ALTER TABLE", object.name(model.schema,'DM2013_PAWS_11_WIDE'), "ADD CONSTRAINT DM2013_PAWS_11_WIDE_PK PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID)"))
 
 source("achievement-act.R")
 source("readiness-ref.R")
 sqlSave(channel=testing, 
         dat=explore,
-        tablename='ACCOUNTABILITY.DM2013_EXPLORE',
+        tablename=object.name(model.schema,'DM2013_EXPLORE'),
         #verbose=TRUE,
         rownames=FALSE,
         varTypes = c(estimate.varchar.lengths(explore)) 
 )
 sqlQuery(channel=testing,
-         query="ALTER TABLE ACCOUNTABILITY.DM2013_EXPLORE ADD CONSTRAINT DM2013_EXPLORE_PK PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID)")
+         query=paste("ALTER TABLE", object.name(model.schema,'DM2013_EXPLORE'), "ADD CONSTRAINT DM2013_EXPLORE_PK PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID)"))
 
 sqlSave(channel=testing, 
         dat=plan,
-        tablename='ACCOUNTABILITY.DM2013_PLAN',
+        tablename=object.name(model.schema,'DM2013_PLAN'),
         #verbose=TRUE,
         rownames=FALSE,
         varTypes = c(estimate.varchar.lengths(plan)) 
 )
 sqlQuery(channel=testing,
-         query="ALTER TABLE ACCOUNTABILITY.DM2013_PLAN ADD CONSTRAINT DM2013_PLAN_PK PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID)")
+         query=paste("ALTER TABLE", object.name(model.schema,'DM2013_PLAN'),  "ADD CONSTRAINT DM2013_PLAN_PK PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID)"))
 
 source("grad-rate-ref.R")
 sqlSave(channel=testing, 
         dat=grads_nongrads_corrected_full,
-        tablename='ACCOUNTABILITY.DM2013_GRAD',
+        tablename=object.name(model.schema,'DM2013_GRAD'),
         #verbose=TRUE,
         rownames=FALSE,
         varTypes = c(estimate.varchar.lengths(grads_nongrads_corrected_full)) 
 )
 sqlQuery(channel=testing,
-         query="ALTER TABLE ACCOUNTABILITY.DM2013_GRAD ADD CONSTRAINT DM2013_GRAD PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID)")
+         query=paste("ALTER TABLE", object.name(model.schema,'DM2013_GRAD'), "ADD CONSTRAINT DM2013_GRAD PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID)"))
 
 source("total-readiness.R")
 source("high-school-equity.R")
 sqlSave(channel=testing, 
         dat=paws_11,
-        tablename='ACCOUNTABILITY.DM2013_PAWS_11_LONG',
+        tablename=object.name(model.schema,'DM2013_PAWS_11_LONG'),
         #verbose=TRUE,
         rownames=FALSE,
         varTypes = c(estimate.varchar.lengths(paws_11)) 
 )
 sqlQuery(channel=testing,
-         query="ALTER TABLE ACCOUNTABILITY.DM2013_PAWS_11_LONG ADD CONSTRAINT DM2013_PAWS_11_LONG PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID, SUBJECT_CODE)")
+         query=paste("ALTER TABLE",object.name(model.schema,'DM2013_PAWS_11_LONG'), "ADD CONSTRAINT DM2013_PAWS_11_LONG PRIMARY KEY (SCHOOL_YEAR, SCHOOL_ID, WISER_ID, SUBJECT_CODE)"))
 
 source("SPL-HS.R")
 
@@ -142,7 +146,7 @@ schools$YEARS_BACK <- as.character(schools$YEARS_BACK)
 schools$YEARS_BACK_HS <- as.character(schools$YEARS_BACK_HS)
 sqlSave(channel=testing, 
         dat=schools, 
-        tablename='ACCOUNTABILITY.DM2013_SPL',
+        tablename=object.name(model.schema,'DM2013_SPL'),
         verbose=TRUE,
         varTypes=c(estimate.varchar.lengths(schools), c(WAEA_SCHOOL_TYPE='integer', YEAR='integer', ENROLLMENT='integer',                    
                    N_ACHIEVEMENT='integer', ACHIEVEMENT_TARGET_LEVEL='integer', 
@@ -163,7 +167,7 @@ odbcClose(testing)
 
 
 #save raw Rdata files for doing 2013 calculation in R
-Rdata.to.RDBMS <- function (conn, Rdata.filename, use.verbose=FALSE, exclude.cols=NULL,  other.var.types=NULL, table.prefix = "ACCOUNTABILITY.R13_") {
+Rdata.to.RDBMS <- function (conn, Rdata.filename, use.verbose=FALSE, exclude.cols=NULL,  other.var.types=NULL, table.prefix = paste(model.schema,"R13_",sep='.') {
   
   obj.name <- load(Rdata.filename)
   obj <- eval(as.name(obj.name))
@@ -196,5 +200,5 @@ Rdata.to.RDBMS(testing, "data/grads_nongrads_corrected.Rdata")
 Rdata.to.RDBMS(testing, "data/paws_11.Rdata")
 
 
-
+odbcClose(testing)
 
