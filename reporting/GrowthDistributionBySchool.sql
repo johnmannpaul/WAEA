@@ -1,6 +1,3 @@
-USE report_dm
-GO
-
 
 CREATE TABLE growth.GrowthDistributionBySchoolScoped(
         DataScope varchar(15) NOT NULL,

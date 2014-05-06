@@ -1,5 +1,4 @@
-use report_dm
-go
+
 
 drop table acct.GradeLevelAchievement;
 

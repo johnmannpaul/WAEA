@@ -4,13 +4,15 @@ precision=1
 
 load("data/ACT/act.Rdata")
 
-assessment.staging <- odbcConnect(dsn=db.dsn, uid=assess.user, pwd=assess.pwd)
+
+rdbms.connect <- odbcConnect(dsn=db.dsn, uid=rdbms.name, pwd=rdbms.pwd)
 
 
-#act.rdbms <- sqlFetch(assessment.staging, "ACT_STUDENT_RESULTS_201213", as.is=as.is.vector(assessment.staging, "ACT_STUDENT_RESULTS_201213"))
-act.rdbms <- sqlFetch(assessment.staging, "ACT_STUDENT_RESULTS_201213") 
+#act.rdbms <- sqlFetch(rdbms.connect, "ACT_STUDENT_RESULTS_201213", as.is=as.is.vector(rdbms.connect, "ACT_STUDENT_RESULTS_201213"))
+act.rdbms <- sqlFetch(rdbms.connect, paste(assess.schema, "ACT_STUDENT_RESULTS_201213", sep='.')) 
 
-odbcClose(assessment.staging)
+odbcClose(rdbms.connect)
+
 
 act.writing <- with(act.rdbms, act.rdbms[,c("WISER_ID", "ACT_COMBINED_ENG_WRITING_SCORE")])
 table(act.writing$ACT_COMBINED_ENG_WRITING_SCORE, useNA="ifany")

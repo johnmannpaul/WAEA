@@ -1,5 +1,3 @@
-Use report_dm
-GO
 
 drop table growth.GrowthDistributionBySchoolScoped;
 
