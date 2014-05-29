@@ -375,17 +375,17 @@ count_indicators <- function (school, min.n = list(N_ACHIEVEMENT=min.N.achieveme
 
 #hs achievement
 calc_type_hs_target_level <- function (school, labels=act.achievement.labels, min.N = min.N.achievement.hs) {
-  school_achievement <- act.achievement[act.achievement$SCHOOL_ID == school[["SCHOOL_ID"]] &
-                                          act.achievement$SCHOOL_YEAR == school[["SCHOOL_YEAR"]],c("PERCENT_PROFICIENT", "N_ACHIEVEMENT", "PARTICIPATION_RATE_ACHIEVEMENT")]  
+  school_achievement <- achievement.hs[achievement.hs$SCHOOL_ID == school[["SCHOOL_ID"]] &
+                                          achievement.hs$SCHOOL_YEAR == school[["SCHOOL_YEAR"]],c("ACHIEVEMENT_HS", "N_ACHIEVEMENT_HS", "PARTICIPATION_RATE_ACHIEVEMENT_HS")]  
   if (nrow(school_achievement) == 0) {
     result <- rep(as.numeric(NA), length(labels))
     names(result) <- labels
     return(result)
   }
   
-  low.cut <- act.achievement.level.lookup[1]
-  high.cut <- act.achievement.level.lookup[2]
-  n.acountability <- school_achievement[["N_ACHIEVEMENT"]]
+  low.cut <- achievement.hs.level.lookup[1]
+  high.cut <- achievement.hs.level.lookup[2]
+  n.acountability <- school_achievement[["N_ACHIEVEMENT_HS"]]
   if (n.acountability < min.N) {
     result <- rep(as.numeric(NA), length(labels))
     result[which(names(labels) == "N")] <- n.acountability  #no need to calculate anything if N is too small
@@ -397,18 +397,18 @@ calc_type_hs_target_level <- function (school, labels=act.achievement.labels, mi
   
   
   
-  pp <- school_achievement[["PERCENT_PROFICIENT"]]
+  pp <- school_achievement[["ACHIEVEMENT_HS"]]
   
-  participation.rate  <- school_achievement[["PARTICIPATION_RATE_ACHIEVEMENT"]]
+  participation.rate  <- school_achievement[["PARTICIPATION_RATE_ACHIEVEMENT_HS"]]
   
   result <- if (pp < low.cut)
-    c(low.cut, high.cut, pp, n.acountability, participation.rate, 1)
+    c(participation.rate, n.acountability, pp, low.cut, high.cut, 1)
   else {
     
     if (pp >= low.cut & pp < high.cut)
-      c(low.cut, high.cut, pp, n.acountability, participation.rate, 2)
+      c(participation.rate, n.acountability, pp, low.cut, high.cut, 2)
     else
-      c(low.cut, high.cut, pp, n.acountability, participation.rate, 3)    
+      c(participation.rate, n.acountability, pp, low.cut, high.cut, 3)    
   }
   names(result) <- labels
   result

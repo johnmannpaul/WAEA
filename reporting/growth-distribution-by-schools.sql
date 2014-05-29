@@ -201,7 +201,7 @@ CREATE TABLE growth.GrowthDistributionBySchoolSubgroups(
 	GradeEnrolled varchar(7) NULL,
 	SubgroupCode varchar(7) NULL,
 	SubgroupDescription varchar(255) NULL,
- 	StudentMobility varchar(3) NULL,
+ 	StudentMobility varchar(12) NULL,
 	SubjectCode varchar(31) NULL,
   	Subject varchar(31) NULL,
 	NLowGrowth int NULL,
@@ -212,11 +212,12 @@ CREATE TABLE growth.GrowthDistributionBySchoolSubgroups(
 	PLowGrowth decimal(5, 2) NULL,
 	PTypicalGrowth decimal(5, 2) NULL,
 	PHighGrowth decimal(5, 2) NULL,
-	PProficient decimal(5, 2) NULL,
+  MGP decimal(3,1) NULL,
+	PProficient decimal(4, 1) NULL,
 	NProficient int NULL,
 	NStudentsAchievement int NULL,
 	NTestsAchievement int NULL,
-    CONSTRAINT GrowthDistributionBySchoolScoped_UNQ UNIQUE CLUSTERED (
+    CONSTRAINT GrowthDistributionBySchoolSubgroups_UNQ UNIQUE CLUSTERED (
 	DataScope ASC,
 	SchoolYear ASC,
 	DistrictId ASC,
@@ -393,3 +394,51 @@ NStudentsAchievement
 FROM growth.GrowthDistributionBySchoolSubgroups
 WHERE DataScope='STATE'
 GO
+
+
+CREATE VIEW growth.SchoolsBubblePlot AS
+SELECT
+      [SchoolYear]
+      ,[SchoolId]
+      ,[SchoolName]
+      ,DistrictId
+      ,DistrictName
+      ,[SubgroupCode]
+      ,[SubgroupDescription]
+      ,[StudentMobility] as FullAcademicYear
+      ,[SubjectCode]
+      ,[Subject]
+      ,MGP
+      ,[NGrowthScores]
+      ,[NStudentsGrowth]
+      ,[PProficient]
+      ,[NProficient]
+      ,[NStudentsAchievement]
+      ,[NTestsAchievement]
+FROM      
+[growth].[GrowthDistributionBySchoolSubgroups]
+WHERE DataScope='SCHOOL' and GradeEnrolled='All'
+
+
+CREATE VIEW growth.DistrictsBubblePlot AS
+SELECT
+      [SchoolYear]
+      ,DistrictId
+      ,DistrictName
+      ,[SubgroupCode]
+      ,[SubgroupDescription]
+      ,[StudentMobility] as FullAcademicYear
+      ,[SubjectCode]
+      ,[Subject]
+      ,MGP
+      ,[NGrowthScores]
+      ,[NStudentsGrowth]
+      ,[PProficient]
+      ,[NProficient]
+      ,[NStudentsAchievement]
+      ,[NTestsAchievement]
+FROM      
+[growth].[GrowthDistributionBySchoolSubgroups]
+WHERE DataScope='DISTRICT' and GradeEnrolled='All' 
+
+

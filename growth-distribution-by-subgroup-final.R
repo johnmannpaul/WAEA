@@ -5,6 +5,7 @@ source("initialize-schools.R")
 source("initialize-paws.R")
 source("reporting-defs.R")
 
+current.school.year<- '2012-13'
 round.to <- 1
 growthCuts <- c(35, 65)
 
@@ -59,7 +60,8 @@ growth.agg.sg <- aggregate.subgroup.combos.product( paws.df[!is.na(paws.df$SGP),
                                                           NGrowth=length(x),
                                                           PLowGrowth = if (length(x) == 0) NA else round((sum(ifelse(x <= growthCuts[1], 1, 0))/length(x))*100,round.to),
                                                           PTypicalGrowth = if (length(x) == 0) NA else round((sum(ifelse(growthCuts[1] < x & x <= growthCuts[2], 1, 0))/length(x))*100,round.to),
-                                                          PHighGrowth = if (length(x) == 0) NA else round((sum(ifelse(growthCuts[2] < x, 1, 0))/length(x))*100,round.to)),
+                                                          PHighGrowth = if (length(x) == 0) NA else round((sum(ifelse(growthCuts[2] < x, 1, 0))/length(x))*100,round.to),
+                                                          MGP = if (length(x) == 0) NA else median(x)),
                                                       N_STUDENTS=function (x) {
                                                         length(unique(x))
                                                       }))
@@ -74,11 +76,11 @@ combo.agg <- merge (paws.agg.sg, growth.agg.sg, by=c("SCOPE","SCHOOL_YEAR", "GRA
 nrow(combo.agg)
 
 combo.agg[,c("NLowGrowth", "NTypicalGrowth", "NHighGrowth", "NGrowth", 
-             "PLowGrowth", "PTypicalGrowth", "PHighGrowth", "N_STUDENTS.y")] <- data.frame(t(apply(combo.agg[,c("NLowGrowth", "NTypicalGrowth", "NHighGrowth", "NGrowth", 
-                                                                                                                    "PLowGrowth", "PTypicalGrowth", "PHighGrowth", "N_STUDENTS.y")], c(1),                                                                                      
+             "PLowGrowth", "PTypicalGrowth", "PHighGrowth", "MGP", "N_STUDENTS.y")] <- data.frame(t(apply(combo.agg[,c("NLowGrowth", "NTypicalGrowth", "NHighGrowth", "NGrowth", 
+                                                                                                                    "PLowGrowth", "PTypicalGrowth", "PHighGrowth", "MGP", "N_STUDENTS.y")], c(1),                                                                                      
                                                                                                    FUN=function (row) {
                                                                                                      if (all(is.na(row)))
-                                                                                                       c(0,0,0,0,NA,NA,NA,0)
+                                                                                                       c(0,0,0,0,NA,NA,NA,NA,0)
                                                                                                      else
                                                                                                        row                                                          
                                                                                                    })))
@@ -100,13 +102,13 @@ with(combo.agg, combo.agg[SCOPE %in% c("STATE") & SCHOOL_YEAR==current.school.ye
 
 table(combo.agg$SUBGROUP, useNA="ifany")
 combo.agg$SUBGROUP_DESCRIPTION <- unlist(lapply(combo.agg$SUBGROUP, function (x) switch(x,
-                                                                                       ALL='All', 
+                                                                                       All='All Students', 
                                                                                        CSG="Consolidated Subgroup", 
                                                                                        FRL="Free And Reduced Lunch", 
-                                                                                       IDEA="IDEA",
+                                                                                       IDEA="Students with Disabilities",
                                                                                        NCSG="Not Consolidated Subgroup",
                                                                                        NFRL="Not Free and Reduced Lunch",
-                                                                                       NIDEA="Not IDEA",
+                                                                                       NIDEA="Students without Disabilities",
                                                                                        ELL="English Language Learner",
                                                                                        NELL="Not English Language Learner",
                                                                                        M="Male",
@@ -128,7 +130,7 @@ ncol(combo.agg)
 result <- combo.agg[,c("SCOPE", "DISTRICT_ID", "DISTRICT_NAME", "SCHOOL_ID", "NAME",
                        "SCHOOL_YEAR", "GRADE_ENROLLED", "SUBGROUP", "SUBGROUP_DESCRIPTION", "SCHOOL_FULL_ACADEMIC_YEAR", "SUBJECT_CODE", "SUBJECT_DESCRIPTION", 
                        "NLowGrowth", "NTypicalGrowth", "NHighGrowth", "NGrowth", "N_STUDENTS_GROWTH",
-                       "PLowGrowth", "PTypicalGrowth", "PHighGrowth",
+                       "PLowGrowth", "PTypicalGrowth", "PHighGrowth", "MGP",
                        "PERCENT_PROFICIENT", "N_PROFICIENT", "N_STUDENTS_ACHIEVEMENT", "N_TESTS")]
 ncol(result) #should be same as above
 
@@ -152,15 +154,16 @@ names(result) <- c("DataScope"
                    ,"PLowGrowth"
                    ,"PTypicalGrowth"
                    ,"PHighGrowth"
+                   ,"MGP"
                    ,"PProficient"
                    ,"NProficient"
                    ,"NStudentsAchievement"
                    ,"NTestsAchievement")
 
 result$StudentMobility <- unlist(lapply(result$StudentMobility, 
-                                        function (x) switch(x, Yes='No', No='Yes', All='All', NA)))
+                                         function (x) switch(x, Yes='Yes', No='No', All='All Students', NA)))
 head(result)
 table(result$SchoolYear)
 table(result$GradeEnrolled)
-head(result[result$GradeEnrolle=='04',])
+head(result[result$GradeEnrolled=='04',])
 write.csv(result[result$SchoolYear==current.school.year,],file="reporting/growth-distribution-by-school-subgroups.csv", na="", row.names=FALSE, quote=FALSE)

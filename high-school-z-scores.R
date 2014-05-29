@@ -79,4 +79,63 @@ length(table(act.standardized$ACT_Z_SCORE_MATH))
 length(table(act.standardized$ACT_SCALE_SCORE_MATH))
 head(act.z.stats)
 
+act.standardized <- cbind(act.standardized, t(apply(act.standardized[,c("TEST_TYPE","ACT_Z_SCORE_MATH", 
+                                                                        "ACT_Z_SCORE_READING",
+                                                                        "ACT_Z_SCORE_SCIENCE", 
+                                                                        "ACT_Z_SCORE_ENG_WRITING",
+                                                                        "WDE_PERFORMANCE_LEVEL_MATH", 
+                                                                        "WDE_PERFORMANCE_LEVEL_READING", 
+                                                                        "WDE_PERFORMANCE_LEVEL_SCIENCE")],
+                                                    c(1),
+                                                    function (row) {
+                                                      result <- if (row["TEST_TYPE"] == "ACT") {
+                                                          as.numeric(row[c("ACT_Z_SCORE_MATH", 
+                                                                         "ACT_Z_SCORE_READING",
+                                                                         "ACT_Z_SCORE_SCIENCE", 
+                                                                         "ACT_Z_SCORE_ENG_WRITING")])
+                                                        
+                                                      } else {
+                                                        
+                                                        perf.level.to.z.score <- function (perf.level) switch(perf.level, `1`=-0.5, `2`=-0.2, `3`=0.2, `4`=0.5, NA)
+                                                        c(perf.level.to.z.score(row["WDE_PERFORMANCE_LEVEL_MATH"]),
+                                                          perf.level.to.z.score(row["WDE_PERFORMANCE_LEVEL_READING"]),
+                                                          perf.level.to.z.score(row["WDE_PERFORMANCE_LEVEL_SCIENCE"]),
+                                                          NA)
+                                                        
+                                                      }
+                                                      names(result) <-act.accountability.z.score.labels
+                                                      result
+                                                                                                              
+                                                    })))
+
+#PAWS Alternate test takers get an 'X' because I know of know of no writing assessment.
+act.standardized$TESTING_STATUS_CODE_ENG_WRITING <- apply(act.standardized[,c("TEST_TYPE", "TESTING_STATUS_CODE_READING", "ACT_Z_SCORE_ENG_WRITING")],
+                                             c(1),
+                                             function (row) {
+                                               test.type <- row["TEST_TYPE"]
+                                               reading.status <- row["TESTING_STATUS_CODE_READING"]
+                                               writing.score <- as.numeric(row["ACT_Z_SCORE_ENG_WRITING"])
+                                               
+                                               if (test.type != 'ACT' | reading.status == 'X')
+                                                 'X'
+                                               else 
+                                                 ifelse(is.na(writing.score), 'N', 'T')
+                                               
+                                             })
+#number of Xs, Ts, Ns
+table(act.standardized$TESTING_STATUS_CODE_ENG_WRITING)
+
+
+#The X's above is the number of Alternate Test takers plus the number of reading Exempt minus the intersection
+table(act.standardized$TEST_TYPE)
+table(act.standardized$TESTING_STATUS_CODE_READING)
+table(with(act.standardized, act.standardized[TEST_TYPE!='ACT',])$TESTING_STATUS_CODE_READING)
+
+#TRUEs should match the number of Ts above
+table(is.na(act.standardized$ACT_Z_SCORE_ENG_WRITING))
+#if it doesn't then the difference should be the number of Xs that also have a writing score
+act.standardized[act.standardized$TESTING_STATUS_CODE_READING %in% c('X') & !is.na(act.standardized$ACT_Z_SCORE_ENG_WRITING),]
+
+
+save(act.standardized, file="data/act-standardized.Rdata")
 #TODO:  Add in Alt Z-scores.  compute school statistics.  Refactor common code.
