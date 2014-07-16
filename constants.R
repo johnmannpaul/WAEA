@@ -1,22 +1,25 @@
 library("reshape")
-current.school.year <- '2012-13'
+options(stringsAsFactors=FALSE)
+current.school.year <- '2013-14'
+prior.school.year <- '2012-13'
 precision <- 1
-
+z.score.precision <- 3
+#
 #non HS minimum N values
-min.N.achievement <-  6
-min.N.growth <- 6
-min.N.subgroup <- 15
+min.N.achievement <-  10
+min.N.growth <- 10
+min.N.subgroup <- 10
 
 min.N.achievement.multiyear <-  10
 min.N.growth.multiyear <- 10
-min.N.subgroup.multiyear <- 15
+min.N.subgroup.multiyear <- 10
 
 #HS minimum N values
-min.N.achievement.hs <- 6
-min.N.tested.readiness <- 6
-min.N.grad <- 6
-min.N.readiness.hs <- 6
-min.N.equity.hs <- 15
+min.N.achievement.hs <- 10
+min.N.tested.readiness <- 10
+min.N.grad <- 10
+min.N.readiness.hs <- 10
+min.N.equity.hs <- 10
 
 min.N.achievement.hs.multiyear <- 10
 
@@ -221,27 +224,35 @@ equity.labels <- c(cut.1="EQUITY_CUT_1", cut.2="EQUITY_CUT_2", "PERCENT_MEETING_
 
 
 #act achievement
-# quantile(act.achievement[act.achievement$SCHOOL_YEAR == current.school.year & 
-#                            act.achievement$N_ACHIEVEMENT > 5 &
-#                            act.achievement$PARTICIPATION_RATE_ACHIEVEMENT >= 90 & 
-#                            act.achievement$SCHOOL_ID != state.school.id,]$PERCENT_PROFICIENT, 
-#          probs=c(.35,.65))
+high.school.baseline.achievement.stats <- read.csv(file="const/HighSchoolBaselineStats.csv")
 
-# quantile(act.achievement[act.achievement$SCHOOL_YEAR == current.school.year & 
-#                            act.achievement$N_ACHIEVEMENT > 5 &
-#                            act.achievement$PARTICIPATION_RATE_ACHIEVEMENT >= 90 & 
-#                            act.achievement$SCHOOL_ID != state.school.id,]$PERCENT_PROFICIENT, 
-#          probs=seq(.20,.90,.01))
+# quantile(achievement.hs[achievement.hs$SCHOOL_YEAR == current.school.year & 
+#                           achievement.hs$N_ACHIEVEMENT_HS >= min.N.achievement.hs &
+#                           achievement.hs$PARTICIPATION_RATE_ACHIEVEMENT_HS >= 90 & 
+#                           achievement.hs$SCHOOL_ID != state.school.id,]$ACHIEVEMENT_HS, 
+#          probs=c(.35,.65),
+#          type=6)
 
 ##based on above percentiles
-##act.achievement.level.lookup.year <- list(`2012-13` = c(70, 77))
-#act.achievement.level.lookup.year <- list(`2012-13` = c(70, 83)) #2012-13 PJP cuts
-act.achievement.level.lookup.year <- list(`2012-13` = c(63, 78)) #equipercentile linkage of 2012-13 PJP cuts once ACT cuts were corrected  
+act.achievement.level.lookup.year <- list(`2013-14` = c(-6, 13))
 
-act.achievement.level.lookup <- act.achievement.level.lookup.year[[current.school.year]]
+achievement.hs.level.lookup <- act.achievement.level.lookup.year[[current.school.year]]
 
+act.achievement.participation.labels <- c("ACHIEVEMENT_TESTED_HS", 
+                                          "ACHIEVEMENT_PARTICIPANTS_HS", 
+                                          "PARTICIPATION_RATE_ACHIEVEMENT_HS")
 
-act.achievement.labels <- c(cut.1="ACHIEVEMENT_CUT_1_HS", cut.2="ACHIEVEMENT_CUT_2_HS", "PERCENT_PROFICIENT_HS", N="N_ACHIEVEMENT_HS", part.rate="PART_RATE_ACHIEVEMENT_HS", "ACHIEVEMENT_TARGET_LEVEL_HS")
+act.accountability.z.score.labels <- c(math="ACCOUNTABILITY_Z_SCORE_MATH", 
+                                       reading="ACCOUNTABILITY_Z_SCORE_READING",
+                                       science="ACCOUNTABILITY_Z_SCORE_SCIENCE", 
+                                       writing="ACCOUNTABILITY_Z_SCORE_ENG_WRITING")
+
+act.achievement.labels <- c(part.rate="PARTICIPATION_RATE_ACHIEVEMENT_HS",
+                            N="N_ACHIEVEMENT_HS", 
+                            score="ACHIEVEMENT_HS", 
+                            cut.1="ACHIEVEMENT_CUT_1_HS", 
+                            cut.2="ACHIEVEMENT_CUT_2_HS",                                                                                      
+                            target.level="ACHIEVEMENT_TARGET_LEVEL_HS")
 
 #act readiness
 calc.index <- function (domain.runs, range) {
@@ -326,6 +337,13 @@ total.readiness.labels <- c(cut.1="READINESS_CUT_1", cut.2="READINESS_CUT_2", "R
 #quantile(hs.equity.df[hs.equity.df$N_ACHIEVEMENT > 14 & hs.equity.df$SCHOOL_ID!=state.school.id,"IMPROVEMENT_VALUE"], c(.33,.66))
 #quantile(hs.equity.df[hs.equity.df$N_ACHIEVEMENT > 14 & hs.equity.df$SCHOOL_ID!=state.school.id,"PERCENT_NONPROFICIENT"], c(.33,.66))  
 #based on the above quantiles
+
+#not set by PJP
+subgroup.hs.math.cut <- 17  
+subgroup.hs.reading.cut <- 16
+
+subgroup.labels.hs <- c("SUBGROUP_MATH_HS", "SUBGROUP_READING_HS", "SUBGROUP_CONSOLIDATED_HS")
+
 hs.equity.level.lookup.year <- list(`2012-13` = list(#IMPROVEMENT_VALUE = c(-3.120,2.764),
   #IMPROVEMENT_VALUE = c(-12.085,-7.15),
   IMPROVEMENT_VALUE = c(-3.2,3.4), #once 2013 act cuts were corrected

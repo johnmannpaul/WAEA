@@ -1,161 +1,166 @@
-#source("achievement-act.R")
+source("mean-z-score-fun.R")
+load(file="data/ACT/plan.Rdata")
+plan.prior.year <- plan[plan$SCHOOL_YEAR==prior.school.year,] 
 
-#hs.equity.df <- act.achievement[act.achievement$N_ACHIEVEMENT > 14,]
-#this equity metric is really only defined for schools for which we did not combine years of data (ie. ones where small_school_hs == 'F')
-hs.equity.df <- act.achievement[act.achievement$SCHOOL_ID %in% schools[schools$SCHOOL_YEAR==current.school.year & 
-                                                                         schools$SMALL_SCHOOL_HS=='F', "SCHOOL_ID"],]
-table(hs.equity.df$SCHOOL_YEAR)
+#In 2012-13 there was only one  point difference between 35%  (16) and 50% (17)
+quantile(as.numeric(plan.prior.year$PLAN_SCALE_MATHEMATICS), probs=c(0.35, 0.5), na.rm=TRUE, type=6)
+table(as.numeric(plan.prior.year$PLAN_SCALE_MATHEMATICS))
+table(ecdf(as.numeric(plan.prior.year$PLAN_SCALE_MATHEMATICS))(as.numeric(plan.prior.year$PLAN_SCALE_MATHEMATICS)))
 
-
-#We only consider proficienies in math and reading.
-hs.equity.df$PERCENT_NONPROFICIENT <- round(((hs.equity.df$MATH_TESTED + hs.equity.df$READING_TESTED - 
-                                         hs.equity.df$MATH_PROFICIENT - hs.equity.df$READING_PROFICIENT)/(hs.equity.df$MATH_TESTED + hs.equity.df$READING_TESTED)) * 100, hs.equity.precision)
-
-#Being the inverse of PERCENT_NON_PROFICIENT, PERCENT_PROFICIENT will only include Reading and Math.
-#This is different from the  Achievement indicator, where it did include Science, too.
-hs.equity.df$PERCENT_PROFICIENT <- 100 - hs.equity.df$PERCENT_NONPROFICIENT
+quantile(as.numeric(plan.prior.year$PLAN_SCALE_READING), probs=c(0.35, 0.5), na.rm=TRUE, type=6)
+table(as.numeric(plan.prior.year$PLAN_SCALE_READING))
+table(ecdf(as.numeric(plan.prior.year$PLAN_SCALE_READING))(as.numeric(plan.prior.year$PLAN_SCALE_READING)))
 
 
-hs.equity.df <- hs.equity.df[,c("SCHOOL_YEAR", "SCHOOL_ID", "PERCENT_PROFICIENT", "N_ACHIEVEMENT",
-                          "PERCENT_NONPROFICIENT")]
+plan.prior.year<- cbind(plan.prior.year[,!(names(plan.prior.year) %in% subgroup.labels.hs)], 
+                        data.frame(t(apply(plan.prior.year[,c("PLAN_SCALE_MATHEMATICS", 
+                                                              "PLAN_SCALE_READING")],
+                                           c(1),
+                                           function (row) {
+                                             scores <- as.numeric(row)
+                                             math.score <- scores[1]
+                                             reading.score <- scores[2]
+                                             
+                                             below.scores <- as.numeric(scores < c(subgroup.hs.math.cut,
+                                                                                   subgroup.hs.reading.cut))
+                                             
+                                             below.scores.NA <- sum(is.na(below.scores))                                                              
+                                             below.scores.nonNA <-  sum(below.scores[which(!is.na(below.scores))])
+                                             
+                                             below.scores <- c(below.scores, ifelse(below.scores.NA == 2, NA, as.numeric(below.scores.nonNA > 0)))
+                                             names(below.scores) <- subgroup.labels.hs
+                                             
+                                             below.scores
+                                           } ))))
 
-head(hs.equity.df)
+#cross tab
+table(plan.prior.year$SUBGROUP_MATH_HS, plan.prior.year$SUBGROUP_READING_HS, useNA="ifany")
+table(plan.prior.year$SUBGROUP_CONSOLIDATED_HS)
 
+#Use last year's Plan scores for prototyping in lieu of having available the standard progression 
+#of Prior Plan -> Currrent ACT
+act.current.year <- merge(plan.prior.year, 
+                          schools[schools$SCHOOL_YEAR==current.school.year,]["SCHOOL_ID"])
+act.current.year$SCHOOL_YEAR <- current.school.year
+act.current.year$TESTING_STATUS_CODE_MATHEMATICS <- act.current.year$TESTING_STATUS_CODE_COMPOSITE #there were no status codes for READING and no MATH
+act.current.year$TESTING_STATUS_CODE_READING <- act.current.year$TESTING_STATUS_CODE_COMPOSITE
+act.current.year.z <- calc.z.scores(act.current.year, subject.labels=c(MATH="MATHEMATICS", READING="READING"),                                      
+                                    scale.score.prefix='PLAN_SCALE', 
+                                    z.score.prefix='ACT_Z_SCORE', baseline.stats=high.school.baseline.achievement.stats)
 
-#save(paws_11, file="data/paws_11.Rdata")
-load(file="data/paws_11.Rdata")
-paws_11.df <- paws_11[paws_11$SCHOOL_FULL_ACADEMIC_YEAR=="T" & 
-                        paws_11$TESTING_STATUS_CODE == "T" & 
-                        paws_11$GRADE_ENROLLED == "11" &
-                        paws_11$SUBJECT_CODE %in% c('MA', 'RE'), ]
-
-table(with(paws_11.df, paws_11.df[SCHOOL_ID %in% c('0706056', '0706055'),"SCHOOL_ID"]))
-paws_11.df$SCHOOL_ID <- ifelse(paws_11.df$SCHOOL_ID == '0706055', '0706056', paws_11.df$SCHOOL_ID)
-table(with(paws_11.df, paws_11.df[SCHOOL_ID %in% c('0706056', '0706055'),"SCHOOL_ID"]))
-
-NONPROFICIENT <- ifelse(paws_11.df$ACCOUNTABILITY_PERF_LEVEL %in% c("1","2"), 1, 0)
-
-achievement_11 <- aggregate(data.frame(NONPROFICIENT=NONPROFICIENT, N=rep(1,length(NONPROFICIENT))), 
-                         by=list(SCHOOL_YEAR=paws_11.df$SCHOOL_YEAR, 
-                                 SCHOOL_ID=paws_11.df$SCHOOL_ID), 
-                         sum)
-
-#get the state level aggregate in there
-achievement_11 <- state.level.aggregate(achievement_11, sum, state.school.id)
-
-tail(achievement_11)
-head(achievement_11)
-
-achievement_11$PERCENT_NONPROFICIENT <- round(achievement_11$NONPROFICIENT/achievement_11$N * 100, hs.equity.precision)
-
-
-
-paws.11.tested <- with(paws_11.df, paws_11.df[TESTING_STATUS_CODE == "T", c("SCHOOL_YEAR", 
-                                                                   "SCHOOL_ID",
-                                                                   "WISER_ID")])
-
-paws.11.tested.school <- cast(paws.11.tested, SCHOOL_YEAR+SCHOOL_ID~., 
-                           function (x) length(unique(x)), margins="SCHOOL_YEAR")
-
-names(paws.11.tested.school)[3] <- "N_ACHIEVEMENT"
-
-#relabale state aggregate to state school id
-paws.11.tested.school[paws.11.tested.school$SCHOOL_ID=='(all)',]
-paws.11.tested.school$SCHOOL_ID <- as.character(paws.11.tested.school$SCHOOL_ID)
-paws.11.tested.school[paws.11.tested.school$SCHOOL_ID=='(all)',c("SCHOOL_ID")] <- rep(state.school.id, nrow(paws.11.tested.school[paws.11.tested.school$SCHOOL_ID=='(all)',]))
-with(paws.11.tested.school, paws.11.tested.school[SCHOOL_ID==state.school.id,])
+act.current.year <- cbind(act.current.year, calc.z.scores(act.current.year, subject.labels=c(MATH="MATHEMATICS", READING="READING"),                                      
+                                                          scale.score.prefix='PLAN_SCALE', 
+                                                          z.score.prefix='ACT_Z_SCORE', baseline.stats=high.school.baseline.achievement.stats))
 
 
-with(paws.11.tested.school, paws.11.tested.school[SCHOOL_ID==state.school.id,])
-
-achievement_11 <- merge(achievement_11, paws.11.tested.school)
-
-head(achievement_11)
-tail(achievement_11)
-
-hs.equity.df$PREV_YEAR <- as.numeric(substr(hs.equity.df$SCHOOL_YEAR, 1, 4))
-hs.equity.df$YEAR <- as.numeric(substr(hs.equity.df$SCHOOL_YEAR, 1, 4)) + 1
-achievement_11$YEAR <- as.numeric(substr(achievement_11$SCHOOL_YEAR, 1, 4)) + 1
-
-table(hs.equity.df$SCHOOL_YEAR)
-hs.equity.df <- merge(hs.equity.df, 
-                   achievement_11[,c("YEAR", 
-                                     "SCHOOL_ID", 
-                                     "PERCENT_NONPROFICIENT", 
-                                     "N_ACHIEVEMENT")],
-                   by.x=c("PREV_YEAR", "SCHOOL_ID"),
-                   by.y=c("YEAR", "SCHOOL_ID"))
-table(hs.equity.df$SCHOOL_YEAR)
-
-names(hs.equity.df)[grep("\\.y",names(hs.equity.df), value=FALSE)] <- 
-  sub("\\.y", "_PRIOR", names(hs.equity.df)[grep("\\.y",names(hs.equity.df), value=FALSE)])
-names(hs.equity.df)
-
-names(hs.equity.df)[grep("\\.x",names(hs.equity.df), value=FALSE)] <- 
-  sub("\\.x", "", names(hs.equity.df)[grep("\\.x",names(hs.equity.df), value=FALSE)])
-names(hs.equity.df)
+mean(act.current.year$ACT_Z_SCORE_MATHEMATICS, na.rm=TRUE)
+mean(act.current.year$ACT_Z_SCORE_READING, na.rm=TRUE)
+sd(act.current.year$ACT_Z_SCORE_MATHEMATICS, na.rm=TRUE)
+sd(act.current.year$ACT_Z_SCORE_READING, na.rm=TRUE)
 
 
-hs.equity.df$IMPROVEMENT_VALUE <- hs.equity.df$PERCENT_NONPROFICIENT - hs.equity.df$PERCENT_NONPROFICIENT_PRIOR
 
-quantile(hs.equity.df[hs.equity.df$N_ACHIEVEMENT > 14 & hs.equity.df$SCHOOL_ID!=state.school.id,"IMPROVEMENT_VALUE"], c(.33,.66))
+nrow(act.current.year)
+act.current.year.subgroup <- merge(act.current.year, plan.prior.year[!is.na(plan.prior.year$SUBGROUP_CONSOLIDATED_HS) & 
+                                                                                    plan.prior.year$SUBGROUP_CONSOLIDATED_HS==1,]["WISER_ID"])
+nrow(act.current.year.subgroup)
 
+#participation rates of the consolidated subroup on this year's test
+act.participation.consolidated.subgroup <- calc.participation.rate(act.current.year.subgroup, subject.labels=c("MATHEMATICS", "READING"),                                      
+                                                                   total.participation.labels = c("EQUITY_HS_TESTS_ACTUAL_COUNT", 
+                                                                                                  "EQUITY_HS_TESTS_EXPECTED_COUNT", 
+                                                                                                  "EQUITY_HS_PARTICIPATION_RATE")) 
 
-hs.equity.df$IMPROVEMENT_CATEGORY <- sapply(hs.equity.df$IMPROVEMENT_VALUE,
-                                            function (iv) {
-                                              cuts <- hs.equity.level.lookup$IMPROVEMENT_VALUE
-                                              if (iv <= cuts[1]) {
-                                                3
-                                              } else {
-                                                
-                                                if (iv > cuts[1] & iv <= cuts[2])
-                                                  2
-                                                else
-                                                  1
-                                              }                         
-                                              
-                                            })
-quantile(hs.equity.df[hs.equity.df$N_ACHIEVEMENT > 14,"PERCENT_NONPROFICIENT"], c(.33,.66))
+act.participation.consolidated.subgroup <- merge(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types, 
+                                                         c("SCHOOL_YEAR", "SCHOOL_ID")],
+                                                 
+                                                 act.participation.consolidated.subgroup,
+                                                 all=TRUE)
 
-hs.equity.df$PERCENT_NONPROFICIENT_CATEGORY <- sapply(hs.equity.df$PERCENT_NONPROFICIENT,
-                                                      function (iv) {
-                                                        cuts <- hs.equity.level.lookup$PERCENT_NONPROFICIENT
-                                                        if (iv <= cuts[1]) {
-                                                          3
-                                                        } else {
-                                                          
-                                                          if (iv > cuts[1] & iv <= cuts[2])
-                                                            2
-                                                          else
-                                                            1
-                                                        }                                              
-                                                      }) 
-#IMPROVEMENT x PERCENT_NON_PROFICIENT
-#1 1 2
-#1 2 3
-#2 3 3
-# hs.equity.df$EQUITY_TARGET_LEVEL <- apply(hs.equity.df[,c("IMPROVEMENT_CATEGORY", "PERCENT_NONPROFICIENT_CATEGORY")],
-#                                    c(1),
-#                                    function (values) {
-#                                      score <- values[["IMPROVEMENT_CATEGORY"]] + values[["PERCENT_NONPROFICIENT_CATEGORY"]]
-#                                      if (score %in% c(2,3)) {
-#                                        1
-#                                      } else {
-#                                        
-#                                        if (score == 4)
-#                                          2
-#                                        else #5 or 6
-#                                          3                                      
-#                                      }
-#                                    })
+table(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types,]$SCHOOL_YEAR)
+table(with(act.participation.consolidated.subgroup,
+           act.participation.consolidated.subgroup[!(SCHOOL_ID %in% state.school.id),]$SCHOOL_YEAR))
+
+with(act.participation.consolidated.subgroup,
+     act.participation.consolidated.subgroup[SCHOOL_YEAR==current.school.year & 
+                                               is.na(PARTICIPATION_RATE_EQUITY_HS),])
+act.participation.consolidated.subgroup[,c("MATHEMATICS_TESTED", 
+                                           "MATHEMATICS_PARTICIPANTS", 
+                                           "READING_TESTED", 
+                                           "READING_PARTICIPANTS", 
+                                           "EQUITY_HS_TESTS_ACTUAL_COUNT", 
+                                           "EQUITY_HS_TESTS_EXPECTED_COUNT")] <- 
+  data.frame(t(apply(act.participation.consolidated.subgroup[,c("MATHEMATICS_TESTED", 
+                                                                "MATHEMATICS_PARTICIPANTS", 
+                                                                "READING_TESTED", 
+                                                                "READING_PARTICIPANTS", 
+                                                                "EQUITY_HS_TESTS_ACTUAL_COUNT", 
+                                                                "EQUITY_HS_TESTS_EXPECTED_COUNT")],
+                     c(1),
+                     function (row) {
+                       if (sum(is.na(row)) == length(row))
+                         rep(0, length(row))
+                       else
+                         row                       
+                     })))
 
 
-#IMPROVEMENT x PERCENT_NON_PROFICIENT
-#1 1 1
-#2 2 2
-#3 3 3
-#PJP 2013 changed the above definition to this one
-hs.equity.df$EQUITY_TARGET_LEVEL <- apply(hs.equity.df[,c("IMPROVEMENT_CATEGORY", "PERCENT_NONPROFICIENT_CATEGORY")],
+
+#reduce to FAY only
+table(act.current.year.subgroup$SCHOOL_FULL_ACADEMIC_YEAR, useNA="ifany")
+act.current.year.subgroup.fay <- act.current.year.subgroup[act.current.year.subgroup$SCHOOL_FULL_ACADEMIC_YEAR=='T',]
+nrow(act.current.year.subgroup.fay)
+
+
+#calculate the Accountability N of the consolidated subgroup
+
+act.current.year.subgroup.fay.equity <- calc.mean.score(act.current.year.subgroup.fay,
+                                                        subject.labels=c(MATH="MATHEMATICS", READING="READING"),
+                                                        testing.status.prefix="TESTING_STATUS_CODE",
+                                                        z.score.prefix="ACT_Z_SCORE")
+
+names(act.current.year.subgroup.fay.equity) <- c("SCHOOL_YEAR", "SCHOOL_ID", "EQUITY_HS",  "N_EQUITY")
+
+#Small schools are determined based on N_EQUITY being less than the minimum N for equity.
+act.current.year.subgroup.fay.equity$SMALL_SCHOOL <- ifelse(act.current.year.subgroup.fay.equity$N_EQUITY < min.N.equity.hs, 'T', 'F') 
+#Normally there will be a lookback for small schools, but in 2013-14 there is no data available for this.
+act.current.year.subgroup.fay.equity$YEARS_BACK <- ifelse(act.current.year.subgroup.fay.equity$N_EQUITY < min.N.equity.hs, Inf, NA) 
+
+
+plot.hist(act.current.year.subgroup.fay.equity[act.current.year.subgroup.fay.equity$SCHOOL_ID != state.school.id, "EQUITY_HS"], 20)
+
+#state score should be consistent with the following 
+mean(act.current.year.subgroup.fay$ACT_Z_SCORE_MATHEMATICS, na.rm=TRUE)
+mean(act.current.year.subgroup.fay$ACT_Z_SCORE_READING, na.rm=TRUE)
+sd(act.current.year.subgroup.fay$ACT_Z_SCORE_MATHEMATICS, na.rm=TRUE)
+sd(act.current.year.subgroup.fay$ACT_Z_SCORE_READING, na.rm=TRUE)
+
+
+act.current.year.subgroup.fay.equity <- merge(act.current.year.subgroup.fay.equity,
+                                              act.participation.consolidated.subgroup[,c("SCHOOL_YEAR", "SCHOOL_ID",                                                                                         
+                                                                                         "EQUITY_HS_TESTS_ACTUAL_COUNT", 
+                                                                                         "EQUITY_HS_TESTS_EXPECTED_COUNT",
+                                                                                         "EQUITY_HS_PARTICIPATION_RATE")],
+                                              by=c("SCHOOL_YEAR", "SCHOOL_ID"), all.y=TRUE)
+
+
+#N_EQUITY and ACHIEVEMENT_TESTED_EQUITY_HS are not necessarily identical: N_EQUITY is filtered to FAY 
+#status, but ACHIEVEMENT_TESTED_EQUITY_HS is not.
+head(act.current.year.subgroup.fay.equity[act.current.year.subgroup.fay.equity$SCHOOL_YEAR==current.school.year,])
+table(act.current.year.subgroup.fay.equity$EQUITY_HS_PARTICIPATION_RATE, useNA="ifany")
+quantile(with(act.current.year.subgroup.fay.equity,
+              act.current.year.subgroup.fay.equity[SCHOOL_YEAR == current.school.year & 
+                          !is.na(N_EQUITY) &                           
+                          N_EQUITY >= min.N.equity.hs &
+                          !is.na(EQUITY_HS_PARTICIPATION_RATE) &  
+                          EQUITY_HS_PARTICIPATION_RATE >= .90 & 
+                          SCHOOL_ID != state.school.id,]$EQUITY_HS), 
+         probs=c(.35,.65),
+         type=6)
+
+#apply cuts based on the above
+
+act.current.year.subgroup.fay.equity$EQUITY_TARGET_LEVEL <- apply(hs.equity.df[,c("IMPROVEMENT_CATEGORY", "PERCENT_NONPROFICIENT_CATEGORY")],
                                           c(1),
                                           function (values) {
                                             score <- values[["IMPROVEMENT_CATEGORY"]] 

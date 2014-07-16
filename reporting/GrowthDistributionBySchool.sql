@@ -1,3 +1,4 @@
+
 CREATE TABLE growth.GrowthDistributionBySchoolScoped(
         DataScope varchar(15) NOT NULL,
 	DistrictId varchar(7) NULL,
