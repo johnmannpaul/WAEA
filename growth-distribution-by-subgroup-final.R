@@ -229,10 +229,6 @@ head(result[result$SchoolId=='1601005' & result$SchoolYear=='2012-13' ,])
 
 g <- factored.result[[9]]
 head(g[g$SchoolId=='1601005' & g$SchoolYearId==3,])
-write.tables("WIGGUM", factored.result, "growth")
-
-
-write.tables("LocalReportDM", factored.result, "growth", "localreaderwriter", "noP@ssword")
 
 
 
