@@ -1,5 +1,6 @@
+library("RODBC")
 library("reshape")
-
+library("data.table")
 sets.to.formula <- function(cols, rows) {
   as.formula(paste( ifelse(length(cols) == 0, ".", do.call(paste, as.list(c(cols, sep="+")))) ,
                     ifelse(length(rows) == 0, ".", do.call(paste, as.list(c(rows, sep="+")))), 
@@ -226,8 +227,9 @@ produce.aggregates.norm <- function (df,
   }
   
   aggregation.combos <- combos.list(id.fixed, names(id.choices))
-  
-  result <- do.call(merge, (lapply(1:length(obs), 
+
+  #merge results together
+  result <- Reduce(merge, lapply(1:length(obs), 
                              function (i) {
                                rbind.fill(lapply(aggregation.combos, 
                                                  aggregate.combo, 
@@ -235,7 +237,7 @@ produce.aggregates.norm <- function (df,
                                                  obs[i],
                                                  aggregator[[i]],
                                                  names(aggregator)[i]))
-                               })))
+                               }))
   
   
   #if there's one return value things don't get labelled properly?
@@ -533,3 +535,355 @@ propagate.to.paired.schools <- function (df, pairings=school.pairing.lookup) {
                         }))
   
 }
+
+
+# partition.names <- function (df, cols) {
+#   
+#   split(names(df), sapply(seq(1, length(names(df))),
+#                           function (i, v) {
+#                             if (v[i] == 1)
+#                               1
+#                             else
+#                               ifelse(sum(v[1:i]) > 1, 2, 0)
+#                             
+#                           }, as.numeric(names(result) %in% cols)))
+#   
+# }
+# 
+# factor.data.frame <- function (df, cols, id.name='Id', table.names=NULL) {
+#     
+#   #get the columns we are factoring out
+#   df.a <- unique(df[, cols])
+#   #order them the way we want
+#   df.a <- df.a[do.call(order, lapply(cols, function (x) df.a[[x]])),]
+#   #assign a sequence
+#   df.a <- data.frame(seq(1, nrow(df.a)), df.a)
+#   #and a name
+#   names(df.a)[1] <- id.name
+#   
+#   #partition df's names              
+#   name.parts <- partition.names(df, cols)
+#   
+#   #replace cols with the correct sequence value
+#   df.b <- cbind(df[, name.parts[[1]]], 
+#                 merge(df.a, df[,name.parts[[2]]])[id.name],
+#                 df[, name.parts[[3]]])
+#   #return the result tables
+#   result <- list(df.a, df.b)
+#   #name the result tables
+#   if (!is.null(table.names))
+#     names(result) <- table.names
+#   result
+# }
+ 
+
+
+factor.data.frame <- function (df, dim.table.specs, scd=c(), school.year.label) {
+
+  
+  factor.table <- function (df, cols, id.label, school.year.id=NULL, school.year.id.label=NULL) {
+    
+    
+    df.a <- unique(df[cols])
+    
+    #order them according to the order specified in cols    
+    df.a <- data.table(df.a[do.call(order, lapply(cols, function (x) df.a[[x]])),])
+    
+    setnames(df.a, seq(1, ncol(df.a)), cols)
+
+        
+    #assign a sequence if there are no id columns already defined
+    if (length(cols[which(names(cols) == "ID")]) == 0) {
+      df.a <- data.table(seq(1, nrow(df.a)), df.a)
+      #and a name
+      setnames(df.a, 1, id.label)
+      setkeyv(df.a, id.label)
+    } else {
+      
+      setkeyv(df.a, cols[which(names(cols) == "ID")])
+    }
+    
+    #add year column if it is present
+    if (!is.null(school.year.id)) {      
+      #old.key <- key(df.a)
+      df.a <- data.table(rep(school.year.id, nrow(df.a)), df.a)
+      setnames(df.a, 1, school.year.id.label)      
+      #setkeyv(df.a, c(school.year.id.label, old.key))
+      df.a      
+    }else 
+      df.a
+  }
+  
+  #compute the school year dimension table
+  school.year.id.label <- paste(school.year.label, "Id", sep="")  
+  school.year.table = factor.table(df, school.year.label, school.year.id.label)
+  
+  
+  factor.table.year <-   function (j, cols, id.col.label) {
+      factor.table(df[eval(bquote(df[.(school.year.label)] == .(school.year.table[j][[school.year.label]]))),],
+                 cols, 
+                 id.col.label,
+                 school.year.table[j][[school.year.id.label]],
+                 school.year.id.label)
+    
+  }
+  
+  factor.table.years <- function (i) {
+    cols <- dim.table.specs[[i]]
+    id.col.label <- paste(names(dim.table.specs)[i], "Id", sep="")
+    
+    if (i %in% scd) {
+      result <- do.call(rbind, lapply(seq(1,nrow(school.year.table)),
+                            factor.table.year, cols, id.col.label
+                            ))
+      setkeyv(result, c(school.year.id.label, cols[which(names(cols) == "ID")]))
+    } else {
+      factor.table(df, cols, id.col.label)
+    }
+  }
+  
+
+  #compute the other dimensions indexed by school year to track slowly change over time
+  dim.tables <- lapply(seq(1, length(dim.table.specs)), factor.table.years)
+  names(dim.tables) <- names(dim.table.specs)
+
+  #now school year is just another dimension
+  dim.tables <- c(SchoolYear=list(school.year.table), dim.tables)
+  dim.table.specs <- c(SchoolYear=school.year.label, dim.table.specs)
+  
+  #factor out the dimensions
+  obs.vals <- names(df)[which(!(names(df) %in% unlist(dim.table.specs)))]
+
+  make.filter.expr <- function (col, row, dim) {
+    eval(bquote(dim[[.(col)]] == .(row[[col]])))
+  }
+  
+  make.filter <- function (row, spec, dim) {
+    Reduce(`&`, lapply(spec, make.filter.expr, row, dim))
+  }
+  
+  lookup.id <- function (row, dim, spec, id.col.label) {
+    dim[make.filter(row, spec, dim)][[id.col.label]]
+  }
+  
+  #function to construct dimension id columns
+  get.id.col <- function (i) {
+    spec = dim.table.specs[[i]]
+    dim = dim.tables[[i]]
+    
+    ids <- spec[which(names(spec) == "ID")]
+    if (length(ids) > 0) {
+      df[ids]      
+    } else {
+      id.col.label <- paste(names(dim.table.specs)[i], "Id", sep="")      
+      result <- data.frame(apply(df[spec], c(1), lookup.id, dim, spec, id.col.label))
+      names(result) <- id.col.label
+      result      
+    }
+  }
+  
+  #The fact table consists of the dimension ids plus the observed variables
+  obs.table <- do.call(cbind, c(lapply(seq(1, length(dim.table.specs)), 
+                                       get.id.col),
+                                df[, obs.vals]))
+  
+  result <- c(dim.tables, Stats=list(obs.table))
+  result
+}
+
+
+
+estimate.varchar.lengths <- function (df) {
+  
+  estimate.varchar.lengths.aux <- function (x) {
+    if (class(df[[x]]) == "character") {
+      max.length <-max(nchar(df[[x]][which(!is.na(df[[x]]))]))
+      if (max.length == 0) #still create a column with width 1 even if every value is empty
+        max.length = 1
+      log.max.length <- log(max.length, 2)
+      bytes <- floor(log.max.length)
+      if (bytes != log.max.length) {
+        bytes = bytes + 1        
+      } 
+      paste("varchar(", 2^bytes, ")", sep="")        
+    }
+    else {
+      NULL
+    }
+  }
+  
+  varcharTypes = unlist(lapply(names(df), estimate.varchar.lengths.aux))
+  names(varcharTypes) = unlist(lapply(names(df), function (n) if (class(df[[n]])=="character") n else NULL))
+  varcharTypes
+} 
+
+
+
+estimate.mssql.types <- function (df) {
+  is.int <- function (v) {    
+    all(floor(v) == v)
+  }
+  
+  num.int.digits <- function (v) {
+    max(floor(log10(abs(c(1, v[which(v != 0)])))) + 1)
+  }
+  estimate.mssql.types.aux <- function (x) {
+    if ("character" %in% class(df[[x]]) | "factor" %in% class(df[[x]])) {
+      col <- as.character(df[[x]])
+      max.length <-max(nchar(col[which(!is.na(col))]))
+      if (max.length == 0) #still create a column with width 1 even if every value is empty
+        max.length = 1
+      log.max.length <- log(max.length, 2)
+      bytes <- floor(log.max.length)
+      if (bytes != log.max.length) {
+        bytes = bytes + 1        
+      } 
+      paste("varchar(", 2^bytes, ")", sep="")        
+    }
+    else {
+      
+      if (is.numeric(df[[x]])) {
+        col <- df[[x]]
+        all.ints <- is.int(col[which(!is.na(col))])
+        integral.digits <- num.int.digits(col)
+        fractional.digits <- num.int.digits(as.numeric(unlist(lapply(col, function (x) strsplit(as.character(x), ".", fixed=TRUE)[[1]][2]))))
+        
+        if (all.ints) 
+          "int"
+        else
+          paste("decimal", "(", integral.digits+fractional.digits, ",", fractional.digits, ")", sep="")
+        
+        
+      } else {
+        NULL
+      }
+    }
+  }
+  
+  types <- unlist(lapply(names(df), estimate.mssql.types.aux))
+  names(types) <- names(df)
+  types
+} 
+
+
+write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL) {
+  
+  if (is.null(uid))
+    conn <- odbcConnect(dsn=db.dsn)
+  else
+    conn <- odbcConnect(db.dsn, uid, pwd)
+  
+  make.key.list <- function (dim.tables) {
+    do.call(paste, c(as.list(Reduce(union, sapply(dim.tables, function (t) key(t)))), sep=", "))
+    
+  }
+  
+  alter.nullability <- function (dim, table.name) {
+    alter.key <- function (pk.col) {
+      cols <- sqlColumns(conn, table.name)
+      pk.data.type <- cols[cols$COLUMN_NAME==pk.col, "TYPE_NAME"]
+      pk.col.size <- if (pk.data.type == "varchar") paste("(", cols[cols$COLUMN_NAME==pk.col, "COLUMN_SIZE"], ")", sep="") else ""
+      sqlQuery(channel=conn,             
+               query=paste("ALTER TABLE", 
+                           table.name, 
+                           "ALTER COLUMN", 
+                           pk.col, 
+                           pk.data.type,
+                           pk.col.size,
+                           "NOT NULL"))
+    }
+    
+    lapply(key(dim), alter.key)
+    
+  }
+  
+  add.dim.constraints <- function (dim, dim.table.name) {
+    alter.nullability(dim, dim.table.name)
+    sqlQuery(channel=conn,
+             query=paste("ALTER TABLE", 
+                         dim.table.name, 
+                         "ADD CONSTRAINT", 
+                         do.call(paste, c(as.list(strsplit(dim.table.name, ".", TRUE)[[1]]), "PK", sep="_")), 
+                         "PRIMARY KEY (", 
+                         make.key.list(list(dim)), 
+                         ")"))      
+  }
+  
+  add.fact.constraints <- function (n, facts, facts.table.name) 
+  {
+    
+    foreign.keys <- function (i) {
+      
+      dim.table <- df.list[[i]]
+      dim.table.name <- names(df.list)[i]
+      dim.table.id <- make.key.list(list(dim.table))
+      alter.nullability(dim.table, facts.table.name)
+      sqlQuery(channel=conn,
+               query=paste("ALTER TABLE", 
+                           facts.table.name, 
+                           "ADD CONSTRAINT", 
+                           do.call(paste, c(as.list(strsplit(facts.table.name, ".", TRUE)[[1]]), 
+                                            as.list(strsplit(dim.table.name, ".", TRUE)[[1]]),
+                                            "FK", 
+                                            sep="_")), 
+                           "FOREIGN KEY (", 
+                           dim.table.id, 
+                           ") REFERENCES",
+                           paste(db.prefix,                                  
+                                 dim.table.name, 
+                                 sep="."),
+                           "(",
+                           dim.table.id, 
+                           ")"))
+      
+      
+      
+    }
+    
+    lapply(seq(1, n-1), foreign.keys)  
+    
+    
+    sqlQuery(channel=conn,
+             query=paste("ALTER TABLE", 
+                         facts.table.name, 
+                         "ADD CONSTRAINT", 
+                         do.call(paste, c(as.list(strsplit(facts.table.name, ".", TRUE)[[1]]), "PK", sep="_")), 
+                         "PRIMARY KEY (", make.key.list(df.list[1:(n-1)]) , ")"))
+    
+  }
+  
+  write.table <- function (i) {
+    
+    data <- df.list[[i]]
+    table <- paste(db.prefix, 
+                   names(df.list)[i], 
+                   sep=".")
+    
+    sqlSave(channel = conn, 
+            dat = data, 
+            tablename = table,
+            rownames = FALSE,
+            safer=FALSE,
+            varTypes = estimate.mssql.types(data))
+    
+    #fact table is presumed to be the last one
+    if (i < length(df.list))
+      add.dim.constraints(data, table)
+    else
+      add.fact.constraints(i, data, table)  
+  }
+  
+  lapply(rev(names(df.list)), function (table.name) {
+    sqlQuery(channel=conn,
+             query=paste("DROP TABLE", 
+                         paste(db.prefix, 
+                               table.name, 
+                               sep=".")))
+    
+  })
+  
+  lapply(seq(1: length(df.list)), write.table)
+
+  odbcClose(conn)
+}
+
