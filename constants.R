@@ -1,6 +1,9 @@
 library("reshape")
+options(stringsAsFactors=FALSE)
 current.school.year <- '2013-14'
+prior.school.year <- '2012-13'
 precision <- 1
+z.score.precision <- 3
 #
 #non HS minimum N values
 min.N.achievement <-  10
@@ -221,6 +224,8 @@ equity.labels <- c(cut.1="EQUITY_CUT_1", cut.2="EQUITY_CUT_2", "PERCENT_MEETING_
 
 
 #act achievement
+high.school.baseline.achievement.stats <- read.csv(file="const/HighSchoolBaselineStats.csv")
+
 # quantile(achievement.hs[achievement.hs$SCHOOL_YEAR == current.school.year & 
 #                           achievement.hs$N_ACHIEVEMENT_HS >= min.N.achievement.hs &
 #                           achievement.hs$PARTICIPATION_RATE_ACHIEVEMENT_HS >= 90 & 
@@ -332,6 +337,13 @@ total.readiness.labels <- c(cut.1="READINESS_CUT_1", cut.2="READINESS_CUT_2", "R
 #quantile(hs.equity.df[hs.equity.df$N_ACHIEVEMENT > 14 & hs.equity.df$SCHOOL_ID!=state.school.id,"IMPROVEMENT_VALUE"], c(.33,.66))
 #quantile(hs.equity.df[hs.equity.df$N_ACHIEVEMENT > 14 & hs.equity.df$SCHOOL_ID!=state.school.id,"PERCENT_NONPROFICIENT"], c(.33,.66))  
 #based on the above quantiles
+
+#not set by PJP
+subgroup.hs.math.cut <- 17  
+subgroup.hs.reading.cut <- 16
+
+subgroup.labels.hs <- c("SUBGROUP_MATH_HS", "SUBGROUP_READING_HS", "SUBGROUP_CONSOLIDATED_HS")
+
 hs.equity.level.lookup.year <- list(`2012-13` = list(#IMPROVEMENT_VALUE = c(-3.120,2.764),
   #IMPROVEMENT_VALUE = c(-12.085,-7.15),
   IMPROVEMENT_VALUE = c(-3.2,3.4), #once 2013 act cuts were corrected

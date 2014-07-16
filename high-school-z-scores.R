@@ -40,41 +40,24 @@ act.stats <-  aggregate(data.frame(ACT_SCALE_SCORE_MATH = act$ACT_SCALE_SCORE_MA
                                    ACT_SCALE_SCORE_READING = act$ACT_SCALE_SCORE_READING,
                                    ACT_SCALE_SCORE_SCIENCE = act$ACT_SCALE_SCORE_SCIENCE,
                                    ACT_SCALE_SCORE_ENG_WRITING = act$ACT_SCALE_SCORE_ENG_WRITING), 
-                        by=list(),
+                        by=list(rep(1, nrow(act))),
                         agg.fun          
 )
 #These are the baseline values that will be used to compute the standardized ACT scores in 2014 and beyond
 act.stats
 
-calc.z.scores <- function (row) {
-  
-  calc.z.score <- function (i) {
-    subject = names(row)[i]
-    score = as.numeric(row[i])
-    
-    mu = act.stats[[subject]][2] 
-    sigma = act.stats[[subject]][3]
-    (score-mu)/sigma                
-  }
-  
-  z.scores <- unlist(lapply(1:length(row), calc.z.score))
-  
-  
-  names(z.scores) <- c("ACT_Z_SCORE_MATH", "ACT_Z_SCORE_READING", "ACT_Z_SCORE_SCIENCE", "ACT_Z_SCORE_ENG_WRITING")
-  z.scores
-}
 
-act.standardized <- cbind(act, data.frame(t(apply(act[,c("ACT_SCALE_SCORE_MATH","ACT_SCALE_SCORE_READING", "ACT_SCALE_SCORE_SCIENCE", "ACT_SCALE_SCORE_ENG_WRITING")],
-                                                  c(1),
-                                                  calc.z.scores))))
+act.standardized <- cbind(act, calc.z.scores(act, baseline.stats=high.school.baseline.achievement.stats))
+
 
 act.z.stats <-  aggregate(data.frame(ACT_Z_SCORE_MATH = act.standardized$ACT_Z_SCORE_MATH,
                                      ACT_Z_SCORE_READING = act.standardized$ACT_Z_SCORE_READING,
                                      ACT_Z_SCORE_SCIENCE = act.standardized$ACT_Z_SCORE_SCIENCE,
                                      ACT_Z_SCORE_ENG_WRITING = act.standardized$ACT_Z_SCORE_ENG_WRITING), 
-                          by=list(),
+                          by=list(rep(1, nrow(act))),
                           agg.fun          
 )
+#lengths will differ by one
 length(table(act.standardized$ACT_Z_SCORE_MATH))
 length(table(act.standardized$ACT_SCALE_SCORE_MATH))
 head(act.z.stats)

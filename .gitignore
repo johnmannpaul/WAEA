@@ -226,3 +226,4 @@ reporting/insert*.sql
 *.Rproj
 junk/
 const/private/
+MF/

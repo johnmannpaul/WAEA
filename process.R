@@ -4,7 +4,7 @@ source("function-defs.R")
 source("services.R")
 source("initialize-schools.R")
 #start non-high schools
-# source("initialize-paws.R")
+source("initialize-paws.R")
 # source("small-schools.R")
 # source("achievement-bands.R")
 # source("growth.R")

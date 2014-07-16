@@ -1,3 +1,4 @@
+source("z-score-fun.R")
 #based on data/PAWS_ACCOUNTABILITY_LONG.csv
 #and Science-2013 sheet in Achievement.xlsx
 #save(paws, file="data/paws.Rdata")
@@ -50,8 +51,8 @@ with(paws, table(paws[SCHOOL_YEAR=='2012-13' & SCHOOL_ID=='0101001',]$ACCOUNTABI
 
 
 
-#Students with testing status code 'N' do not count for achievement.  We'll be working with this frame for the the nonHS calculations
-paws.df <- paws[paws$SCHOOL_FULL_ACADEMIC_YEAR=="T" & paws$TESTING_STATUS_CODE == "T" & paws$GRADE_ENROLLED != "11", ]
+
+paws.df <- paws[paws$GRADE_ENROLLED != "11" & paws$TESTING_STATUS_CODE %in% c('N','T'), ]
 
 paws.df$SGP <- as.numeric(paws.df$SGP)
 
@@ -88,3 +89,44 @@ paws.df$SCHOOL_ID <- school.ids.paired
 nrow(paws.df[paws.df$SCHOOL_ID=='1001002' & paws.df$GRADE_ENROLLED=='03',])
 
 
+
+##compute baseline statistics for 2012-13
+paws.reading.math <- paws.df[paws.df$SUBJECT_CODE %in% c("MA","RE"),]
+
+paws.stats <-  aggregate(paws.reading.math["STANDARD_PAWS_SCALE_SCORE"], 
+                         by=list(SCHOOL_YEAR=paws.reading.math$SCHOOL_YEAR,
+                                   SUBJECT_CODE=paws.reading.math$SUBJECT_CODE,
+                                 GRADE_ENROLLED=paws.reading.math$GRADE_ENROLLED),
+                         function (rows) {        
+                           c(N=length(which(!is.na(as.numeric(rows)))), MEAN=round(mean(as.numeric(rows), na.rm=TRUE), precision), SD=round(sd(as.numeric(rows), na.rm=TRUE), precision))
+                         }          
+)
+#we have a matrix in the fourth column. So, we'll cast that as a data.frame and bind it to columns 1-3
+paws.stats <- cbind(paws.stats[,1:3], as.data.frame(paws.stats[,4])[,2:3])
+
+paws.z.score.fun <- function (row, precision) {
+  mean.sd <- paws.stats[paws.stats$SCHOOL_YEAR==row[["SCHOOL_YEAR"]] &
+                          paws.stats$SUBJECT_CODE==row[["SUBJECT_CODE"]] &
+                          paws.stats$GRADE_ENROLLED==row[["GRADE_ENROLLED"]],c("MEAN","SD")]
+  standard.score = as.numeric(row[["STANDARD_PAWS_SCALE_SCORE"]])
+  if (nrow(mean.sd) == 0 | is.na(standard.score))
+    NA
+  else
+    round((standard.score - mean.sd$MEAN)/mean.sd$SD, precision)  
+}
+
+paws.df$PAWS_Z_SCORE <-  apply(paws.df[,c("SCHOOL_YEAR", "SUBJECT_CODE", "GRADE_ENROLLED", "STANDARD_PAWS_SCALE_SCORE")], 
+      c(1), 
+      paws.z.score.fun, z.score.precision)
+
+#check the means and sd of the z scores we just computed
+aggregate(paws.df["PAWS_Z_SCORE"], 
+          by=list(SCHOOL_YEAR=paws.df$SCHOOL_YEAR,
+                  SUBJECT_CODE=paws.df$SUBJECT_CODE,
+                  GRADE_ENROLLED=paws.df$GRADE_ENROLLED),
+          function (rows) {        
+            c(N=length(which(!is.na(as.numeric(rows)))), 
+              MEAN=round(mean(as.numeric(rows), na.rm=TRUE), 3), 
+              SD=round(sd(as.numeric(rows), na.rm=TRUE), 3))
+          }
+)
