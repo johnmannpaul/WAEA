@@ -108,7 +108,7 @@ with(combo.agg, combo.agg[SCOPE %in% c("STATE") & SCHOOL_YEAR==current.school.ye
 
 table(combo.agg$SUBGROUP, useNA="ifany")
 combo.agg$SUBGROUP_DESCRIPTION <- unlist(lapply(combo.agg$SUBGROUP, function (x) switch(x,
-                                                                                       ALL='All Students', 
+                                                                                       All='All Students', 
                                                                                        CSG="Consolidated Subgroup", 
                                                                                        FRL="Free And Reduced Lunch", 
                                                                                        IDEA="IDEA",
