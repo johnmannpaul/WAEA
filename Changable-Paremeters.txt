@@ -1,0 +1,27 @@
+What parameters will the PJP set?
+
+High School Readiness 
+---------------------
+
+1)  Decision  table assignments
+
+
+2)  Additional Readiness
+    --------------------
+    1) Hathaway index values  (Hathaway subindicator)
+    2) Verify tested readiness index values (tested readiness subindicator)
+    3) Weighting of the 3 subindicators (additional readiness indicator)
+    4) Meet and exceed cut scores (additional readiness indicator)
+    
+3)  Graduation Rate
+    ------------------
+    1) Meet and exceed cut scores
+
+
+4)  Equity
+    ---------------
+    1) Meet and exceed cut scores
+
+5)  Achievement
+    ---------------
+    1) Meet and exceed cut scores

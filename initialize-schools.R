@@ -44,9 +44,7 @@ with(schools, schools[SCHOOL_ID=='1201056',]$WAEA_SCHOOL_TYPE <<- 2) #Kemmerer A
 with(schools, schools[SCHOOL_ID=='1301058',]$WAEA_SCHOOL_TYPE <<- 2) #Roosevelt High School
 
 
-schools$YEAR <- as.numeric(sapply(schools$SCHOOL_YEAR, function (y) {
-  strsplit(y,'-')[[1]][1]
-})) + 1
+schools$YEAR <- school.years.to.years(schools$SCHOOL_YEAR)
 
 lapply(c("2009-10", "2010-11", "2011-12", "2012-13"),
        function(year) table(schools[schools$SCHOOL_YEAR == year,]$TYPE_CODE))

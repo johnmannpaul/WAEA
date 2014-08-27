@@ -1,9 +1,18 @@
-calc.small.schools <- function (df, schools.df, waea.school.types, excluded.school.ids=c('7700000'), attribute="ACHIEVEMENT") {
+source("constants.R")
+source("function-defs.R")
+
+calc.small.schools <- function (df, 
+                                schools.df, 
+                                waea.school.types,
+                                id.column = "WISER_ID",
+                                excluded.school.ids=c('7700000'), 
+                                min.N=10,
+                                attribute="ACHIEVEMENT") {
   
   #determine "small" schools in df 
   schools.N <- with(df, cast(merge(schools.df[schools.df$WAEA_SCHOOL_TYPE %in% waea.school.types,
                                               c("SCHOOL_YEAR", "SCHOOL_ID")],
-                                   df[, c("SCHOOL_YEAR","SCHOOL_ID","WISER_ID")]), SCHOOL_YEAR+SCHOOL_ID~., 
+                                   df[, c("SCHOOL_YEAR","SCHOOL_ID",id.column)]), SCHOOL_YEAR+SCHOOL_ID~., 
                              function (x) length(unique(x))))
   
   
@@ -14,33 +23,37 @@ calc.small.schools <- function (df, schools.df, waea.school.types, excluded.scho
   
   #merge schools with no scores
   schools.N.0 <- merge(schools.df[schools.df$WAEA_SCHOOL_TYPE %in% waea.school.types,c("SCHOOL_YEAR", "SCHOOL_ID")],
-                       df[, c("SCHOOL_YEAR","SCHOOL_ID","WISER_ID")],
+                       df[, c("SCHOOL_YEAR","SCHOOL_ID",id.column)],
                        all.x=TRUE)
   
-  schools.N.0 <- schools.N.0[is.na(schools.N.0$WISER_ID) & !(schools.N.0$SCHOOL_ID %in% excluded.school.ids),]
+  schools.N.0 <- schools.N.0[is.na(schools.N.0[id.column]) & !(schools.N.0$SCHOOL_ID %in% excluded.school.ids),]
   
-  schools.N <- as.data.frame(rbind(schools.N, data.frame(t(apply(schools.N.0,
-                                                                 c(1),
-                                                                 function (school){
-                                                                   
-                                                                   c(SCHOOL_YEAR = school[["SCHOOL_YEAR"]], SCHOOL_ID=school[["SCHOOL_ID"]], N_ACHIEVEMENT=0)
-                                                                 })))))
+  
+  schools.N <- if (nrow(schools.N.0) > 0)
+    as.data.frame(rbind(schools.N, data.frame(t(apply(schools.N.0,
+                                                                   c(1),
+                                                                   function (school){
+                                                                     
+                                                                     result <- c(SCHOOL_YEAR = school[["SCHOOL_YEAR"]], SCHOOL_ID=school[["SCHOOL_ID"]], 0)
+                                                                     names(result)[length(result)] <- N.label
+                                                                     result
+                                                                   })))))
+  else
+    as.data.frame(schools.N)
   
   
     
   ##cast as numeric
-  schools.N$N.label <- as.numeric(schools.N$N.label)
-  
-  small.schools.achievement <- with(schools.N, schools.N[N_ACHIEVEMENT < min.N.achievement,])
+  schools.N[N.label] <- as.numeric(schools.N[[N.label]])
   
   
-  
+  small.schools <- schools.N[eval(bquote(schools.N[.(N.label)] < min.N)),]
   
   
   #now we need to determine how far back to go 
   #small.achievement <- cast(small.schools.achievement[,c("SCHOOL_YEAR","SCHOOL_ID","N_ACHIEVEMENT")], SCHOOL_ID~SCHOOL_YEAR, fill=0)
-  small.achievement <- merge(cast(schools.N[,c("SCHOOL_YEAR","SCHOOL_ID","N_ACHIEVEMENT")], SCHOOL_ID~SCHOOL_YEAR, fill=0),
-                             data.frame(SCHOOL_ID = unique(small.schools.achievement[,c("SCHOOL_ID")])))
+  small <- merge(cast(schools.N[,c("SCHOOL_YEAR","SCHOOL_ID",N.label)], SCHOOL_ID~SCHOOL_YEAR, fill=0),
+                             data.frame(SCHOOL_ID = unique(small.schools[,c("SCHOOL_ID")])))
   
   
   #small.growth <- cast(small.schools[,c("SCHOOL_YEAR","SCHOOL_ID","N_GROWTH")], SCHOOL_ID~SCHOOL_YEAR, fill=0)
@@ -48,72 +61,107 @@ calc.small.schools <- function (df, schools.df, waea.school.types, excluded.scho
   
   
   #this is a dataframe
-  go.back.achievement <- cbind(SCHOOL_ID = small.achievement[,"SCHOOL_ID"], as.data.frame(t(apply(small.achievement, c(1),
-                                                                                                  FUN=function (school) {
-                                                                                                    compute.N.years(school, min.N.achievement.multiyear)          
-                                                                                                  }
+  go.back <- cbind(SCHOOL_ID = small[,"SCHOOL_ID"], as.data.frame(t(apply(small, c(1),
+                                                                          FUN=function (school) {
+                                                                            compute.N.years(school, min.N)          
+                                                                          }
   ))))
   
   
-  compute.years.back.achievement <- function (school) {
+  compute.years.back <- function (school) {
     
     id <- school[["SCHOOL_ID"]]
     year <- school[["SCHOOL_YEAR"]]
     
-    years.back.achievement <- go.back.achievement[go.back.achievement$SCHOOL_ID==id,][[year]] 
+    years.back <- go.back[go.back$SCHOOL_ID==id,][[year]] 
     
-    years.back.achievement
+    years.back
+    
+  }
+
+  years.back.label <- paste("YEARS_BACK", attribute, sep="_")
+  small.schools[years.back.label] <- apply(small.schools, c(1),
+                                                FUN=compute.years.back)
+  
+  #look at the current year's batch
+  small.schools[small.schools$SCHOOL_YEAR==current.school.year,]
+  
+  #this is how many we can rate
+  table(small.schools[years.back.label])
+  
+  ##now assign back to schools dataframe
+  
+  
+  small.school.label <- paste("SMALL_SCHOOL", attribute, sep="_")
+  small.school.labels <- c(small.school.label, years.back.label)
+  result.schools <- cbind(schools.df[,c("SCHOOL_YEAR", "YEAR", "SCHOOL_ID")], data.frame(t(apply(schools.df[,c("SCHOOL_ID",                                                     
+                                          "SCHOOL_YEAR",                                                     
+                                          "WAEA_SCHOOL_TYPE")], c(1),                                                                                      
+                               FUN=function (school) {
+                                 small.school <- with(small.schools, small.schools[SCHOOL_ID == school[["SCHOOL_ID"]] &
+                                                                                                             SCHOOL_YEAR == school[["SCHOOL_YEAR"]],])
+                                 if (nrow(small.school) == 0)
+                                   result <- c('F', NA)
+                                 else {
+                                   result <- c('T', small.school[,years.back.label])  
+#                                    if (small.school[,years.back.label] < Inf)
+#                                       result <- c('F', small.school[,years.back.label])
+#                                    else
+#                                       result <- c('T', small.school[,years.back.label])  
+                                 }
+                                 names(result) <- small.school.labels
+                                 result
+                               }))))
+  
+  result.schools[years.back.label] <- as.numeric(result.schools[[years.back.label]])
+  
+  #here are your small schools again  
+  result.schools[eval(bquote(result.schools[.(small.school.label)] == 'T')),]
+
+  
+  #these are the ones we can actually do something about
+  small.schools.fix <- result.schools[eval(bquote(result.schools[.(small.school.label)] == 'T' &
+                                                    result.schools[.(years.back.label)] < Inf)),]
+  
+  
+  get.students.years.back <- function (school, df, id.column, years.back.label) {
+    
+    #when 'apply' this function on an empty data.frame
+    #if (is.logical(school) & !all(school))
+    if (length(names(school)) == 0)
+      return(list(NULL))
+    
+    school.year <- school[["SCHOOL_YEAR"]]
+    id <- school[["SCHOOL_ID"]]
+    year <- as.numeric(school[["YEAR"]])
+    
+    years.back <- as.numeric(school[[years.back.label]])
+    
+    scores <- lapply((year-years.back):(year-1),
+                     
+                     function (y) {
+                       df.year <- with(df, df[SCHOOL_ID==id & school.years.to.years(SCHOOL_YEAR) == y,])
+                       #save the original school year for each student in SCHOOL_YEAR_ORIGINAL 
+                       df.year$SCHOOL_YEAR_ORIGINAL <- df.year$SCHOOL_YEAR
+                       df.year$SCHOOL_YEAR <- rep(school.year,nrow(df.year))
+                       df.year[id.column] <- sapply(df.year[[id.column]],
+                                                  function (id) {
+                                                    paste(id,y,sep='.')                                                   
+                                                  })
+                       df.year
+                       
+                     })
+    do.call(rbind, scores)
     
   }
   
-  small.schools.achievement$YEARS_BACK <- apply(small.schools.achievement, c(1),
-                                                FUN=compute.years.back.achievement)
+
+  small.schools.additional.student.records <- do.call(rbind, apply(small.schools.fix[,c("SCHOOL_YEAR", "YEAR", "SCHOOL_ID", years.back.label)], c(1),
+                                                                       FUN=function (school) get.students.years.back(school,
+                                                                                                                     df, 
+                                                                                                                     id.column,
+                                                                                                                     years.back.label)))
   
-  #look at the current year's batch
-  small.schools.achievement[small.schools.achievement$SCHOOL_YEAR==current.school.year,]
-  
-  #this is how many we can rate
-  table(small.schools.achievement$YEARS_BACK)
-  
-  ##now assign back to schools dataframe
-  schools <- schools[, !(names(schools) %in% small.school.labels.achievement)]
-  
-  schools <- cbind(schools, data.frame(t(apply(schools[,c("SCHOOL_ID",                                                     
-                                                          "SCHOOL_YEAR",                                                     
-                                                          "WAEA_SCHOOL_TYPE")], c(1),                                                                                      
-                                               FUN=function (school) {
-                                                 small.school <- with(small.schools.achievement, small.schools.achievement[SCHOOL_ID == school[["SCHOOL_ID"]] &
-                                                                                                                             SCHOOL_YEAR == school[["SCHOOL_YEAR"]],])
-                                                 if (nrow(small.school) == 0)
-                                                   result <- c('F', NA)
-                                                 else 
-                                                   result <- c('T', small.school[,"YEARS_BACK"])
-                                                 names(result) <- small.school.labels.achievement
-                                                 result
-                                               }))))
-  
-  schools$YEARS_BACK_ACHIEVEMENT <- as.numeric(schools$YEARS_BACK_ACHIEVEMENT)
-  
-  #here are your small schools again
-  schools[schools$SMALL_SCHOOL_ACHIEVEMENT=='T',]
-  
-  #these are the ones we can actually do something about
-  small.schools.achievement.fix <- schools[schools$SMALL_SCHOOL_ACHIEVEMENT=='T' & schools$YEARS_BACK_ACHIEVEMENT < Inf,]
-  
-  
-  
-  small.schools.achievement.additional.paws.df <- do.call(rbind, apply(small.schools.achievement.fix[,c("SCHOOL_YEAR", "YEAR", "SCHOOL_ID", "YEARS_BACK_ACHIEVEMENT")], c(1),
-                                                                       FUN=function (school) get.paws.years.back(school, paws.df, "YEARS_BACK_ACHIEVEMENT")))
-  
-  #SCHOOL_YEAR_ORIGINAL is just SCHOOL_YEAR for these rows
-  paws.df$SCHOOL_YEAR_ORIGINAL <- paws.df$SCHOOL_YEAR
-  paws.df <- rbind(paws.df, small.schools.achievement.additional.paws.df)
-  
-  #for calculating participation rate we also have to add the students from the previous years (including those with testing status 'N' from the previous years) to the paws data frame 
-  small.schools.achievement.additional.paws <- do.call(rbind, apply(small.schools.achievement.fix[,c("SCHOOL_YEAR", "YEAR", "SCHOOL_ID", "YEARS_BACK_ACHIEVEMENT")], c(1),
-                                                                    FUN=function (school) get.paws.years.back(school, paws, "YEARS_BACK_ACHIEVEMENT")))
-  paws$SCHOOL_YEAR_ORIGINAL <- paws$SCHOOL_YEAR
-  paws <- rbind(paws, small.schools.achievement.additional.paws)
-  
+  list(result.schools=result.schools, result.students=small.schools.additional.student.records)
   ##end small schools
 }

@@ -17,6 +17,15 @@ library("reshape")
 #   names(result) <- rev(names(school))
 #   result
 # }
+
+school.year.to.year <- function (y) {
+    as.numeric(strsplit(y,'-')[[1]][1]) + 1
+}
+
+school.years.to.years <- function (school.years) {
+  sapply(school.years, school.year.to.year)
+}
+
 increment.school.year <- function (school.year, increment=1) {
   
   do.call(paste, as.list(c(as.numeric(strsplit(school.year,'-')[[1]]) + increment, sep='-')))
@@ -739,32 +748,40 @@ calc.school.achievement.hs <- function (schools) {
 }
 
 
-calc.school.tested.readiness.hs <- function (schools, labels=tested.readiness.labels, min.N = min.N.tested.readiness) {
+
+bind.indicator <- function (schools, 
+                            indicator.df,
+                            indicator.labels.min.N = c(N= "N", score="SCORE", part.rate = "PARTICIPATION_RATE"),
+                            min.N) {
   
-  schools <- schools[, !(names(schools) %in% tested.readiness.labels)]
+  indicator.labels <- names(indicator.df)[!(names(indicator.df) %in% c("SCHOOL_YEAR", "SCHOOL_ID"))]
+  
+  schools <- schools[, !(names(schools) %in% indicator.labels)]
+  
+  process.school <- function (school) {
+    indicator.row <- with(indicator.df, indicator.df[SCHOOL_ID == school[["SCHOOL_ID"]] &
+                                                       SCHOOL_YEAR == school[["SCHOOL_YEAR"]],indicator.labels])
+    
+    if (nrow(indicator.row) == 0)
+      result <- rep(NA, length(indicator.labels))
+    else {
+      result <- as.vector(as.matrix(indicator.row))
+      
+      N <- indicator.row[[indicator.labels.min.N["N"]]]                                        
+      if (N < min.N) {
+        result[which(indicator.labels %in% indicator.labels.min.N[which(names(indicator.labels.min.N) != 'N')])] <- NA  #no score if N is too small
+      }
+      
+    }
+    result <- as.numeric(result) #make numeric
+    names(result) <-indicator.labels
+    result
+  }
   
   cbind(schools, data.frame(t(apply(schools[,c("SCHOOL_ID",                                                     
                                                "SCHOOL_YEAR",                                                     
                                                "WAEA_SCHOOL_TYPE")], c(1),                                                                                      
-                                    FUN=function (school) {
-                                      readiness <- with(tested.readiness.df, tested.readiness.df[SCHOOL_ID == school[["SCHOOL_ID"]] &
-                                                                                                   SCHOOL_YEAR == school[["SCHOOL_YEAR"]],
-                                                                                                 c("TESTED_READINESS", "N_TESTED", "PARTICIPATION_RATE")])
-                                      
-                                      if (nrow(readiness) == 0)
-                                        result <- rep(NA, length(labels))
-                                      else {
-                                        N <- readiness[["N_TESTED"]]
-                                        if (N < min.N) {
-                                          result <- rep(as.numeric(NA), length(labels))
-                                          result[which(names(labels) == "N")] <- N  #no need to calculate anything if N is too small
-                                        } else {                                                   
-                                          result <- as.vector(as.matrix(readiness))
-                                        }
-                                      }
-                                      names(result) <- labels
-                                      result
-                                    }
+                                    FUN=process.school
                                     
   ))))
   
@@ -935,4 +952,54 @@ state.level.aggregate <- function (df, fun, state.id=state.school.id) {
   df.state <- cbind(SCHOOL_ID=rep(state.id, nrow(df.state)), df.state)
   
   rbind(df, df.state)  
+}
+
+#When calling aggregate with vector valued aggregator the result
+#is a data.frame  with single matrix valued column of aggregated values at the end.
+#This function articulates matrix valued columns and returns the resulting data.frame.
+unmatrixfy.df <- function (df, sep="_") {
+  
+  do.call(cbind, lapply(names(df),
+                        function (n) {
+                          
+                          obj <- df[[n]]
+                          
+                          if (class(obj) != "matrix")
+                            df[n]
+                          else{
+                            col.names <- dimnames(obj)[[2]]
+                            result <- do.call(data.frame, 
+                                    sapply(col.names,
+                                           function (n) obj[,n],
+                                           simplify=FALSE))
+                            names(result) <- sapply(col.names, function (x) paste(n, x, sep=sep))
+                            result
+                          }
+                          
+                          
+                        }))
+  
+}
+
+
+#replace NA rows with zeros
+zero.na.rows <- function (df, col.labels) {
+  
+  if (length(col.labels) > 1)
+    t(apply(df[,col.labels],
+            c(1),
+            function (row) {
+              if (sum(is.na(row)) == length(row))
+                rep(0, length(row))
+              else
+                row                       
+            }))
+  else
+    sapply(df[,col.labels],
+          function (row) {
+            if (sum(is.na(row)) == length(row))
+              rep(0, length(row))
+            else
+              row                       
+          })
 }

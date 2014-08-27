@@ -3,6 +3,10 @@ options(stringsAsFactors=FALSE)
 current.school.year <- '2013-14'
 prior.school.year <- '2012-13'
 precision <- 1
+#tested readiness, grade nine credits, and hathaway eligibility subindicators will all 
+#be rounded to the nearest whole number
+precision.readiness <- 0
+precision.add.readiness <- 0
 z.score.precision <- 3
 #
 #non HS minimum N values
@@ -22,6 +26,8 @@ min.N.readiness.hs <- 10
 min.N.equity.hs <- 10
 
 min.N.achievement.hs.multiyear <- 10
+min.N.grade.nine.credits <- 10
+min.N.hath.eligibility <- 10
 
 nonHS.types = c(1,3,4,5)
 HS.types = c(2,4,5)
@@ -262,33 +268,73 @@ calc.index <- function (domain.runs, range) {
   result
 }
 
+readiness.standard.test.types <- c('ACT','PLAN','EXPLORE')
+
+tested.readiness.level1.points <- 20
+tested.readiness.level2.points <- 50
+tested.readiness.level3.points <- 80
+tested.readiness.level4.points <- 100
+
 explore.index.runs <- list(1:14, 15:17, 18:20, 21:25)
 #explore.index.range <- c(0, 40, 80, 100)
-explore.index.range <- c(20, 50, 80, 100)  #2012-13 PJP index
+explore.index.range <- c(tested.readiness.level1.points, 
+                         tested.readiness.level2.points,
+                         tested.readiness.level3.points, 
+                         tested.readiness.level4.points)  #2012-13 PJP index
 #explore_index <- c(rep(0,14), rep(40, 3), rep(80, 3), rep(100,5))
 #names(explore_index) <- c(1:14, 15:17, 18:20, 21:25)
 explore_index <- calc.index(explore.index.runs, explore.index.range)
 
+
 plan.index.runs <- list(1:15, 16:18, 19:21, 22:32)
 #plan.index.range <- c(0,40,80,100)
-plan.index.range <- c(20,50,80,100)  #2012-13 PJP index
+plan.index.range <- c(tested.readiness.level1.points,
+                      tested.readiness.level2.points,
+                      tested.readiness.level3.points,
+                      tested.readiness.level4.points)  #2012-13 PJP index
 plan_index <- calc.index(plan.index.runs, plan.index.range)
 #names(plan_index) <- c(1:15, 16:18, 19:21, 22:32)
 
 act.index.runs <- list(1:16, 17:20, 21:24, 25:36)
 ##act.index.range <- c(0, 40, 80, 100)
-act.index.range <- c(20, 50, 80, 100) #2012-13 PJP index
+act.index.range <- c(tested.readiness.level1.points, 
+                     tested.readiness.level2.points, 
+                     tested.readiness.level3.points, 
+                     tested.readiness.level4.points) #2012-13 PJP index
+
 act_index  <- calc.index(act.index.runs, act.index.range)
+
+
 # act_index <- c(rep(0,16), rep(40, 4), rep(80, 4), rep(100,12))
 # names(act_index) <- c(1:16, 17:20, 21:24, 25:36)
 
-alt.index.runs = as.list(0:3)
-#alt.index.range = c(0,40, 80, 100)
-alt.index.range = c(20,50, 80, 100) #2012-13 PJP index
+
+tested.readiness.alt.level1.points <- 20
+tested.readiness.alt.level2.points <- 50
+tested.readiness.alt.level2.5.points <- 65
+tested.readiness.alt.level3.points <- 80
+tested.readiness.alt.level4.points <- 100
+
+#The only possible percentages are 0, .25, .33, .5,  .66, .75, and 1
+#     1         2        2.5       3         4
+#..., .25) [.25, .5) [.5, .66) [.66, .8) [.8,....
+alt.index.intervals <- c(.25, .5, .66, .8)
+alt.index.runs = as.list(0:4)
+
+alt.index.range = c(tested.readiness.alt.level1.points,
+                    tested.readiness.alt.level2.points, 
+                    tested.readiness.alt.level2.5.points,
+                    tested.readiness.alt.level3.points,
+                    tested.readiness.alt.level4.points) 
+
 alt_index <- calc.index(alt.index.runs, alt.index.range)
 # alt_index <- c(0,40, 80, 100)
 # names(alt_index) <- 0:3
 
+readiness.indeces <- list(ALT=alt_index,
+                          ACT=act_index,
+                          PLAN=plan_index,
+                          EXPLORE=explore_index)
 
 tested.readiness.labels <- c( 
   "TESTED_READINESS", 
@@ -311,6 +357,9 @@ grad.index.labels <- c(Indicator="SCHOOL_GRADUATION_INDEX",
 #hs readiness weights
 # hs.readiness.weights = c(TESTED_READINESS=0.44,
 #                          SCHOOL_GRADUATION_INDEX=0.56)
+
+#hathaway eligibility
+hathaway.eligibility.index <- c(0,70,80,90,100)  #PJP 2014 will define
 
 #PJP 2013 changed to this
 hs.readiness.weights = c(TESTED_READINESS=0.4,
@@ -386,3 +435,6 @@ small.school.hs.labels <- c("SMALL_SCHOOL_HS", "YEARS_BACK_HS")
 small.school.labels.achievement <- c("SMALL_SCHOOL_ACHIEVEMENT", "YEARS_BACK_ACHIEVEMENT")
 small.school.labels.growth <- c("SMALL_SCHOOL_GROWTH", "YEARS_BACK_GROWTH")
 small.school.labels.equity <- c("SMALL_SCHOOL_EQUITY", "YEARS_BACK_EQUITY")
+
+
+##

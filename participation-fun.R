@@ -1,7 +1,7 @@
 calc.participation.rate <- function (df, subject.labels=c("MATH", "READING", "SCIENCE", "ENG_WRITING"),                                      
                                      status.prefix='TESTING_STATUS_CODE', 
                                      status.prefix.sep="_",
-                                     status.codes=c(exempt='X', participated='T', did.not.participate='F'),
+                                     status.codes=c(exempt='X', participated='T', did.not.participate='N'),
                                      total.participation.labels = c("ACHIEVEMENT_TESTED_HS", "ACHIEVEMENT_PARTICIPANTS_HS", "PARTICIPATION_RATE_ACHIEVEMENT_HS"),
                                      precision=1)
 {  
@@ -40,12 +40,16 @@ calc.participation.rate <- function (df, subject.labels=c("MATH", "READING", "SC
   #tail(participation.df)
   
   
+  set.participation <- function (i) {
+    tested <- participation.df[[tested.labels[i]]]
+    participants <- participation.df[[participant.labels[i]]]
+    
+    participation.df[participation.rate.labels[i]] <<- ifelse(participants == 0, NA, round((tested / participants) * 100, precision))                                   
+  }
 
-  #calulate and assigne particpation rate columns
+  #calulate and assign particpation rate columns
   lapply(seq(1,length(subject.labels)),
-         function (i) {
-         participation.df[participation.rate.labels[i]] <<- round((participation.df[tested.labels[i]] / participation.df[participant.labels[i]]) * 100, precision)                                   
-       })
+         set.participation)
   
 
 
@@ -55,12 +59,15 @@ calc.participation.rate <- function (df, subject.labels=c("MATH", "READING", "SC
                                                        function (school) {
                                                          total.tested <- sum(school[tested.labels])
                                                          total.participants <- sum(school[participant.labels])
-                                                         participation.rate.total <- round((total.tested / total.participants) * 100, precision)
+                                                         participation.rate.total <- ifelse(total.participants == 0, 
+                                                                                            NA,
+                                                                                            round((total.tested / total.participants) * 100, precision))
                                                          
                                                          result <- c(total.tested, total.participants, participation.rate.total)
                                                          names(result) <- total.participation.labels
                                                          result
                                                          
                                                        })))
+  participation.df
 
 }
