@@ -32,6 +32,6 @@ source("additional-readiness-types.R")
 # source("grad-rate-ref.R")
 # source("total-readiness.R")
 
-# source("SPL-HS.R")
+source("SPL-HS.R")
 ##finish
 #source("schools-fin.R")

@@ -125,3 +125,20 @@ schools[!is.na(schools$HS_SPL) & schools$HS_SPL !=  schools$HS_SPL_ACCOUNTABILIT
 schools$SPL_ACCOUNTABILITY <- apply(schools[,c("G38_SPL_ACCOUNTABILITY", "HS_SPL_ACCOUNTABILITY")],
                                     c(1),
                                     function (scores) scores[order(scores)][1])
+
+results.files <- dir("results")[grep("schools-2013-14-with-indicators-[0-9]+\\.csv", dir("results"))]
+results.files <- results.files[order(results.files, decreasing=TRUE)]
+result.file <- if (length(results.files) == 0) {
+  "schools-2013-14-with-indicators-001.csv"  
+  
+}else {
+  
+  last.file <- results.files[1]
+  prefix <- strsplit(strsplit(last.file, ".", fixed=TRUE)[[1]][1], "-", fixed=TRUE)
+  raw.index <- paste("00", as.numeric(prefix[[1]][length(prefix[[1]])]) + 1, sep="")
+  index <- substr(raw.index, nchar(raw.index) - 2, nchar(raw.index))
+  
+  paste(do.call(paste, as.list(c(prefix[[1]][1:(length(prefix[[1]])-1)], index, sep="-"))), "csv", sep=".")
+}
+
+write.csv(schools[schools$SCHOOL_YEAR==current.school.year,], file=paste("results", result.file, sep="/"), na="", row.names=FALSE)
