@@ -1,159 +1,187 @@
 source("participation-fun.R")
 source("mean-z-score-fun.R")
 
-#paws.df is long format data: each row is a test event
-below.proficient.priors <- paws.df[paws.df$SUBJECT_CODE %in% c("MA","RE") &
-                                     paws.df$TEST_TYPE %in% c("PAWS-STANDARD", "PAWS Standard") &
-                                     paws.df$ACHIEVEMENT_LEVEL_PRIOR %in% c("1","2"),]
+load("data/g38.achieve.Rdata")
+load("data/paws.Rdata")
+load("data/g38.achieve.lookback.Rdata")
 
-table(below.proficient.priors$GRADE_ENROLLED, useNA="ifany")
+g38.achieve.all.for.equity <- rbind(g38.achieve.lookback,g38.achieve)
 
-subgroup.students <- unique(below.proficient.priors[, c("SCHOOL_YEAR", "WISER_ID", "SCHOOL_ID")])
+g38.achieve.all.for.equity <- g38.achieve.all.for.equity[g38.achieve.all.for.equity$SUBJECT %in% c("Math", "Reading") &
+                                                           g38.achieve.all.for.equity$TEST_TYPE %in% c("PAWS-STANDARD", "PAWS Standard"),]
 
-#scores for all the students in the subgroup
-consolidated.subgroup.df <- merge(subgroup.students, paws.df[paws.df$SUBJECT_CODE %in% c("MA","RE") &
-                                                               paws.df$TEST_TYPE %in% c("PAWS-STANDARD", "PAWS Standard"),])
 
-##calculate participation rate for the subgroup
-subgroup.testing.status.wide <- reshape(consolidated.subgroup.df[,c("SCHOOL_YEAR", 
-                                         "SCHOOL_ID", 
-                                         "WISER_ID",
-                                         "SUBJECT_CODE",
-                                         "TESTING_STATUS_CODE")],
-        v.names=c("TESTING_STATUS_CODE"),
-        idvar=c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID"),
-        timevar = "SUBJECT_CODE",
-        times = c("MA", "RE"),
+sample.stats <- unmatrixfy.df(aggregate(g38.achieve.all.for.equity$SCALE_SCORE,
+                                               by=list(SCHOOL_YEAR=g38.achieve.all.for.equity$SCHOOL_YEAR,
+                                                       SUBJECT=g38.achieve.all.for.equity$SUBJECT,
+                                                       GRADE_ENROLLED=g38.achieve.all.for.equity$GRADE_ENROLLED),
+                                               function (g) c(MEAN=mean(as.numeric(g), na.rm=TRUE),
+                                                              SD=sd(as.numeric(g), na.rm=TRUE))),prepend=FALSE)
+
+g38.achieve.all.for.equity$STD_SCORE <- apply(g38.achieve.all.for.equity[,c("SCHOOL_YEAR", "SUBJECT", "GRADE_ENROLLED", "SCALE_SCORE")],
+                                            c(1),
+                                            function (score) {
+                                              mean <- sample.stats[sample.stats$SCHOOL_YEAR == score[["SCHOOL_YEAR"]] &
+                                                                     sample.stats$SUBJECT == score[["SUBJECT"]] &
+                                                                     sample.stats$GRADE_ENROLLED == score[["GRADE_ENROLLED"]], "MEAN"]
+                                              
+                                              sd <- sample.stats[sample.stats$SCHOOL_YEAR == score[["SCHOOL_YEAR"]] &
+                                                                     sample.stats$SUBJECT == score[["SUBJECT"]] &
+                                                                   sample.stats$GRADE_ENROLLED == score[["GRADE_ENROLLED"]], "SD"]
+                                              
+                                              z_score <- round((as.numeric(score[["SCALE_SCORE"]]) - mean)/sd, 2)
+                                              
+                                              z_score * 20 + 100
+                                              
+                                            })
+
+unmatrixfy.df(aggregate(g38.achieve.all.for.equity$STD_SCORE,
+                        by=list(SCHOOL_YEAR=g38.achieve.all.for.equity$SCHOOL_YEAR,
+                                SUBJECT=g38.achieve.all.for.equity$SUBJECT,
+                                GRADE_ENROLLED=g38.achieve.all.for.equity$GRADE_ENROLLED),
+                        function (g) c(MEAN=mean(as.numeric(g), na.rm=TRUE),
+                                       SD=sd(as.numeric(g), na.rm=TRUE))),prepend=FALSE)
+
+achievement.prior.year <- paws[paws$SCHOOL_YEAR == prior.school.year &
+                                 paws$SUBJECT_CODE %in% c("MA","RE") &
+                                 paws$TEST_TYPE %in% c("PAWS-STANDARD", "PAWS Standard") &
+                                 paws$TESTING_STATUS_CODE == 'T',c("WISER_ID", "SUBJECT_CODE", "STANDARD_PAWS_PERF_LEVEL")]
+
+table(achievement.prior.year$SUBJECT_CODE, useNA="ifany")
+achievement.prior.year$SUBJECT_CODE <- ifelse(achievement.prior.year$SUBJECT_CODE == 'MA', 'Math', 'Reading')
+names(achievement.prior.year) <- c("WISER_ID", "SUBJECT", "PRIOR_PERFORMANCE_LEVEL")
+table(achievement.prior.year$SUBJECT, useNA="ifany")
+
+#nrow(g38.achieve)
+achievement.for.equity <- merge(g38.achieve.all.for.equity[g38.achieve.all.for.equity$SCHOOL_YEAR==current.school.year,],
+                                achievement.prior.year, all.x=TRUE)
+#nrow(g38.achieve)
+
+consolidated.subgroup.students <- data.frame(WISER_ID=unique(achievement.for.equity[achievement.for.equity$PRIOR_PERFORMANCE_LEVEL %in% c('1','2'), "WISER_ID"]),
+                                             CONSOLIDATED_SUBGROUP='T')
+                                                             
+achievement.for.equity <- merge(achievement.for.equity, consolidated.subgroup.students)
+achievement.for.equity$CONSOLIDATED_SUBGROUP <- ifelse(is.na(achievement.for.equity$CONSOLIDATED_SUBGROUP),
+                                                       'F',
+                                                       'T')
+consolidated.subgroup.wide <- reshape(achievement.for.equity[achievement.for.equity$SUBJECT %in% c('Math', 'Reading') &
+                                 achievement.for.equity$CONSOLIDATED_SUBGROUP == 'T',
+                               c("WISER_ID", "SUBJECT", "PERFORMANCE_LEVEL", "PRIOR_PERFORMANCE_LEVEL")],
+        v.names=c("PERFORMANCE_LEVEL", "PRIOR_PERFORMANCE_LEVEL"),
+        timevar="SUBJECT",
+        idvar="WISER_ID",
         direction="wide")
 
-subgroup.particpation.rate <- calc.participation.rate(subgroup.testing.status.wide, 
-                                     subject.labels=c("MA", "RE"),                                      
-                                     status.prefix='TESTING_STATUS_CODE', 
-                                     status.prefix.sep=".",
-                                     status.codes=c(exempt='X', participated='T', did.not.participate='F'),
-                                     total.participation.labels = c("EQUITY_TESTS_EXPECTED_COUNT", "EQUITY_TESTS_ACTUAL_COUNT", "EQUITY_PARTICIPATION_RATE"),
-                                     precision=1)
+# table(consolidated.subgroup.wide[c("PERFORMANCE_LEVEL.Math",
+#                                    "PERFORMANCE_LEVEL.Reading")],
+#       useNA="ifany")
 
-#small schools lookback
-consolidated.subgroup.df <- with(consolidated.subgroup.df,
-                                 consolidated.subgroup.df[SCHOOL_FULL_ACADEMIC_YEAR=='T' &
-                                                            TESTING_STATUS_CODE=='T',])
-schools.subgroup.N <- with(consolidated.subgroup.df, cast(consolidated.subgroup.df[, c("SCHOOL_YEAR", 
-                                                                                       "SCHOOL_ID",   
-                                                                                       "WISER_ID")], SCHOOL_YEAR+SCHOOL_ID~., 
-                                                          function (x) length(unique(x))))
+consolidated.subgroup.wide$PROFICIENT_MATH <- ifelse(is.na(consolidated.subgroup.wide$PERFORMANCE_LEVEL.Math),
+                                                     NA,
+                                                     consolidated.subgroup.wide$PERFORMANCE_LEVEL.Math %in% c('3','4'))
 
-names(schools.subgroup.N)[length(schools.subgroup.N)] <- "N_SUBGROUP"
+consolidated.subgroup.wide$PROFICIENT_READING <- ifelse(is.na(consolidated.subgroup.wide$PERFORMANCE_LEVEL.Reading),
+                                                        NA,
+                                                        consolidated.subgroup.wide$PERFORMANCE_LEVEL.Reading %in% c('3','4'))
 
+consolidated.subgroup.wide$PROFICIENT_MATH_PRIOR <- ifelse(is.na(consolidated.subgroup.wide$PRIOR_PERFORMANCE_LEVEL.Math),
+                                                     NA,
+                                                     consolidated.subgroup.wide$PRIOR_PERFORMANCE_LEVEL.Math %in% c('3','4'))
 
-#merge schools with no scores
-schools.subgroup.N.0 <- merge(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types,c("SCHOOL_YEAR", "SCHOOL_ID")],
-                              consolidated.subgroup.df[, c("SCHOOL_YEAR","SCHOOL_ID","WISER_ID")],
-                              all.x=TRUE)
+consolidated.subgroup.wide$PROFICIENT_READING_PRIOR <- ifelse(is.na(consolidated.subgroup.wide$PRIOR_PERFORMANCE_LEVEL.Reading),
+                                                        NA,
+                                                        consolidated.subgroup.wide$PRIOR_PERFORMANCE_LEVEL.Reading %in% c('3','4'))
 
-schools.subgroup.N.0 <- schools.subgroup.N.0[is.na(schools.subgroup.N.0$WISER_ID) & schools.subgroup.N.0$SCHOOL_ID != state.school.id,]
-
-schools.subgroup.N <- rbind(schools.subgroup.N, data.frame(t(apply(schools.subgroup.N.0,
-                                                                   c(1),
-                                                                   function (school){
-                                                                     
-                                                                     c(SCHOOL_YEAR = school[["SCHOOL_YEAR"]], SCHOOL_ID=school[["SCHOOL_ID"]], N_SUBGROUP=0)
-                                                                   }))))
+#table(consolidated.subgroup.wide[c("PROFICIENT_MATH", "PROFICIENT_READING")], useNA="ifany")
+table(consolidated.subgroup.wide[c("PROFICIENT_MATH_PRIOR", "PROFICIENT_READING_PRIOR")], useNA="ifany")
+prop.table(table(consolidated.subgroup.wide[c("PROFICIENT_MATH_PRIOR", "PROFICIENT_READING_PRIOR")], useNA="ifany"))
 
 
-tail(schools.subgroup.N, 30)
+paws.for.equity.lookback <- paws[paws$SCHOOL_YEAR >= '2011-12' &
+                                   paws$SUBJECT_CODE %in% c("MA","RE") &
+                                   paws$TEST_TYPE %in% c("PAWS-STANDARD", "PAWS Standard") &
+                                   paws$TESTING_STATUS_CODE == 'T',]
+  
+consolidated.subgroup.students.lookback <- data.frame(unique(paws.for.equity.lookback[paws.for.equity.lookback$ACHIEVEMENT_LEVEL_PRIOR %in% c('1','2'), c("SCHOOL_YEAR", "WISER_ID")]),
+                                             CONSOLIDATED_SUBGROUP='T')
 
-schools.subgroup.N$N_SUBGROUP <- as.numeric(schools.subgroup.N$N_SUBGROUP)
-small.schools.subgroup <- data.frame(with(schools.subgroup.N, schools.subgroup.N[N_SUBGROUP < min.N.subgroup,]))
-
-small.subgroup <- merge(cast(schools.subgroup.N[,c("SCHOOL_YEAR","SCHOOL_ID","N_SUBGROUP")], SCHOOL_ID~SCHOOL_YEAR, fill=0),
-                        data.frame(SCHOOL_ID = unique(small.schools.subgroup[,c("SCHOOL_ID")])))
-
-go.back.subgroup <- cbind(SCHOOL_ID = small.subgroup[,"SCHOOL_ID"], as.data.frame(t(apply(small.subgroup, c(1),
-                                                                                          FUN=function (school) {
-                                                                                            compute.N.years(school, min.N.subgroup.multiyear)          
-                                                                                          }
-))))
+table(consolidated.subgroup.students.lookback$SCHOOL_YEAR)
 
 
+consolidated.subgroup.scores.lookback <- merge(g38.achieve.all.for.equity[g38.achieve.all.for.equity$SCHOOL_YEAR < current.school.year,], 
+                                               consolidated.subgroup.students.lookback)
+
+table(consolidated.subgroup.scores.lookback[c("CONSOLIDATED_SUBGROUP", "SCHOOL_YEAR")])
+table(achievement.for.equity[c("CONSOLIDATED_SUBGROUP", "SCHOOL_YEAR")])
 
 
-small.schools.subgroup$YEARS_BACK <- apply(small.schools.subgroup, c(1),
-                                           FUN=function (school) {
-                                             
-                                             id <- school[["SCHOOL_ID"]]
-                                             year <- school[["SCHOOL_YEAR"]]
-                                             
-                                             go.back.subgroup[go.back.subgroup$SCHOOL_ID==id,][[year]] 
-                                             
-                                           })
+achievement.for.equity.all <- rbind(achievement.for.equity[,!(names(achievement.for.equity) %in% "PRIOR_PERFORMANCE_LEVEL")],
+                                    consolidated.subgroup.scores.lookback)
+
+table(achievement.for.equity.all$SCHOOL_YEAR)
+
+equity.g38.indicator <- compute.indicator.long(achievement.for.equity.all, 
+                                               achievement.for.equity.all,
+                                               schools,
+                                               school.types = nonHS.types,
+                                               indicator.label="G38_EQUITY",
+                                               score.prefix="STD_SCORE",
+                                               agg.fun=function (g) c(N_TESTS=length(g),                                                                           
+                                                                      MEAN=round(mean(g), 0)))
 
 
-#look at the current year's batch
-small.schools.subgroup[small.schools.subgroup$SCHOOL_YEAR==current.school.year,]
+equity.g38.labels <- names(equity.g38.indicator$schools)[grep("^G38_EQUITY", 
+                                                          names(equity.g38.indicator$schools))]
 
-#this is how many we can rate
-table(small.schools.subgroup[small.schools.subgroup$SCHOOL_YEAR==current.school.year,]$YEARS_BACK)
+schools[,equity.g38.labels] <- equity.g38.indicator$schools[,equity.g38.labels]
 
+table(schools[c("SCHOOL_YEAR", "G38_EQUITY_SMALL_SCHOOL")])
 
+table(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types,
+              c("SCHOOL_YEAR", "G38_EQUITY_YEARS_BACK")], useNA="ifany")
+equity.g38.participation.rate <- schools[schools$SCHOOL_YEAR==current.school.year &
+                                    schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                                    schools$G38_EQUITY_N >= min.N.subgroup,"G38_EQUITY_PARTICIPATION_RATE"]
 
-small.schools.fix.subgroup <- small.schools.subgroup[small.schools.subgroup$YEARS_BACK < Inf,]
-
-small.schools.fix.subgroup$YEAR <- as.numeric(sapply(small.schools.fix.subgroup$SCHOOL_YEAR, function (y) {
-  strsplit(y,'-')[[1]][1]
-})) + 1
-
-small.schools.subgroup.additional.consolidated.subgroup.df <- do.call(rbind, apply(small.schools.fix.subgroup[,c("SCHOOL_YEAR", "YEAR", "SCHOOL_ID", "YEARS_BACK")], c(1),
-                                                                                   FUN=function (school) get.paws.years.back(school, consolidated.subgroup.df)))
-
-consolidated.subgroup.df <- rbind(consolidated.subgroup.df, small.schools.subgroup.additional.consolidated.subgroup.df)
+equity.g38.participation.rate[order(equity.g38.participation.rate)]
 
 
-schools <- schools[, !(names(schools) %in% small.school.labels.equity)]
+quantile(with(schools,
+              schools[schools$SCHOOL_YEAR==current.school.year &
+                        schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                        schools$G38_EQUITY_N >= min.N.subgroup
+                      ,]$G38_EQUITY_MEAN), 
+         probs=c(.35,.65),
+         type=6)
+
+schools$G38_EQUITY_TARGET_LEVEL <- findInterval(schools$G38_EQUITY_MEAN,
+                                            round(quantile(with(schools,
+                                                                schools[schools$SCHOOL_YEAR==current.school.year &
+                                                                          schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                                                                          schools$G38_EQUITY_N >= min.N.subgroup
+                                                                        ,]$G38_EQUITY_MEAN), 
+                                                           probs=c(.35,.65),
+                                                           type=6),0)) + 1
+
+table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "G38_EQUITY_TARGET_LEVEL")])
+prop.table(table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "G38_EQUITY_TARGET_LEVEL")]),1)
+
+schools[schools$SCHOOL_YEAR==current.school.year &
+          schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+          schools$G38_EQUITY_N >= min.N.subgroup &
+          schools$G38_EQUITY_PARTICIPATION_RATE < 95
+        ,]
+
+# write.csv(schools[schools$SCHOOL_YEAR==current.school.year &
+#                     schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+#                     schools$G38_EQUITY_N >= min.N.subgroup, 
+#                   c("SCHOOL_YEAR", "NAME", "SCHOOL_ID", 
+#                     "GRADE_BAND_COMPOSITION", 
+#                     "G38_EQUITY_YEARS_BACK",
+#                     "G38_EQUITY_N", 
+#                     "G38_EQUITY_MEAN"),],
+#           file="results/g38-equity-cfds.csv",
+#           na="",
+#           row.names=FALSE)
 
 
-schools <- cbind(schools, data.frame(t(apply(schools[,c("SCHOOL_ID",                                                     
-                                                        "SCHOOL_YEAR")], c(1),                                                                                      
-                                             FUN=function (school) {
-                                               small.school <- with(small.schools.subgroup, 
-                                                                    small.schools.subgroup[SCHOOL_ID == school[["SCHOOL_ID"]] &
-                                                                                             SCHOOL_YEAR == school[["SCHOOL_YEAR"]],])
-                                               if (nrow(small.school) == 0)
-                                                 result <- c('F', NA)
-                                               else 
-                                                 result <- c('T', small.school[,"YEARS_BACK"]) 
-                                               names(result) <- small.school.labels.equity
-                                               result
-                                             }))))
-
-
-
-schools$YEARS_BACK_EQUITY <- as.numeric(schools$YEARS_BACK_EQUITY)
-
-
-##calculate mean z-score for the consolidated subgroup
-subgroup.testing.scores.wide <- reshape(consolidated.subgroup.df[,c("SCHOOL_YEAR", 
-                                                                    "SCHOOL_ID", 
-                                                                    "WISER_ID",
-                                                                    "SUBJECT_CODE",
-                                                                    "TESTING_STATUS_CODE",
-                                                                    "PAWS_Z_SCORE")],
-                                        v.names=c("PAWS_Z_SCORE", "TESTING_STATUS_CODE"),
-                                        idvar=c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID"),
-                                        timevar = "SUBJECT_CODE",
-                                        times = c("MA", "RE"),
-                                        direction="wide",
-                                        sep="_")
-
-
-subgroup.mean.z.scores <- calc.mean.score(subgroup.testing.scores.wide, subject.labels=c(MATH="MA", READING="RE"),
-          testing.status.prefix="TESTING_STATUS_CODE",
-          z.score.prefix="PAWS_Z_SCORE",
-          prefix="_",
-          agg.function=function (g) round(100*mean(g),0)) 
-subgroup.mean.z.scores[is.na(subgroup.mean.z.scores$PAWS_Z_SCORE),]
-tail(subgroup.mean.z.scores)
-
-names(subgroup.mean.z.scores) <- c("SCHOOL_YEAR","SCHOOL_ID","MEAN_PAWS_Z_SCORE", "N_SUBGROUP")
-
-write.csv(subgroup.mean.z.scores, file="results/elementary-middle-school-subgroup-mean-z-scores.csv", row.names=FALSE, na="")

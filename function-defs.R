@@ -887,32 +887,27 @@ calc.school.grad.index <- function (schools) {
 }
 
 #could optimize this
-propagate.results.to.paired.schools <- function (schools) {
+propagate.results.to.paired.schools <- function (schools, labels) {
   
   #just propagating the nonHS columns. Don't think any of the schools are paired with high schools or K12s.
-  lapply(c(achievement.labels,
-           achievement.grade.band.labels,
-           growth.labels,
-           equity.labels, 
-           "PARTICIPATION_RATE",
-           #still report them in the summary as 0 indicator schools?
-           #"N_INDICATORS",
-           "SPL",
-           "SPL_ADJUSTED"),
+  lapply(c(labels),
          function (column) {
            
-           schools[[column]] <<- as.numeric(apply(schools[,c("SCHOOL_YEAR", "SCHOOL_ID", column)], 
+           schools[[column]] <<- apply(schools[,c("SCHOOL_YEAR", "SCHOOL_ID")], 
                                                   c(1), 
                                                   function (school) {
                                                     school.year <- school[["SCHOOL_YEAR"]]
-                                                    pairing <- school.pairing.lookup[[school[["SCHOOL_YEAR"]]]]
-                                                    paired.school <- pairing[[school[["SCHOOL_ID"]]]]
-                                                    ifelse(is.null(paired.school), 
-                                                           school[[column]], 
-                                                           schools[schools$SCHOOL_YEAR == school.year & 
-                                                                     schools$SCHOOL_ID == paired.school, c(column)])
+                                                    school.id <- school[["SCHOOL_ID"]]
+                                                    pairing <- school.pairing.lookup[[school.year]]
+                                                    paired.school <- pairing[[school.id]]
                                                     
-                                                  }))
+                                                    ifelse(is.null(paired.school), 
+                                                           schools[schools$SCHOOL_YEAR==school.year &
+                                                                     schools$SCHOOL_ID==school.id, column], 
+                                                           schools[schools$SCHOOL_YEAR == school.year & 
+                                                                     schools$SCHOOL_ID == paired.school, column])
+                                                    
+                                                  })
            
            
          })
@@ -957,7 +952,7 @@ state.level.aggregate <- function (df, fun, state.id=state.school.id) {
 #When calling aggregate with vector valued aggregator the result
 #is a data.frame  with single matrix valued column of aggregated values at the end.
 #This function articulates matrix valued columns and returns the resulting data.frame.
-unmatrixfy.df <- function (df, sep="_") {
+unmatrixfy.df <- function (df, sep="_", prepend=TRUE) {
   
   do.call(cbind, lapply(names(df),
                         function (n) {
@@ -972,7 +967,12 @@ unmatrixfy.df <- function (df, sep="_") {
                                     sapply(col.names,
                                            function (n) obj[,n],
                                            simplify=FALSE))
-                            names(result) <- sapply(col.names, function (x) paste(n, x, sep=sep))
+                            names(result) <- sapply(col.names, function (x) {
+                              if(prepend)
+                                paste(n, x, sep=sep)
+                              else
+                                x})
+                            
                             result
                           }
                           
@@ -983,23 +983,54 @@ unmatrixfy.df <- function (df, sep="_") {
 
 
 #replace NA rows with zeros
-zero.na.rows <- function (df, col.labels) {
+zero.na.rows <- function (df, col.labels, rate.labels=NULL) {
   
-  if (length(col.labels) > 1)
-    t(apply(df[,col.labels],
+  labels <- c(col.labels, rate.labels)
+  
+  if (length(labels) > 1)
+    t(apply(df[,labels],
             c(1),
             function (row) {
               if (sum(is.na(row)) == length(row))
-                rep(0, length(row))
+                c(rep(0, length(col.labels)),
+                  rep(100, length(rate.labels)))
               else
                 row                       
             }))
   else
-    sapply(df[,col.labels],
-          function (row) {
-            if (sum(is.na(row)) == length(row))
-              rep(0, length(row))
+    sapply(df[,labels],
+          function (val) {
+            if (is.na(val))
+              0
             else
-              row                       
+              val                       
           })
+}
+
+
+
+
+calc.SPL.accountability <- function (school, SPL.label, participation.labels) {
+  
+  SPL <- school[[SPL.label]]
+  
+  if (is.na(SPL))
+    NA
+  else {
+    
+    part.rates <- school[participation.labels]
+    lowest.part.rate <- part.rates[order(part.rates)][1]
+    
+    if (lowest.part.rate < 90)
+      1
+    else {
+      
+      if (lowest.part.rate < 95)
+        ifelse(SPL == 1, 1, SPL-1)
+      else
+        SPL                                                                
+    }
+    
+    
+  }
 }

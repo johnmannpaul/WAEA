@@ -22,13 +22,13 @@ hathaway.eligibility$HATH_INDEX_SCORE <- sapply(as.numeric(hathaway.eligibility$
                                                 })
 
 
-hathaway.eligibility.index.option2 <- c(20, 40, 60, 80, 100)
-
-hathaway.eligibility$HATH_INDEX_SCORE_OPT2 <- sapply(hathaway.eligibility$HATH_CAT,
-                                                     function (cat) {
-                                                       
-                                                       hathaway.eligibility.index.option2[as.numeric(cat)]
-                                                     })
+# hathaway.eligibility.index.option2 <- c(20, 40, 60, 80, 100)
+# 
+# hathaway.eligibility$HATH_INDEX_SCORE_OPT2 <- sapply(hathaway.eligibility$HATH_CAT,
+#                                                      function (cat) {
+#                                                        
+#                                                        hathaway.eligibility.index.option2[as.numeric(cat)]
+#                                                     })
 
 hathaway.eligibility.school <- unmatrixfy.df(aggregate(data.frame(HATH_INDEX_SCORE=hathaway.eligibility$HATH_INDEX_SCORE),
                                                      by=list(SCHOOL_YEAR=hathaway.eligibility$ACCOUNTABILITY_YEAR,
@@ -39,21 +39,21 @@ hathaway.eligibility.school <- unmatrixfy.df(aggregate(data.frame(HATH_INDEX_SCO
                                                      }))
 
 
-hathaway.eligibility.school$HATH_INDEX_SCORE_OPT1_MEAN <- unmatrixfy.df(aggregate(data.frame(HATH_INDEX_SCORE_OPT1=hathaway.eligibility$HATH_INDEX_SCORE),
-                                                                                  by=list(SCHOOL_YEAR=hathaway.eligibility$ACCOUNTABILITY_YEAR,
-                                                                                          SCHOOL_ID=hathaway.eligibility$EXIT_RECORD_SCHOOL_ID),
-                                                                                  function (v) {
-                                                                                    c(N=length(v),
-                                                                                      MEAN=round(mean(v), precision.readiness))
-                                                                                  }))$HATH_INDEX_SCORE_OPT1_MEAN
-
-hathaway.eligibility.school$HATH_INDEX_SCORE_OPT2_MEAN <- unmatrixfy.df(aggregate(data.frame(HATH_INDEX_SCORE_OPT2=hathaway.eligibility$HATH_INDEX_SCORE_OPT2),
-                                                       by=list(SCHOOL_YEAR=hathaway.eligibility$ACCOUNTABILITY_YEAR,
-                                                               SCHOOL_ID=hathaway.eligibility$EXIT_RECORD_SCHOOL_ID),
-                                                       function (v) {
-                                                         c(N=length(v),
-                                                           MEAN=round(mean(v), precision.readiness))
-                                                       }))$HATH_INDEX_SCORE_OPT2_MEAN
+# hathaway.eligibility.school$HATH_INDEX_SCORE_OPT1_MEAN <- unmatrixfy.df(aggregate(data.frame(HATH_INDEX_SCORE_OPT1=hathaway.eligibility$HATH_INDEX_SCORE),
+#                                                                                   by=list(SCHOOL_YEAR=hathaway.eligibility$ACCOUNTABILITY_YEAR,
+#                                                                                           SCHOOL_ID=hathaway.eligibility$EXIT_RECORD_SCHOOL_ID),
+#                                                                                   function (v) {
+#                                                                                     c(N=length(v),
+#                                                                                       MEAN=round(mean(v), precision.readiness))
+#                                                                                   }))$HATH_INDEX_SCORE_OPT1_MEAN
+# 
+# hathaway.eligibility.school$HATH_INDEX_SCORE_OPT2_MEAN <- unmatrixfy.df(aggregate(data.frame(HATH_INDEX_SCORE_OPT2=hathaway.eligibility$HATH_INDEX_SCORE_OPT2),
+#                                                        by=list(SCHOOL_YEAR=hathaway.eligibility$ACCOUNTABILITY_YEAR,
+#                                                                SCHOOL_ID=hathaway.eligibility$EXIT_RECORD_SCHOOL_ID),
+#                                                        function (v) {
+#                                                          c(N=length(v),
+#                                                            MEAN=round(mean(v), precision.readiness))
+#                                                        }))$HATH_INDEX_SCORE_OPT2_MEAN
 
 hathaway.eligibility.school.cat <- unmatrixfy.df(aggregate(data.frame(HATH_CAT=as.numeric(hathaway.eligibility$HATH_CAT)),
                                                        by=list(SCHOOL_YEAR=hathaway.eligibility$ACCOUNTABILITY_YEAR,
@@ -97,8 +97,19 @@ head(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & schools$SCHOOL_YEAR==curre
 
 
 # write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & 
-#                     schools$SCHOOL_YEAR==current.school.year,c("SCHOOL_ID", 
+#                     schools$SCHOOL_YEAR==current.school.year &
+#                     schools$HATH_CAT_N >= min.N.hath.eligibility,c("SCHOOL_ID", 
 #                                                                "SCHOOL_YEAR", 
 #                                                                "ALTERNATIVE_SCHOOL", 
 #                                                                "HATH_CAT_N", "HATH_CAT_MEAN", "SMALL_SCHOOL_HATH_ELIGIBILITY")], 
 #           file="results/hathaway-elligibility-subindicator.csv", na="", row.names=FALSE)
+
+
+# write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & 
+#                     !is.na(schools$HATH_INDEX_SCORE_N) &
+#                     schools$HATH_INDEX_SCORE_N >= min.N.hath.eligibility &
+#                     schools$SCHOOL_YEAR==current.school.year ,c("SCHOOL_ID", 
+#                                                                            "SCHOOL_YEAR", 
+#                                                                            "ALTERNATIVE_SCHOOL", 
+#                                                                            "HATH_INDEX_SCORE_N", "HATH_INDEX_SCORE_MEAN")], 
+#           file="results/hathaway-elligibility-subindicator-index.csv", na="", row.names=FALSE)

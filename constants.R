@@ -148,6 +148,24 @@ school.pairing.lookup <- list(`2010-11` = list(`0501002` = '0501010',
                                                `1601003` = '1601005',
                                                `2001010` = '2001009',
                                                `2104001` = '2104002',
+                                               `2301003` = '2301001'),
+                              `2013-14` = list(`0501002` = '0501010',
+                                               `0501013` = '0501010',
+                                               `0701007` = '0701009',
+                                               `0701008` = '0701009',
+                                               `0706001` = '0706002',
+                                               `0725001` = '0725007',
+                                               `0725005` = '0725007',
+                                               `0725003` = '0725007',
+                                               `0801007` = '0801006',
+                                               `1001006` = '1001002',
+                                               `1101021` = '1101013',
+                                               `1101010` = '1101022',
+                                               `1202001` = '1202005',
+                                               `1202003` = '1202004',
+                                               `1601003` = '1601005',
+                                               `2001010` = '2001009',
+                                               `2104001` = '2104002',
                                                `2301003` = '2301001')
 )
 
@@ -161,8 +179,9 @@ SPL.labels <- c("Not Meeting Expectations",
 #reflect the 2012-13 PJP matrix decisions
 SPL.lookup <- list( nonHS = list( `3` = cast(read.csv(file="const/AGE.csv"), ACHIEVEMENT~GROWTH~EQUITY),
                                   `2` = as.matrix(cast(read.csv(file="const/AG.csv"), ACHIEVEMENT~GROWTH))),
-                    HS = list( `3` = cast(read.csv(file="const/ARE.csv"), ACHIEVEMENT~READINESS~EQUITY),
-                               `2` = as.matrix(cast(read.csv(file="const/AR.csv"), ACHIEVEMENT~READINESS))))
+                    HS = list( Readiness = as.matrix(cast(read.csv(file="const/Overall-Readiness.csv"), ADD_READINESS~GRAD_RATE)),
+                               Achievement = as.matrix(cast(read.csv(file="const/Achievement-Equity.csv"), ACHIEVEMENT~EQUITY)),
+                               Overall = as.matrix(cast(read.csv(file="const/Achievement-Readiness.csv"), READINESS~ACHIEVEMENT))))
 
 
 #achievement
@@ -359,7 +378,7 @@ grad.index.labels <- c(Indicator="SCHOOL_GRADUATION_INDEX",
 #                          SCHOOL_GRADUATION_INDEX=0.56)
 
 #hathaway eligibility
-hathaway.eligibility.index <- c(0,70,80,90,100)  #PJP 2014 will define
+hathaway.eligibility.index <- c(20, 40, 60, 80, 100)  #PJP 2014 will define
 
 #PJP 2013 changed to this
 hs.readiness.weights = c(TESTED_READINESS=0.4,

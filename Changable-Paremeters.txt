@@ -11,7 +11,7 @@ High School Readiness
     1) Hathaway index values  (Hathaway subindicator)
     2) Verify tested readiness index values (tested readiness subindicator)
     3) Weighting of the 3 subindicators (additional readiness indicator)
-    4) Meet and exceed cut scores (additional readiness indicator)
+    4) Meet and exceed cut scores (additional readiness type1 indicator)
     
 3)  Graduation Rate
     ------------------

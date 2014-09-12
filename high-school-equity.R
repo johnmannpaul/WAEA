@@ -1,4 +1,3 @@
-source("mean-z-score-fun.R")
 load(file="data/ACT/plan.Rdata")
 load(file="data/ACT/act.achieve.Rdata")
 plan.prior.year <- plan[plan$SCHOOL_YEAR==prior.school.year,] 
@@ -38,140 +37,85 @@ plan.prior.year<- cbind(plan.prior.year[,!(names(plan.prior.year) %in% subgroup.
 table(plan.prior.year$SUBGROUP_MATH_HS, plan.prior.year$SUBGROUP_READING_HS, useNA="ifany")
 table(plan.prior.year$SUBGROUP_CONSOLIDATED_HS)
 
-#Use last year's Plan scores for prototyping in lieu of having available the standard progression 
-#of Prior Plan -> Currrent ACT
-act.current.year <- act.achieve[,c("SCHOOL_YEAR", "SCHOOL_ID",
-                                   "WISER_ID", "SCHOOL_FULL_ACADEMIC_YEAR",
-                                   "TESTING_STATUS_CODE_MATH", "TESTING_STATUS_CODE_READING",
-                                   "WY_SCORE_MATH", "WY_SCORE_READING")]
+#Will limit to Math and Reading.  Also, since the indicator is based on WY_ACT_SCALE_SCORE, this
+#indicator is defined only  for ACT test takers.
+act.current.year <- act.achieve[act.achieve$SUBJECT %in% c("Math", "Reading"),
+                                c("SCHOOL_YEAR", "SCHOOL_ID",
+                                  "WISER_ID", "TEST_TYPE", "SUBJECT", 
+                                  "SCHOOL_FULL_ACADEMIC_YEAR",
+                                  "TESTING_STATUS_CODE", 
+                                  "WY_ACT_SCALE_SCORE")]
 
 
 
 
 nrow(act.current.year)
 
-act.current.year.subgroup <- merge(act.current.year, plan.prior.year[!is.na(plan.prior.year$SUBGROUP_CONSOLIDATED_HS) & 
-                                                                                    plan.prior.year$SUBGROUP_CONSOLIDATED_HS==1,]["WISER_ID"])
+act.current.year.subgroup <- merge(act.current.year, 
+                                   plan.prior.year[!is.na(plan.prior.year$SUBGROUP_CONSOLIDATED_HS) & 
+                                                     plan.prior.year$SUBGROUP_CONSOLIDATED_HS==1,]["WISER_ID"])
 nrow(act.current.year.subgroup)
 
-#participation rates of the consolidated subroup on this year's test
-act.participation.consolidated.subgroup <- calc.participation.rate(act.current.year.subgroup, subject.labels=c("MATH", "READING"),                                      
-                                                                   total.participation.labels = c("EQUITY_HS_TESTS_ACTUAL_COUNT", 
-                                                                                                  "EQUITY_HS_TESTS_EXPECTED_COUNT", 
-                                                                                                  "EQUITY_HS_PARTICIPATION_RATE")) 
-table(findInterval(act.participation.consolidated.subgroup$EQUITY_HS_PARTICIPATION_RATE,
-             c(90, 95)) + 1)
 
-nrow(act.participation.consolidated.subgroup)
-act.participation.consolidated.subgroup <- merge(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types, 
-                                                         c("SCHOOL_YEAR", "SCHOOL_ID")],
-                                                 
-                                                 act.participation.consolidated.subgroup,
-                                                 all=TRUE)
-nrow(act.participation.consolidated.subgroup)
-table(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types,]$SCHOOL_YEAR)
-table(with(act.participation.consolidated.subgroup,
-           act.participation.consolidated.subgroup[!(SCHOOL_ID %in% state.school.id),]$SCHOOL_YEAR))
+equity.hs.indicator <- compute.indicator.long(act.current.year.subgroup, 
+                                              act.current.year.subgroup[act.current.year.subgroup$TEST_TYPE == 'ACT',],
+                                              schools,
+                                              indicator.label="HS_EQUITY",                                         
+                                              score.prefix="WY_ACT_SCALE_SCORE",
+                                              agg.fun=function (g) c(N_SCORES=length(!is.na(g)),
+                                                                     MEAN=round(mean(g, na.rm=TRUE),0)))
 
-#Which schools don't have a consolidated subgroup
-with(act.participation.consolidated.subgroup,
-     act.participation.consolidated.subgroup[SCHOOL_YEAR==current.school.year & 
-                                               is.na(EQUITY_HS_PARTICIPATION_RATE),])
-
-#assign zero N counts for schools that had and empty consolidated subgroup
-act.participation.consolidated.subgroup[,c("MATH_TESTED", 
-                                           "MATH_PARTICIPANTS", 
-                                           "READING_TESTED", 
-                                           "READING_PARTICIPANTS", 
-                                           "EQUITY_HS_TESTS_ACTUAL_COUNT", 
-                                           "EQUITY_HS_TESTS_EXPECTED_COUNT")] <- 
-  zero.na.rows(act.participation.consolidated.subgroup,
-               c("MATH_TESTED", 
-                 "MATH_PARTICIPANTS", 
-                 "READING_TESTED", 
-                 "READING_PARTICIPANTS", 
-                 "EQUITY_HS_TESTS_ACTUAL_COUNT", 
-                 "EQUITY_HS_TESTS_EXPECTED_COUNT"))
-
-
-
-#reduce to FAY only
-table(act.current.year.subgroup$SCHOOL_FULL_ACADEMIC_YEAR, useNA="ifany")
-act.current.year.subgroup.fay <- act.current.year.subgroup[act.current.year.subgroup$SCHOOL_FULL_ACADEMIC_YEAR=='T',]
-nrow(act.current.year.subgroup.fay)
-
-#do small schools
-small.equity.hs <- calc.small.schools(act.current.year.subgroup.fay, schools, HS.types, "WISER_ID", attribute="EQUITY_HS")
-schools <- schools[,!(names(schools) %in% setdiff(names(small.equity.hs$result.schools), names(schools)))]
-schools <- cbind(schools, small.equity.hs$result.schools[,setdiff(names(small.equity.hs$result.schools), names(schools))])
-act.current.year.subgroup.fay$SCHOOL_YEAR_ORIGINAL <- act.current.year.subgroup.fay$SCHOOL_YEAR
-act.current.year.subgroup.fay <- rbind(act.current.year.subgroup.fay, small.equity.hs$result.students)
-
-
-#calculate the Accountability N of the consolidated subgroup
-
-act.current.year.subgroup.fay.equity <- calc.mean.score(act.current.year.subgroup.fay,
-                                                        subject.labels=c(MATH="MATH", READING="READING"),
-                                                        testing.status.prefix="TESTING_STATUS_CODE",
-                                                        score.prefix="WY_SCORE",
-                                                        agg.function=function (g) round(mean(g),0))
-
-names(act.current.year.subgroup.fay.equity) <- c("SCHOOL_YEAR", "SCHOOL_ID", "EQUITY_HS",  "N_EQUITY_HS")
-
-
-#attach participation rates.  The left outerness of this join will bring in schools that had no full year participants
-act.current.year.subgroup.fay.equity <- merge(act.current.year.subgroup.fay.equity,
-                                              act.participation.consolidated.subgroup[,c("SCHOOL_YEAR", "SCHOOL_ID",                                                                                         
-                                                                                         "EQUITY_HS_TESTS_ACTUAL_COUNT", 
-                                                                                         "EQUITY_HS_TESTS_EXPECTED_COUNT",
-                                                                                         "EQUITY_HS_PARTICIPATION_RATE")],
-                                              by=c("SCHOOL_YEAR", "SCHOOL_ID"), all.y=TRUE)
-#set anyone's N_EQUITY_HS who didn't have any full year participants to 0
-act.current.year.subgroup.fay.equity$N_EQUITY_HS <- zero.na.rows(act.current.year.subgroup.fay.equity, "N_EQUITY_HS")
+equity.hs.labels <- setdiff(names(equity.hs.indicator$schools), names(schools))
+schools[,equity.hs.labels] <- equity.hs.indicator$schools[,equity.hs.labels]
 
 
 #who is too small?
-table(act.current.year.subgroup.fay.equity[act.current.year.subgroup.fay.equity$SCHOOL_YEAR==current.school.year,]$N_EQUITY_HS < min.N.equity.hs)
-table(act.current.year.subgroup.fay.equity[act.current.year.subgroup.fay.equity$SCHOOL_YEAR==current.school.year,]$N_EQUITY_HS < 8)
+table(schools[schools$SCHOOL_YEAR==current.school.year,]$HS_EQUITY_N < min.N.equity.hs)
+table(schools[schools$SCHOOL_YEAR==current.school.year,]$HS_EQUITY_N < 8)
 
 
 source("plot-funs.R")
-equity.plot.data <- with(act.current.year.subgroup.fay.equity,
-                         act.current.year.subgroup.fay.equity[SCHOOL_YEAR==current.school.year & 
-                                                                SCHOOL_ID != state.school.id &
-                                                                !is.na(EQUITY_HS), "EQUITY_HS"])
+equity.plot.data <- with(schools,
+                         schools[SCHOOL_YEAR==current.school.year & 
+                                   SCHOOL_ID != state.school.id &
+                                   !is.na(HS_EQUITY_MEAN), "HS_EQUITY_MEAN"])
 plot.hist(equity.plot.data, 20)
 
 
 
 
-#N_EQUITY and ACHIEVEMENT_TESTED_EQUITY_HS are not necessarily identical: N_EQUITY is filtered to FAY 
-#status, but ACHIEVEMENT_TESTED_EQUITY_HS is not.
-head(act.current.year.subgroup.fay.equity[act.current.year.subgroup.fay.equity$SCHOOL_YEAR==current.school.year,])
-table(act.current.year.subgroup.fay.equity$EQUITY_HS_PARTICIPATION_RATE, useNA="ifany")
-quantile(with(act.current.year.subgroup.fay.equity,
-              act.current.year.subgroup.fay.equity[SCHOOL_YEAR == current.school.year &                     
-                          N_EQUITY_HS >= min.N.equity.hs &
-                          !is.na(EQUITY_HS_PARTICIPATION_RATE) &  
-                          EQUITY_HS_PARTICIPATION_RATE >= .90 & 
-                          SCHOOL_ID != state.school.id,]$EQUITY_HS), 
+#N_EQUITY and ACHIEVEMENT_TESTED_HS_EQUITY are not necessarily identical: N_EQUITY is filtered to FAY 
+#status, but ACHIEVEMENT_TESTED_HS_EQUITY is not.
+head(schools[schools$SCHOOL_YEAR==current.school.year,])
+table(schools$HS_EQUITY_PARTICIPATION_RATE, useNA="ifany")
+quantile(with(schools,
+              schools[WAEA_SCHOOL_TYPE %in% HS.types &
+                SCHOOL_YEAR == current.school.year &                     
+                          HS_EQUITY_N >= min.N.equity.hs &
+                          HS_EQUITY_PARTICIPATION_RATE >= .90 & 
+                          SCHOOL_ID != state.school.id,]$HS_EQUITY_MEAN), 
          probs=c(.35,.65),
          type=6)
 
-act.current.year.subgroup.fay.equity$EQUITY_HS_TARGET_LEVEL <- findInterval(act.current.year.subgroup.fay.equity$EQUITY_HS,
-                                                                            round(quantile(with(act.current.year.subgroup.fay.equity,
-                                                                                          act.current.year.subgroup.fay.equity[SCHOOL_YEAR == current.school.year &                     
-                                                                                                                                 N_EQUITY_HS >= min.N.equity.hs &
-                                                                                                                                 !is.na(EQUITY_HS_PARTICIPATION_RATE) &  
-                                                                                                                                 EQUITY_HS_PARTICIPATION_RATE >= .90 & 
-                                                                                                                                 SCHOOL_ID != state.school.id,]$EQUITY_HS), 
-                                                                                     probs=c(.35,.65),
-                                                                                     type=6),0)
-                                                                            ) + 1
+schools$HS_EQUITY_TARGET_LEVEL <- findInterval(schools$HS_EQUITY_MEAN,
+                                               round(quantile(with(schools,
+                                                                   schools[WAEA_SCHOOL_TYPE %in% HS.types &
+                                                                             SCHOOL_YEAR == current.school.year &                     
+                                                                             HS_EQUITY_N >= min.N.equity.hs &
+                                                                             HS_EQUITY_PARTICIPATION_RATE >= .90 & 
+                                                                             SCHOOL_ID != state.school.id,]$HS_EQUITY_MEAN), 
+                                                              probs=c(.35,.65),
+                                                              type=6),0)
+) + 1
 
-schools <- bind.indicator(schools, 
-                          act.current.year.subgroup.fay.equity,
-                          indicator.labels.min.N = c("EQUITY_HS", N="N_EQUITY_HS", "EQUITY_HS_TARGET_LEVEL"),
-                          min.N.equity.hs)
 
-head(schools[schools$SCHOOL_YEAR==current.school.year & schools$WAEA_SCHOOL_TYPE %in% HS.types,])
+head(schools[schools$SCHOOL_YEAR==current.school.year & schools$WAEA_SCHOOL_TYPE %in% HS.types,],50)
+
+
+# write.csv(file="results/high-school-equity-cfds.csv", schools[schools$WAEA_SCHOOL_TYPE %in% HS.types &
+#                                                               schools$SCHOOL_YEAR==current.school.year & 
+#                                                               schools$HS_EQUITY_N >= min.N.equity.hs &
+#                                                                 schools$SCHOOL_ID != state.school.id,
+#                                                             c("SCHOOL_YEAR", "SCHOOL_ID", "ALTERNATIVE_SCHOOL", "HS_EQUITY_PARTICIPATION_RATE", "HS_EQUITY_MEAN")],
+#           na="",
+#           row.names=FALSE)

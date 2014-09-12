@@ -15,25 +15,24 @@ schools$WAEA_SCHOOL_TYPE <- unlist(lapply(schools$GRADES_SERVED,
                                               type.lookup[[x]]                                                                                
                                           }))
 
-schools <- cbind(schools, data.frame(t(apply(schools[,c("SCHOOL_YEAR", "SCHOOL_ID")], c(1),
-                                             function (school) {
-                                               pairing.lookup <- school.pairing.lookup[[school[["SCHOOL_YEAR"]]]]
-                                               paired.school.id <- pairing.lookup[[school[["SCHOOL_ID"]]]]                                               
-#                                                if (is.null(paired.school.id)) {#if forward lookup is null then do a reverse lookup...assumption is that the mapping is 1-1
-#                                                  idx <- which(pairing.lookup == school[["SCHOOL_ID"]])
-#                                                  if (length(idx) > 0)
-#                                                    paired.school.id <- names(pairing.lookup)[[idx]]
-#                                                }
-#                                                  
-                                               if (is.null(paired.school.id))                                                 
-                                                 result <- c(as.character(NA), as.character(NA))
-                                               else {
-                                                 paired.school.name <- with(schools, schools[SCHOOL_ID==paired.school.id & SCHOOL_YEAR == school[["SCHOOL_YEAR"]], "NAME" ])
-                                                 result <- c(paired.school.id, paired.school.name)
-                                               }
-                                               names(result) <- c("PAIRED_SCHOOL_ID", "PAIRED_SCHOOL_NAME")
-                                               result
-                                             }))))
+schools[,c("PAIRED_SCHOOL_ID", "PAIRED_SCHOOL_NAME")] <- t(apply(schools[,c("SCHOOL_YEAR", "SCHOOL_ID")], c(1),
+                                                                 function (school) {
+                                                                   pairing.lookup <- school.pairing.lookup[[school[["SCHOOL_YEAR"]]]]
+                                                                   paired.school.id <- pairing.lookup[[school[["SCHOOL_ID"]]]]                                               
+                                                                   #                                                if (is.null(paired.school.id)) {#if forward lookup is null then do a reverse lookup...assumption is that the mapping is 1-1
+                                                                   #                                                  idx <- which(pairing.lookup == school[["SCHOOL_ID"]])
+                                                                   #                                                  if (length(idx) > 0)
+                                                                   #                                                    paired.school.id <- names(pairing.lookup)[[idx]]
+                                                                   #                                                }
+                                                                   #                                                  
+                                                                   if (is.null(paired.school.id))                                                 
+                                                                     result <- c(as.character(NA), as.character(NA))
+                                                                   else {
+                                                                     paired.school.name <- with(schools, schools[SCHOOL_ID==paired.school.id & SCHOOL_YEAR == school[["SCHOOL_YEAR"]], "NAME" ])
+                                                                     result <- c(paired.school.id, paired.school.name)
+                                                                   }                                                                   
+                                                                   result
+                                                                 }))
 
 #fix some of the high schools manually
 #Even though they appear as type 5, there are so few 7th and 8th graders historically, that they would not even meet minimum N requirements.
@@ -80,3 +79,40 @@ load(file="data/school-enrollment.Rdata")
 schools <- merge(schools, school_enrollment, all.x=TRUE)
 schools$ENROLLMENT <- as.numeric(schools$ENROLLMENT)
 nrow(schools[is.na(schools$ENROLLMENT),])
+
+
+#Label nonHS schools as "grades below 7 only", "grades above 6 only", or "mixed grades".
+#We assign this label to all schools, but what we are really interesting in is the resulting partition on nonHS schools, for
+#achievement impact data.
+schools$GRADE_BAND_COMPOSITION <- apply(schools[c("WAEA_SCHOOL_TYPE",
+                                                  "LOW_GRADE",
+                                                  "HIGH_GRADE")],
+                                        c(1),
+                                        function (school) {
+                                          type <- as.numeric(school[["WAEA_SCHOOL_TYPE"]])
+                                          if (type %in% HS.types & type != 4) #exclude K-12s
+                                            "> 6 only"
+                                          else {
+                                            
+                                            low.grade <- school[["LOW_GRADE"]]
+                                            
+                                            if (!(low.grade %in% c('KG', 'PK')) & as.numeric(low.grade) > 6)
+                                              "> 6 only"
+                                            else {
+                                              
+                                              high.grade <- as.numeric(school[["HIGH_GRADE"]])
+                                              
+                                              if (high.grade < 7)
+                                                "< 7 only"
+                                              else
+                                                "mixed"
+                                            }
+                                            
+                                          }
+                                        }
+)
+
+table(schools[schools$SCHOOL_YEAR==current.school.year, c("WAEA_SCHOOL_TYPE", "GRADE_BAND_COMPOSITION")])
+
+schools[schools$SCHOOL_YEAR==current.school.year & 
+          (schools$WAEA_SCHOOL_TYPE == 1 & schools$GRADE_BAND_COMPOSITION=='> 6 only' | schools$WAEA_SCHOOL_TYPE == 5), c("LOW_GRADE", "HIGH_GRADE")]

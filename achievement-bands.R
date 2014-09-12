@@ -1,141 +1,298 @@
-              
-PROFICIENT <- ifelse(paws.df$ACCOUNTABILITY_PERF_LEVEL %in% c("3","4"), 1, 0)
+load("data/g38.achieve.Rdata")
+load("data/g38.achieve.lookback.Rdata")
+
+g38.achieve.all <- rbind(g38.achieve.lookback,g38.achieve)
+
+table(g38.achieve.all$SCHOOL_YEAR)
+
+g38.achieve.all$GRADE_BAND <- unlist(lapply(g38.achieve.all$GRADE_ENROLLED,
+                                 function (x) {
+                                   if (is.na(x))
+                                     NA
+                                   else
+                                     band.lookup[[x]]                                                                                
+                                 }))
 
 
+compute.grade.band.achievement <- function (band) {
+  indicator.label <- paste("ACHIEVEMENT_G38_B", band, sep="")
+  
+  #limit scores to current band
+  student.df.scores <- g38.achieve.all[g38.achieve.all$GRADE_BAND==band,]
+  
+  #limit scores to FAY and tests taken
+  student.df.fay <- student.df.scores[student.df.scores[["SCHOOL_FULL_ACADEMIC_YEAR"]] == 'T' &
+                                        student.df.scores[["TESTING_STATUS_CODE"]] == "T",]   
+  
+  
+  achievement.indicator <- unmatrixfy.df(calc.mean.score(student.df.fay, 
+                                                         testing.status.prefix = "TESTING_STATUS_CODE",
+                                                         score.prefix="PERFORMANCE_LEVEL",
+                                                         prefix.sep="_",
+                                                         agg.function=function (g) c(N_TESTS=length(g),
+                                                                                     N_PROFICIENT_TESTS=sum(ifelse(g %in% c('3','4'), 1, 0)),
+                                                                                     PERCENT_PROFICIENT=round((sum(ifelse(g %in% c('3','4'), 1, 0))/length(g))*100, 0)),
+                                                         already.long=TRUE), prepend=FALSE)
+  
+  
+  names(achievement.indicator) <- sapply(names(achievement.indicator), 
+                                         function (n) if (n %in% c("SCHOOL_YEAR","SCHOOL_ID")) n else paste(indicator.label, n, sep="_"),
+                                         USE.NAMES=FALSE)
 
-achievement <- aggregate(data.frame(PROFICIENT=PROFICIENT, N=rep(1,length(PROFICIENT))), 
-                         by=list(SCHOOL_YEAR=paws.df$SCHOOL_YEAR, 
-                                 SCHOOL_ID=paws.df$SCHOOL_ID,
-                                 GRADE_BAND=paws.df$GRADE_BAND), 
-                         sum)
-
-achievement.state <- aggregate(data.frame(PROFICIENT=PROFICIENT, N=rep(1,length(PROFICIENT))), 
-                               by=list(SCHOOL_YEAR=paws.df$SCHOOL_YEAR, 
-                                       GRADE_BAND=paws.df$GRADE_BAND), 
-                               sum)
-
-achievement.state <- cbind(SCHOOL_ID=rep(state.school.id, nrow(achievement.state)), achievement.state)
-
-achievement <- rbind(achievement, achievement.state)
-
-achievement$PERCENT_PROFICIENT <- round(achievement$PROFICIENT/achievement$N * 100, 1)
-
-
-paws.tested <- with(paws.df, paws.df[TESTING_STATUS_CODE == "T", c("SCHOOL_YEAR", 
-                                                                   "SCHOOL_ID",   
-                                                                   "GRADE_BAND",
-                                                                   "SCHOOL_YEAR_ORIGINAL",
-                                                                   "WISER_ID")])
-
-paws.tested.school <- cast(paws.tested, SCHOOL_YEAR+SCHOOL_ID~., 
-                           function (x) length(unique(x)))
-
-#for the state value we are counting scores from previous years that have been added to buttress small schools
-paws.tested.state <- cast(paws.tested, SCHOOL_YEAR~., value="WISER_ID",
-                          function (x) length(unique(x)))
-
-paws.tested.state <- cbind(SCHOOL_ID = rep(state.school.id, nrow(paws.tested.state)), paws.tested.state)
-paws.tested.school <- rbind(paws.tested.school, paws.tested.state)
-
-names(paws.tested.school)[3] <- "ACCOUNTABILITY_N"
-
-head(paws.tested.school)
-tail(paws.tested.school)
-##now by band
-paws.tested.school.band <- cast(paws.tested, SCHOOL_YEAR+SCHOOL_ID+GRADE_BAND~.,  
-                                function (x) length(unique(x)))
-
-paws.tested.school.band.state <- cast(paws.tested, SCHOOL_YEAR+GRADE_BAND~.,  value="WISER_ID",
-                                      function (x) length(unique(x)))
-
-paws.tested.school.band.state <- cbind(SCHOOL_ID=rep(state.school.id, nrow(paws.tested.school.band.state)), paws.tested.school.band.state)
-paws.tested.school.band <- rbind(paws.tested.school.band, paws.tested.school.band.state)
+  indicator.labels.min.N <- names(achievement.indicator)[(ncol(achievement.indicator)-1):ncol(achievement.indicator)]
+  names(indicator.labels.min.N) <- c("indicator.score","N")
+  
+  achievement.indicator <- merge(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types, 
+                                         c("SCHOOL_YEAR","SCHOOL_ID")],                           
+                                 achievement.indicator,
+                                 all=TRUE)
+  
+  N.labels <- setdiff(names(achievement.indicator)[grep(paste(indicator.label, "N", sep="_"), 
+                                                        names(achievement.indicator),
+                                                        fixed=TRUE)], c("SCHOOL_YEAR","SCHOOL_ID"))
+  
+  achievement.indicator[,N.labels] <- zero.na.rows(achievement.indicator,
+                                                   N.labels)
+  
+  achievement.labels <- names(achievement.indicator)[grep(paste("^",indicator.label, sep=""), 
+                                                          names(achievement.indicator))]
+  
+  schools[,achievement.labels] <<- bind.indicator(schools, 
+                                                  achievement.indicator,                               
+                                                  indicator.labels.min.N = indicator.labels.min.N,
+                                                  min.N.achievement)[,achievement.labels]
+}
 
 
+lapply(1:2,
+       compute.grade.band.achievement)
 
-names(paws.tested.school.band)[4] <- "ACCOUNTABILITY_N_BAND"
 
-head(paws.tested.school.band)
-tail(paws.tested.school.band)
-# paws.df.tested <- with(paws.df, paws.df[TESTING_STATUS_CODE == "T",])
-# achievement.subject <- aggregate(data.frame(N=rep(1,nrow(paws.df.tested))), 
-#                                  by=list(SCHOOL_YEAR=paws.df.tested$SCHOOL_YEAR, 
-#                                          SUBJECT_CODE=paws.df.tested$SUBJECT_CODE,
-#                                          SCHOOL_ID=paws.df.tested$SCHOOL_ID), 
-#                                  sum)
+# write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+#           schools$SCHOOL_YEAR == current.school.year &
+#           schools$ACHIEVEMENT_G38_B1_N >= min.N.achievement,c("SCHOOL_YEAR", "SCHOOL_ID", "ACHIEVEMENT_G38_B1_N", "ACHIEVEMENT_G38_B1_PERCENT_PROFICIENT")],
+#           file="results/g38-achievement-band-1-cfd.csv",
+#           na="",
+#           row.names=FALSE)
 # 
-# 
-# accountability.n_old <- aggregate(data.frame(OLD_ACCOUNTABILITY_N=achievement.subject$N), 
-#                                by=list(SCHOOL_YEAR=achievement.subject$SCHOOL_YEAR, 
-#                                        SCHOOL_ID=achievement.subject$SCHOOL_ID), 
-#                                max)
+# write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+#           schools$SCHOOL_YEAR == current.school.year &
+#           schools$ACHIEVEMENT_G38_B2_N >= min.N.achievement,c("SCHOOL_YEAR", "SCHOOL_ID", "ACHIEVEMENT_G38_B2_N", "ACHIEVEMENT_G38_B2_PERCENT_PROFICIENT")],
+#           file="results/g38-achievement-band-2-cfd.csv",
+#           na="",
+#           row.names=FALSE)
+
+achievement.g38.indicator <- compute.indicator.long(g38.achieve.all, 
+                                                    g38.achieve.all,
+                                                    schools,
+                                                    school.types = nonHS.types,
+                                                    indicator.label="ACHIEVEMENT_G38_ALL",
+                                                    score.prefix="PERFORMANCE_LEVEL",
+                                                    agg.fun=function (g) c(N_TESTS=length(g),
+                                                                          N_PROFICIENT_TESTS=sum(ifelse(g %in% c('3','4'), 1, 0)),
+                                                                          PERCENT_PROFICIENT=round((sum(ifelse(g %in% c('3','4'), 1, 0))/length(g))*100, 0)))
+
+achievement.labels <- names(achievement.g38.indicator$schools)[grep("^ACHIEVEMENT_G38_ALL", 
+                                                                   names(achievement.g38.indicator$schools))]
+
+schools[,achievement.labels] <- achievement.g38.indicator$schools[,achievement.labels]
+
+table(schools[c("SCHOOL_YEAR", "ACHIEVEMENT_G38_ALL_SMALL_SCHOOL")])
+
+schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                    schools$SCHOOL_YEAR == current.school.year &
+                    schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement,]
+
+schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+          schools$SCHOOL_YEAR == current.school.year &
+          schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement &
+          is.na(schools$ACHIEVEMENT_G38_ALL_PARTICIPATION_RATE),]
+
+g38.participation.rate <- schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+          schools$SCHOOL_YEAR == current.school.year &
+          schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement,"ACHIEVEMENT_G38_ALL_PARTICIPATION_RATE"]
+
+g38.participation.rate[order(g38.participation.rate)]
 
 
-#achievement <- achievement[, !(names(achievement) %in% c("OLD_ACCOUNTABILITY_N", "ACCOUNTABILITY_N"))]
+#compare quantiles for grade bands 1 and 2
+quantile(with(schools,
+              schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                        schools$SCHOOL_YEAR == current.school.year &
+                        schools$ACHIEVEMENT_G38_B1_N >= min.N.achievement
+                        ,]$ACHIEVEMENT_G38_B1_PERCENT_PROFICIENT), 
+         probs=c(.35,.65),
+         type=6)
 
-#achievement <- merge(achievement, accountability.n_old)
-achievement <- merge(achievement, paws.tested.school)
-achievement <- merge(achievement, paws.tested.school.band)
-head(with(achievement, achievement[SCHOOL_YEAR==current.school.year,]))
-tail(with(achievement, achievement[SCHOOL_YEAR==current.school.year,]))
+quantile(with(schools,
+              schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                        schools$SCHOOL_YEAR == current.school.year &
+                        schools$ACHIEVEMENT_G38_B2_N >= min.N.achievement
+                      ,]$ACHIEVEMENT_G38_B2_PERCENT_PROFICIENT), 
+         probs=c(.35,.65),
+         type=6)
+
+#compare quantiles for grade bands 1 and 2 on a more nuanced scale
+quantile(with(schools,
+              schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                        schools$SCHOOL_YEAR == current.school.year &
+                        schools$ACHIEVEMENT_G38_B1_N >= min.N.achievement
+                      ,]$ACHIEVEMENT_G38_B1_PERCENT_PROFICIENT), 
+         probs=seq(from=0, to=1, by=.1),
+         type=6)
+
+quantile(with(schools,
+              schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                        schools$SCHOOL_YEAR == current.school.year &
+                        schools$ACHIEVEMENT_G38_B2_N >= min.N.achievement
+                      ,]$ACHIEVEMENT_G38_B2_PERCENT_PROFICIENT), 
+         probs=seq(from=0, to=1, by=.1),
+         type=6)
+
+grade.bands.ttest <- t.test(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                                      schools$SCHOOL_YEAR == current.school.year &
+                                      schools$ACHIEVEMENT_G38_B1_N >= min.N.achievement
+                                    ,]$ACHIEVEMENT_G38_B1_PERCENT_PROFICIENT,
+                            schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                                      schools$SCHOOL_YEAR == current.school.year &
+                                      schools$ACHIEVEMENT_G38_B2_N >= min.N.achievement
+                                    ,]$ACHIEVEMENT_G38_B2_PERCENT_PROFICIENT,
+                         alternative="two.sided",
+                         var.equal = TRUE)
+
+grade.bands.ttest
+
+#examine the assumption that the variances are equal
+grade.bands.vartest <- var.test(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                                       schools$SCHOOL_YEAR == current.school.year &
+                                       schools$ACHIEVEMENT_G38_B1_N >= min.N.achievement
+                                     ,]$ACHIEVEMENT_G38_B1_PERCENT_PROFICIENT,
+                             schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                                       schools$SCHOOL_YEAR == current.school.year &
+                                       schools$ACHIEVEMENT_G38_B2_N >= min.N.achievement
+                                     ,]$ACHIEVEMENT_G38_B2_PERCENT_PROFICIENT,
+                             alternative="two.sided")
+
+grade.bands.vartest
 
 
 
-#with(achievement, achievement[OLD_ACCOUNTABILITY_N != ACCOUNTABILITY_N,])
-##look at a school where old accountability n > accountability n
+#conclusion: In 2013-14 there is so little difference in the two bands within 
+#the 20% and 80% range that it there is no longer justification for using cuts 
+#based on two separate grade bands.  One set of cuts will be determined based on 
+#combined achievement from both bands.
 
-##look at 35% and 65% percentiles by grade band in the year 2011-12 for schools with at least 5 participants
+schools$ACHIEVEMENT_G38_ALL_TARGET_LEVEL <- findInterval(schools$ACHIEVEMENT_G38_ALL_PERCENT_PROFICIENT,
+                                                    round(quantile(with(schools,
+                                                                        schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                                                                                  schools$SCHOOL_YEAR == current.school.year &
+                                                                                  schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement &
+                                                                                  schools$ACHIEVEMENT_G38_ALL_PARTICIPATION_RATE > 0.9
+                                                                                ,]$ACHIEVEMENT_G38_ALL_PERCENT_PROFICIENT), 
+                                                                   probs=c(.35,.65),
+                                                                   type=6)
+                                                          ,0)) + 1
 
-# lapply(seq(1,3), 
-#        function (band) {
-#          quantile(achievement[achievement$SCHOOL_YEAR == current.school.year & 
-#                                 achievement$ACCOUNTABILITY_N > 5 &
-#                                 achievement$GRADE_BAND == band,]$PERCENT_PROFICIENT, 
-#                   probs=c(.35,.65))
-#       
-# })
+# write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+#                     schools$SCHOOL_YEAR == current.school.year &
+#                     schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement, 
+#                   c("SCHOOL_YEAR", "SCHOOL_ID", 
+#                     "GRADE_BAND_COMPOSITION", 
+#                     "ACHIEVEMENT_G38_ALL_N", 
+#                     "ACHIEVEMENT_G38_ALL_PARTICIPATION_RATE", 
+#                     "ACHIEVEMENT_G38_ALL_PERCENT_PROFICIENT"),],
+#           file="results/g38-achievement-cfds.csv",
+#           na="",
+#           row.names=FALSE)
 
+table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "ACHIEVEMENT_G38_ALL_TARGET_LEVEL")])
+prop.table(table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "ACHIEVEMENT_G38_ALL_TARGET_LEVEL")]),1)
 
-##look at proficiency and achievment N by grade band
-percent.proficient.band <- with(achievement, 
-                                cast(achievement[,c("SCHOOL_YEAR", "SCHOOL_ID", "GRADE_BAND", "PERCENT_PROFICIENT")],
-                                     SCHOOL_YEAR+SCHOOL_ID~GRADE_BAND))
-
-names(percent.proficient.band)[3:4] <- achievement.grade.band.labels[1:2]
-with(percent.proficient.band, head(percent.proficient.band[SCHOOL_YEAR=='2012-13',]))
-
-
-accountability.N.band <- with(achievement, 
-                              cast(achievement[,c("SCHOOL_YEAR", "SCHOOL_ID", "GRADE_BAND", "ACCOUNTABILITY_N_BAND")],
-                                   SCHOOL_YEAR+SCHOOL_ID~GRADE_BAND))
-with(accountability.N.band, head(accountability.N.band[SCHOOL_YEAR=='2012-13',]))
-
-names(accountability.N.band)[3:4] <- achievement.grade.band.labels[3:4]
-
-achievement.bands <- merge(percent.proficient.band, accountability.N.band)
-
-
-lapply(seq(1,3), 
-       function (band) {
-         quantile(achievement[achievement$SCHOOL_YEAR == current.school.year & achievement$SCHOOL_ID != state.school.id &
-                                achievement$ACCOUNTABILITY_N_BAND > min.N.achievement &
-                                achievement$GRADE_BAND == band,]$PERCENT_PROFICIENT, 
-                  probs=c(.35,.65))
-         
-       })
+quantile(with(schools,
+              schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                        schools$SCHOOL_YEAR == current.school.year &
+                        schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement
+                      ,]$ACHIEVEMENT_G38_ALL_PERCENT_PROFICIENT), 
+         probs=c(.35,.65),
+         type=6)
 
 
+quantile(with(schools,
+              schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types & schools$GRADE_BAND_COMPOSITION=='> 6 only' &
+                        schools$SCHOOL_YEAR == current.school.year &
+                        schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement 
+                      ,]$ACHIEVEMENT_G38_ALL_PERCENT_PROFICIENT), 
+         probs=c(.35,.65),
+         type=6)
 
 
-##assign achievement SPL
-schools <- calc.school.achievement(schools)
+quantile(with(schools,
+              schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types & schools$GRADE_BAND_COMPOSITION=='mixed' &
+                        schools$SCHOOL_YEAR == current.school.year &
+                        schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement 
+                      ,]$ACHIEVEMENT_G38_ALL_PERCENT_PROFICIENT), 
+         probs=c(.35,.65),
+         type=6)
 
-schools <- merge(schools, achievement.bands, all.x=TRUE)
+
+quantile(with(schools,
+              schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types & schools$GRADE_BAND_COMPOSITION=='< 7 only' &                        
+                        schools$SCHOOL_YEAR == current.school.year &
+                        schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement 
+                      ,]$ACHIEVEMENT_G38_ALL_PERCENT_PROFICIENT), 
+         probs=c(.35,.65),
+         type=6)
 
 
-#look at distribution of computed target levels
-table(schools[schools$SCHOOL_YEAR==current.school.year,]$ACHIEVEMENT_TARGET_LEVEL)
-schools[schools$SCHOOL_ID==state.school.id,]
+junior.highs.pp <- schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types & schools$GRADE_BAND_COMPOSITION=='> 6 only' &
+          schools$SCHOOL_YEAR == current.school.year &
+          schools$ACHIEVEMENT_G38_B2_N >= min.N.achievement 
+        ,]$ACHIEVEMENT_G38_B2_PERCENT_PROFICIENT
+
+junior.highs.pp
+
+mixed.grades.pp <- schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types & schools$GRADE_BAND_COMPOSITION=='mixed' &
+                             schools$SCHOOL_YEAR == current.school.year &
+                             schools$ACHIEVEMENT_G38_B2_N >= min.N.achievement 
+                           ,]$ACHIEVEMENT_G38_B2_PERCENT_PROFICIENT
+mixed.grades.pp
+#Perform a ttest to examine the hypothesis that 7th and 8th graders at " > 6" schools
+#have a lower percent proficient than 7th and 8th gradders at "mixed" schools.
+#Perorm this test in the face of the assumption that the variances are equal.
+grade.78.ttest <- t.test(junior.highs.pp,
+       mixed.grades.pp,
+       alternative="less",
+       var.equal = TRUE)
+
+grade.78.ttest
+
+#examine the assumption that the variances are equal
+grade.78.vartest <- var.test(junior.highs.pp,
+                             mixed.grades.pp,
+                             alternative="two.sided")
+
+grade.78.vartest
+
+##check that we have a disjoint partition of the nonHS schools
+nrow(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types & schools$GRADE_BAND_COMPOSITION=='> 6 only' &
+          schools$SCHOOL_YEAR == current.school.year &
+          schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement 
+        ,]) +
+nrow(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types & schools$GRADE_BAND_COMPOSITION=='mixed' &
+               schools$SCHOOL_YEAR == current.school.year &
+               schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement 
+             ,]) +
+nrow(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types & schools$GRADE_BAND_COMPOSITION=='< 7 only' &
+               schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+               schools$SCHOOL_YEAR == current.school.year &
+               schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement 
+             ,])  
+  
+nrow(schools[
+          schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+          schools$SCHOOL_YEAR == current.school.year &
+          schools$ACHIEVEMENT_G38_ALL_N >= min.N.achievement 
+        ,])
 
 
 

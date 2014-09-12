@@ -1,6 +1,4 @@
 source("constants.R")
-source('db-functions.R')
-source('const/private/db.R')
 
 
 load(file="data/ACT/explore.Rdata")
@@ -9,85 +7,72 @@ load(file="data/ACT/act.Rdata")
 
 #massaging 2012-13 data into format expected by 2013-14 calculation
 
-#there was no writing
-act.readiness <- cbind(act[,c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID", "GRADE_ENROLLED", "SCHOOL_FULL_ACADEMIC_YEAR", 
-                        "TEST_TYPE",
-                        "TESTING_STATUS_CODE_COMPOSITE", "TESTING_STATUS_CODE_MATH", "TESTING_STATUS_CODE_READING",
-                        "TESTING_STATUS_CODE_SCIENCE")], TESTING_STATUS_CODE_WRITING=rep('X', nrow(act)), act[,c("ACT_SCALE_SCORE_COMPOSITE", "WDE_PERFORMANCE_LEVEL_MATH", "WDE_PERFORMANCE_LEVEL_READING",
-                        "WDE_PERFORMANCE_LEVEL_SCIENCE")], WDE_PERFORMANCE_LEVEL_WRITING=rep(NA, nrow(act)))
 
-#Standard takers are exempt from the subject tests and alternate takers are exempt from the composite test for purposes of tested readiness
-act.readiness[,c("TESTING_STATUS_CODE_COMPOSITE", 
-                 "TESTING_STATUS_CODE_MATH",
-                 "TESTING_STATUS_CODE_READING",
-                 "TESTING_STATUS_CODE_SCIENCE", 
-                 "TESTING_STATUS_CODE_WRITING")] <- data.frame(t(apply(act.readiness[,c("TEST_TYPE",
-                                                                                        "TESTING_STATUS_CODE_COMPOSITE", 
-                                                                                        "TESTING_STATUS_CODE_MATH",
-                                                                                        "TESTING_STATUS_CODE_READING",
-                                                                                        "TESTING_STATUS_CODE_SCIENCE", 
-                                                                                        "TESTING_STATUS_CODE_WRITING")],
-                                                                       c(1),
-                                                                       function (student, standard.test.types) {
-                                                                         
-                                                                         if (student[["TEST_TYPE"]] %in% standard.test.types)
-                                                                           c(student[["TESTING_STATUS_CODE_COMPOSITE"]], rep('X', 4))
-                                                                         else
-                                                                           c('X', student[c("TESTING_STATUS_CODE_MATH",
-                                                                                            "TESTING_STATUS_CODE_READING",
-                                                                                            "TESTING_STATUS_CODE_SCIENCE", 
-                                                                                            "TESTING_STATUS_CODE_WRITING")])
-                                                                       }, readiness.standard.test.types)))
-                                                                         
-#There was not alternate assessment on the 2012-13 plan exam
-plan.readiness <- cbind(plan[,c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID", "GRADE_ENROLLED", "SCHOOL_FULL_ACADEMIC_YEAR", 
-                                "TEST_TYPE", "TESTING_STATUS_CODE_COMPOSITE")],
-                        TESTING_STATUS_CODE_MATH=rep('X', nrow(plan)),
-                        TESTING_STATUS_CODE_READING=rep('X', nrow(plan)),
-                        TESTING_STATUS_CODE_SCIENCE=rep('X', nrow(plan)),
-                        TESTING_STATUS_CODE_WRITING=rep('X', nrow(plan)),                          
-                        plan[,c("PLAN_SCALE_COMPOSITE")],
-                        WDE_PERFORMANCE_LEVEL_MATH=rep(NA, nrow(plan)),
-                        WDE_PERFORMANCE_LEVEL_READING=rep(NA, nrow(plan)),
-                        WDE_PERFORMANCE_LEVEL_SCIENCE=rep(NA, nrow(plan)),
-                        WDE_PERFORMANCE_LEVEL_WRITING=rep(NA, nrow(plan)))
+act.readiness.alt <- reshape(act[act$TEST_TYPE == 'PAWS Alternate',
+                                 c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID", "SCHOOL_FULL_ACADEMIC_YEAR", "GRADE_ENROLLED", "TEST_TYPE", 
+                                   "TESTING_STATUS_CODE_MATH", "TESTING_STATUS_CODE_READING", "TESTING_STATUS_CODE_SCIENCE", 
+                                   "WDE_PERFORMANCE_LEVEL_MATH", "WDE_PERFORMANCE_LEVEL_READING", "WDE_PERFORMANCE_LEVEL_SCIENCE")], 
+                             varying=list(c("TESTING_STATUS_CODE_MATH", "TESTING_STATUS_CODE_READING", "TESTING_STATUS_CODE_SCIENCE"),
+                                          c("WDE_PERFORMANCE_LEVEL_MATH", "WDE_PERFORMANCE_LEVEL_READING", "WDE_PERFORMANCE_LEVEL_SCIENCE")),
+                             timevar="SUBJECT",
+                             v.names=c("TESTING_STATUS_CODE", "PERFORMANCE_LEVEL"),
+                             times=c("Math", "Reading", "Science"),
+                             direction="long")
+
+act.readiness.alt <- data.frame(act.readiness.alt[c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID")],
+                                SNAPSHOT=NA,
+                                SUBJECT_CODE=NA,
+                                act.readiness.alt[c("SUBJECT", "SCHOOL_FULL_ACADEMIC_YEAR", "GRADE_ENROLLED", "TEST_TYPE", "TESTING_STATUS_CODE",
+                                                  "PERFORMANCE_LEVEL")],
+                                SCALE_SCORE=NA,
+                                WY_ACT_SCALE_SCORE=NA
+                                )
+
+act.readiness <- data.frame(act[act$TEST_TYPE == 'ACT', c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID")],
+                            SNAPSHOT=NA,
+                            SUBJECT_CODE=NA,
+                            SUBJECT="Composite",
+                            act[act$TEST_TYPE == 'ACT', c("SCHOOL_FULL_ACADEMIC_YEAR", "GRADE_ENROLLED", "TEST_TYPE")],
+                            TESTING_STATUS_CODE=act[act$TEST_TYPE == 'ACT', "TESTING_STATUS_CODE_COMPOSITE"],
+                            PERFORMANCE_LEVEL=NA,
+                            SCALE_SCORE=act[act$TEST_TYPE == 'ACT', "ACT_SCALE_SCORE_COMPOSITE"],
+                            WY_ACT_SCALE_SCORE=NA)
 
 
-
-explore.readiness <- cbind(explore[,c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID", "GRADE_ENROLLED", "SCHOOL_FULL_ACADEMIC_YEAR", 
-                                "TEST_TYPE", "TESTING_STATUS_CODE_COMPOSITE")],
-                        TESTING_STATUS_CODE_MATH=rep('X', nrow(explore)),
-                        TESTING_STATUS_CODE_READING=rep('X', nrow(explore)),
-                        TESTING_STATUS_CODE_SCIENCE=rep('X', nrow(explore)),
-                        TESTING_STATUS_CODE_WRITING=rep('X', nrow(explore)),                          
-                        explore[,c("EXPLORE_SCALE_COMPOSITE")],
-                        WDE_PERFORMANCE_LEVEL_MATH=rep(NA, nrow(explore)),
-                        WDE_PERFORMANCE_LEVEL_READING=rep(NA, nrow(explore)),
-                        WDE_PERFORMANCE_LEVEL_SCIENCE=rep(NA, nrow(explore)),
-                        WDE_PERFORMANCE_LEVEL_WRITING=rep(NA, nrow(explore)))
-
-
-
-names(act.readiness) <- c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID", "GRADE_ENROLLED", "SCHOOL_FULL_ACADEMIC_YEAR", "TEST_TYPE", "TESTING_STATUS_CODE_COMPOSITE",                          
-                          "TESTING_STATUS_CODE_MATH", "TESTING_STATUS_CODE_READING",
-                          "TESTING_STATUS_CODE_SCIENCE", "TESTING_STATUS_CODE_WRITING", "SCALE_SCORE_COMPOSITE", "WDE_PERFORMANCE_LEVEL_MATH", "WDE_PERFORMANCE_LEVEL_READING",
-                          "WDE_PERFORMANCE_LEVEL_SCIENCE", "WDE_PERFORMANCE_LEVEL_WRITING")
-
-names(plan.readiness) <- names(act.readiness)
-names(explore.readiness) <- names(act.readiness)
-
+act.readiness <- rbind(act.readiness.alt,act.readiness)
 save(act.readiness, file="data/ACT/act.readiness.Rdata")
+
+
+plan.readiness <- data.frame(plan[c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID")],
+                            SNAPSHOT=NA,
+                            SUBJECT_CODE=NA,
+                            SUBJECT="Composite",
+                            plan[c("SCHOOL_FULL_ACADEMIC_YEAR", "GRADE_ENROLLED", "TEST_TYPE")],
+                            TESTING_STATUS_CODE=plan[,"TESTING_STATUS_CODE_COMPOSITE"],
+                            PERFORMANCE_LEVEL=NA,
+                            SCALE_SCORE=plan[, "PLAN_SCALE_COMPOSITE"],
+                            WY_ACT_SCALE_SCORE=NA)
+
+
 save(plan.readiness, file="data/ACT/plan.readiness.Rdata")
+
+
+explore.readiness <- data.frame(explore[c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID")],
+                             SNAPSHOT=NA,
+                             SUBJECT_CODE=NA,
+                             SUBJECT="Composite",
+                             explore[c("SCHOOL_FULL_ACADEMIC_YEAR", "GRADE_ENROLLED", "TEST_TYPE")],
+                             TESTING_STATUS_CODE=explore[,"TESTING_STATUS_CODE_COMPOSITE"],
+                             PERFORMANCE_LEVEL=NA,
+                             SCALE_SCORE=explore[, "EXPLORE_SCALE_COMPOSITE"],
+                             WY_ACT_SCALE_SCORE=NA)
+
+
 save(explore.readiness, file="data/ACT/explore.readiness.Rdata")
 
 
+act.suite.readiness <- rbind(act.readiness,
+                             plan.readiness,
+                             explore.readiness)
 
-
-
-conn <- odbcConnect(dsn=db.dsn, uid=rdbms.name, pwd=rdbms.pwd)
-
-
-current.act.readiness <- sqlFetch(conn, data.tables.lexicon[[current.school.year]][["act.readiness"]], as.is=as.is.vector(names(act.readiness)))
-act.readiness <- rbind(act.readiness,current.act.readiness)
-save(act.readiness, file="data/ACT/act.readiness.Rdata")
-
+save(act.suite.readiness, file="data/ACT/act.suite.readiness.Rdata")

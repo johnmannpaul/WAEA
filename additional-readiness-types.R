@@ -11,7 +11,7 @@ table(schools[schools$SCHOOL_YEAR==current.school.year &
                 schools$WAEA_SCHOOL_TYPE %in% HS.types,
               c("SMALL_SCHOOL_HATH_ELIGIBILITY", 
                 "SMALL_SCHOOL_GRADE_NINE_CREDIT", 
-                "YEARS_BACK_TESTED_READINESS_HS")], useNA="ifany")
+                "HS_TESTED_READINESS_SMALL_SCHOOL")], useNA="ifany")
 
 
 schools[schools$SCHOOL_YEAR==current.school.year &
@@ -26,7 +26,7 @@ compute.add.readiness.type <- function (school) {
   
   ss.hathaway <- school[["SMALL_SCHOOL_HATH_ELIGIBILITY"]]
   ss.grade.nine <- school[["SMALL_SCHOOL_GRADE_NINE_CREDIT"]]
-  years.back.tested.readiness <- as.numeric(school[["YEARS_BACK_TESTED_READINESS_HS"]])
+  years.back.tested.readiness <- as.numeric(school[["HS_TESTED_READINESS_YEARS_BACK"]])
   ss.tested.readiness <- if (!is.na(years.back.tested.readiness) &
                                years.back.tested.readiness == Inf) 
     'T'
@@ -59,25 +59,25 @@ compute.add.readiness.type <- function (school) {
 }
 
 
-schools[,c("ADD_READINESS_TYPE","ADD_READINESS_TYPE_LABEL")] <- data.frame(t(apply(schools[,c("SCHOOL_ID","WAEA_SCHOOL_TYPE",
+schools[,c("HS_ADD_READINESS_TYPE","HS_ADD_READINESS_TYPE_LABEL")] <- data.frame(t(apply(schools[,c("SCHOOL_ID","WAEA_SCHOOL_TYPE",
                                                                                      "SMALL_SCHOOL_HATH_ELIGIBILITY", 
                                                                                      "SMALL_SCHOOL_GRADE_NINE_CREDIT", 
-                                                                                     "YEARS_BACK_TESTED_READINESS_HS")],
+                                                                                     "HS_TESTED_READINESS_YEARS_BACK")],
                                     c(1),
                                     compute.add.readiness.type)))
 
-table(schools[,c("SCHOOL_YEAR","ADD_READINESS_TYPE")])
-table(schools[,c("SCHOOL_YEAR","ADD_READINESS_TYPE_LABEL")])
+table(schools[,c("SCHOOL_YEAR","HS_ADD_READINESS_TYPE")])
+table(schools[,c("SCHOOL_YEAR","HS_ADD_READINESS_TYPE_LABEL")])
 
 
 compute.add.readiness <- function (school, 
                                    weights, 
                                    precision,
-                                   result.labels=c("ADD_READINESS_SCORE", "ADD_READINESS_N"),
-                                   score.labels=c("TESTED_READINESS_INDEX_MEAN",
+                                   result.labels=c("HS_ADD_READINESS_SCORE", "HS_ADD_READINESS_N"),
+                                   score.labels=c("HS_TESTED_READINESS_MEAN",
                                                   "PERCENT_GD_9_CREDIT_MET",
                                                   "HATH_INDEX_SCORE_MEAN"),
-                                   N.labels=c("TESTED_READINESS_INDEX_N",
+                                   N.labels=c("HS_TESTED_READINESS_N",
                                               "GRADE_NINE_CREDITS_MET_N",
                                               "HATH_INDEX_SCORE_N"),
                                    school.labels = c("SCHOOL_YEAR","SCHOOL_ID")) {
@@ -98,54 +98,54 @@ compute.add.readiness <- function (school,
 type.1.additional.readiness <- data.frame(t(apply(schools[schools$SCHOOL_YEAR==current.school.year &
                                                             schools$WAEA_SCHOOL_TYPE %in% HS.types &
                                                             schools$SCHOOL_ID != state.school.id &
-                                                            schools$ADD_READINESS_TYPE_LABEL=='all',c("SCHOOL_YEAR", 
+                                                            schools$HS_ADD_READINESS_TYPE_LABEL=='all',c("SCHOOL_YEAR", 
                                                                                                       "SCHOOL_ID",
-                                                                                                      "TESTED_READINESS_INDEX_MEAN",
+                                                                                                      "HS_TESTED_READINESS_MEAN",
                                                                                                       "PERCENT_GD_9_CREDIT_MET",
                                                                                                       "HATH_INDEX_SCORE_MEAN",
-                                                                                                      "TESTED_READINESS_INDEX_N",
+                                                                                                      "HS_TESTED_READINESS_N",
                                                                                                       "GRADE_NINE_CREDITS_MET_N",
                                                                                                       "HATH_INDEX_SCORE_N")],
                                                   c(1),
                                                   compute.add.readiness, c(.35,.15,.50),
                                                   precision.add.readiness, 
-                                                  result.labels=c("ADD_READINESS_SCORE_TYPE1", "ADD_READINESS_N_TYPE1"))))
+                                                  result.labels=c("HS_ADD_READINESS_SCORE_TYPE1", "HS_ADD_READINESS_N_TYPE1"))))
                                           
-table(type.1.additional.readiness$ADD_READINESS_SCORE_TYPE1)
+table(type.1.additional.readiness$HS_ADD_READINESS_SCORE_TYPE1)
 schools <- bind.indicator(schools, 
                           type.1.additional.readiness,
-                          indicator.labels.min.N = c(N= "ADD_READINESS_N_TYPE1", score="ADD_READINESS_SCORE_TYPE1"),
+                          indicator.labels.min.N = c(N= "HS_ADD_READINESS_N_TYPE1", score="HS_ADD_READINESS_SCORE_TYPE1"),
                           min.N.readiness.hs)
 
 quantile(schools[schools$SCHOOL_YEAR==current.school.year &
                    schools$WAEA_SCHOOL_TYPE %in% HS.types &
                    schools$SCHOOL_ID != state.school.id &
-                   schools$ADD_READINESS_TYPE_LABEL=='all',"ADD_READINESS_SCORE_TYPE1"],
+                   schools$HS_ADD_READINESS_TYPE_LABEL=='all',"HS_ADD_READINESS_SCORE_TYPE1"],
          probs=c(.30, .70))
 
 
-type.1.additional.readiness.cuts <- c(58, 68)
+type.1.additional.readiness.cuts <- c(58, 66)
 
-type.1.additional.readiness$ADD_READINESS_CAT_TYPE1 <- sapply(type.1.additional.readiness$ADD_READINESS_SCORE_TYPE1,
+type.1.additional.readiness$HS_ADD_READINESS_CAT_TYPE1 <- sapply(type.1.additional.readiness$HS_ADD_READINESS_SCORE_TYPE1,
                                                         function (s) {
                                                           
                                                           findInterval(s, type.1.additional.readiness.cuts) + 1
                                                         })
 
-prop.table(table(type.1.additional.readiness$ADD_READINESS_CAT_TYPE1))
+prop.table(table(type.1.additional.readiness$HS_ADD_READINESS_CAT_TYPE1))
 
 
 
 schools <- bind.indicator(schools, 
                           type.1.additional.readiness,
-                          indicator.labels.min.N = c(N= "ADD_READINESS_N_TYPE1", score="ADD_READINESS_CAT_TYPE1"),
+                          indicator.labels.min.N = c(N= "HS_ADD_READINESS_N_TYPE1", score="HS_ADD_READINESS_CAT_TYPE1", "HS_ADD_READINESS_SCORE_TYPE1"),
                           min.N.readiness.hs)
 
 
 head(schools[schools$SCHOOL_YEAR==current.school.year &
                schools$WAEA_SCHOOL_TYPE %in% HS.types &
                schools$SCHOOL_ID != state.school.id &
-               schools$ADD_READINESS_TYPE_LABEL=='all',])
+               schools$HS_ADD_READINESS_TYPE_LABEL=='all',])
 
 
 head(schools[schools$SCHOOL_YEAR==current.school.year &
@@ -154,7 +154,7 @@ head(schools[schools$SCHOOL_YEAR==current.school.year &
 
 
 #examine the type 1 proportions resulting from type 1 cuts
-type.1.percentages <- cumsum(round(prop.table(table(type.1.additional.readiness$ADD_READINESS_CAT_TYPE1)),2))[1:2]
+type.1.percentages <- cumsum(round(prop.table(table(type.1.additional.readiness$HS_ADD_READINESS_CAT_TYPE1)),2))[1:2]
 
 #we'll use these percentages to set the cuts for types 2,3, and 4
 compute.add.readiness.cuts <- function (scores, percentages) {
@@ -171,14 +171,14 @@ compute.add.readiness.cuts <- function (scores, percentages) {
 
 compute.add.readiness.for.other.types <- function (schools, type.label, type.suffix, weights, cut.percentages, score.labels, N.labels, min.N=min.N.readiness.hs) {
   
-  result.labels<-sapply(c("ADD_READINESS_SCORE", "ADD_READINESS_N"), paste, type.suffix, sep="_")
+  result.labels<-sapply(c("HS_ADD_READINESS_SCORE", "HS_ADD_READINESS_N"), paste, type.suffix, sep="_")
   names(result.labels) <- c("score", "N")
   
   
   typed.additional.readiness <- data.frame(t(apply(schools[schools$SCHOOL_YEAR==current.school.year &
                                                              schools$WAEA_SCHOOL_TYPE %in% HS.types &
                                                              schools$SCHOOL_ID != state.school.id &
-                                                             schools$ADD_READINESS_TYPE_LABEL %in% c('all',type.label),
+                                                             schools$HS_ADD_READINESS_TYPE_LABEL %in% c('all',type.label),
                                                             c("SCHOOL_YEAR", 
                                                               "SCHOOL_ID",
                                                               score.labels,
@@ -199,12 +199,12 @@ compute.add.readiness.for.other.types <- function (schools, type.label, type.suf
   typed.additional.readiness.cuts <- compute.add.readiness.cuts(schools[schools$SCHOOL_YEAR==current.school.year &
                                                                           schools$WAEA_SCHOOL_TYPE %in% HS.types &
                                                                           schools$SCHOOL_ID != state.school.id &
-                                                                          schools$ADD_READINESS_TYPE_LABEL %in% c('all',type.label),
+                                                                          schools$HS_ADD_READINESS_TYPE_LABEL %in% c('all',type.label),
                                                                          result.labels[["score"]]],
                                                                  cut.percentages)
   
-  cat.label <- paste("ADD_READINESS_CAT", type.suffix, sep="_")
-  cut.labels <- sapply(c("ADD_READINESS_CUT1", "ADD_READINESS_CUT2"), paste, type.suffix, sep="_")
+  cat.label <- paste("HS_ADD_READINESS_CAT", type.suffix, sep="_")
+  cut.labels <- sapply(c("HS_ADD_READINESS_CUT1", "HS_ADD_READINESS_CUT2"), paste, type.suffix, sep="_")
   
   typed.additional.readiness[, c(cat.label, cut.labels)] <- t(sapply(typed.additional.readiness[[result.labels[["score"]]]],
                                                                 function (s) {
@@ -226,13 +226,13 @@ schools <- compute.add.readiness.for.other.types(schools,
                                          "TYPE2",
                                          1,
                                          type.1.percentages, 
-                                         "TESTED_READINESS_INDEX_MEAN", 
-                                         "TESTED_READINESS_INDEX_N")
+                                         "HS_TESTED_READINESS_MEAN", 
+                                         "HS_TESTED_READINESS_N")
 
 schools[schools$SCHOOL_YEAR==current.school.year &
           schools$WAEA_SCHOOL_TYPE %in% HS.types &
           schools$SCHOOL_ID != state.school.id &
-          schools$ADD_READINESS_TYPE_LABEL %in% c('tested only'),]
+          schools$HS_ADD_READINESS_TYPE_LABEL %in% c('tested only'),]
 
 #type3
 schools <- compute.add.readiness.for.other.types(schools, 
@@ -240,14 +240,14 @@ schools <- compute.add.readiness.for.other.types(schools,
                                                  "TYPE3", 
                                                  c(.7,.3),
                                                  type.1.percentages, 
-                                                 c("TESTED_READINESS_INDEX_MEAN", "PERCENT_GD_9_CREDIT_MET"), 
-                                                 c("TESTED_READINESS_INDEX_N", "GRADE_NINE_CREDITS_MET_N"))
+                                                 c("HS_TESTED_READINESS_MEAN", "PERCENT_GD_9_CREDIT_MET"), 
+                                                 c("HS_TESTED_READINESS_N", "GRADE_NINE_CREDITS_MET_N"))
 
 
 schools[schools$SCHOOL_YEAR==current.school.year &
           schools$WAEA_SCHOOL_TYPE %in% HS.types &
           schools$SCHOOL_ID != state.school.id &
-          schools$ADD_READINESS_TYPE_LABEL %in% c("tested and gd9 only"),]
+          schools$HS_ADD_READINESS_TYPE_LABEL %in% c("tested and gd9 only"),]
 
 
 #type4
@@ -256,27 +256,27 @@ schools <- compute.add.readiness.for.other.types(schools,
                                                  "TYPE4", 
                                                  c(.41,.59),
                                                  type.1.percentages, 
-                                                 c("TESTED_READINESS_INDEX_MEAN", "HATH_INDEX_SCORE_MEAN"), 
-                                                 c("TESTED_READINESS_INDEX_N", "HATH_INDEX_SCORE_N"))
+                                                 c("HS_TESTED_READINESS_MEAN", "HATH_INDEX_SCORE_MEAN"), 
+                                                 c("HS_TESTED_READINESS_N", "HATH_INDEX_SCORE_N"))
 
 schools[schools$SCHOOL_YEAR==current.school.year &
           schools$WAEA_SCHOOL_TYPE %in% HS.types &
           schools$SCHOOL_ID != state.school.id &
-          schools$ADD_READINESS_TYPE_LABEL %in% c("tested and Hath only"),]
+          schools$HS_ADD_READINESS_TYPE_LABEL %in% c("tested and Hath only"),]
 
 
 
 #assign an overall category
-schools$ADD_READINESS_CAT <- apply(schools[,c("SCHOOL_YEAR", "SCHOOL_ID","ADD_READINESS_TYPE")],
+schools$HS_ADD_READINESS_CAT <- apply(schools[,c("SCHOOL_YEAR", "SCHOOL_ID","HS_ADD_READINESS_TYPE")],
                                    c(1),
                                    function (school) {
-                                     type <- school[["ADD_READINESS_TYPE"]]
+                                     type <- school[["HS_ADD_READINESS_TYPE"]]
                                      if (is.na(type) | type==0)
                                        NA
                                      else
                                        schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
                                                  schools$SCHOOL_ID == school[["SCHOOL_ID"]],
-                                               paste("ADD_READINESS_CAT_TYPE", type, sep="")]
+                                               paste("HS_ADD_READINESS_CAT_TYPE", type, sep="")]
                                      
                                    })
 
@@ -289,64 +289,82 @@ schools.of.interest <- schools[schools$SCHOOL_YEAR==current.school.year &
 
 head(schools.of.interest[,grep("NESS_CAT|_TYPE_LABEL",names(schools.of.interest))])
 
-table(schools[schools$SCHOOL_YEAR==current.school.year, "ADD_READINESS_CAT_TYPE1"])
-table(schools[schools$SCHOOL_YEAR==current.school.year, "ADD_READINESS_CAT_TYPE2"])
+table(schools[schools$SCHOOL_YEAR==current.school.year, "HS_ADD_READINESS_CAT_TYPE1"])
+table(schools[schools$SCHOOL_YEAR==current.school.year, "HS_ADD_READINESS_SCORE_TYPE1"])
+type.1.additional.readiness.cuts
 
-table(schools[schools$SCHOOL_YEAR==current.school.year, "ADD_READINESS_CAT_TYPE3"])
-table(schools[schools$SCHOOL_YEAR==current.school.year, "ADD_READINESS_SCORE_TYPE3"])
+
+table(schools[schools$SCHOOL_YEAR==current.school.year, "HS_ADD_READINESS_CAT_TYPE2"])
+table(schools[schools$SCHOOL_YEAR==current.school.year, "HS_ADD_READINESS_SCORE_TYPE2"])
+table(schools[schools$SCHOOL_YEAR==current.school.year, "HS_ADD_READINESS_CAT_TYPE3"])
+table(schools[schools$SCHOOL_YEAR==current.school.year, "HS_ADD_READINESS_SCORE_TYPE3"])
 
 #ordering by type3 score
-schools.of.interest[, grep("TYPE3", names(schools))][order(schools.of.interest$ADD_READINESS_SCORE_TYPE3),]
+#schools.of.interest[, grep("TYPE3", names(schools))][order(schools.of.interest$HS_ADD_READINESS_SCORE_TYPE3),]
 
-table(schools[schools$SCHOOL_YEAR==current.school.year, "ADD_READINESS_CAT_TYPE4"])
+table(schools[schools$SCHOOL_YEAR==current.school.year, "HS_ADD_READINESS_CAT_TYPE4"])
 
 
 
 
 ##check deltas in categories for the 'all' type
- table(abs(schools.of.interest[schools.of.interest$ADD_READINESS_TYPE_LABEL %in% c('all'),
-         "ADD_READINESS_CAT_TYPE1"] -
-           schools.of.interest[schools.of.interest$ADD_READINESS_TYPE_LABEL %in% 'all',
-           "ADD_READINESS_CAT_TYPE2"]))
-         
-table(abs(schools.of.interest[schools.of.interest$ADD_READINESS_TYPE_LABEL %in% c('all'),
-                              "ADD_READINESS_CAT_TYPE1"] -
-            schools.of.interest[schools.of.interest$ADD_READINESS_TYPE_LABEL %in% 'all',
-                                "ADD_READINESS_CAT_TYPE3"]))
+#  table(abs(schools.of.interest[schools.of.interest$HS_ADD_READINESS_TYPE_LABEL %in% c('all'),
+#          "HS_ADD_READINESS_CAT_TYPE1"] -
+#            schools.of.interest[schools.of.interest$HS_ADD_READINESS_TYPE_LABEL %in% 'all',
+#            "HS_ADD_READINESS_CAT_TYPE2"]))
+#          
+# table(abs(schools.of.interest[schools.of.interest$HS_ADD_READINESS_TYPE_LABEL %in% c('all'),
+#                               "HS_ADD_READINESS_CAT_TYPE1"] -
+#             schools.of.interest[schools.of.interest$HS_ADD_READINESS_TYPE_LABEL %in% 'all',
+#                                 "HS_ADD_READINESS_CAT_TYPE3"]))
+# 
+# 
+# table(abs(schools.of.interest[schools.of.interest$HS_ADD_READINESS_TYPE_LABEL %in% c('all'),
+#                               "HS_ADD_READINESS_CAT_TYPE1"] -
+#             schools.of.interest[schools.of.interest$HS_ADD_READINESS_TYPE_LABEL %in% 'all',
+#                                 "HS_ADD_READINESS_CAT_TYPE4"]))
 
 
-table(abs(schools.of.interest[schools.of.interest$ADD_READINESS_TYPE_LABEL %in% c('all'),
-                              "ADD_READINESS_CAT_TYPE1"] -
-            schools.of.interest[schools.of.interest$ADD_READINESS_TYPE_LABEL %in% 'all',
-                                "ADD_READINESS_CAT_TYPE4"]))
+table(schools.of.interest[schools.of.interest$HS_ADD_READINESS_TYPE_LABEL %in% c('all'),
+                              "HS_ADD_READINESS_CAT_TYPE1"] -
+            schools.of.interest[schools.of.interest$HS_ADD_READINESS_TYPE_LABEL %in% 'all',
+                                "HS_ADD_READINESS_CAT_TYPE2"])
+
+table(schools.of.interest[schools.of.interest$HS_ADD_READINESS_TYPE_LABEL %in% c('all'),
+                              "HS_ADD_READINESS_CAT_TYPE1"] -
+            schools.of.interest[schools.of.interest$HS_ADD_READINESS_TYPE_LABEL %in% 'all',
+                                "HS_ADD_READINESS_CAT_TYPE3"])
 
 
-table(schools.of.interest[schools.of.interest$ADD_READINESS_TYPE_LABEL %in% c('all'),
-                              "ADD_READINESS_CAT_TYPE1"] -
-            schools.of.interest[schools.of.interest$ADD_READINESS_TYPE_LABEL %in% 'all',
-                                "ADD_READINESS_CAT_TYPE2"])
-
-table(schools.of.interest[schools.of.interest$ADD_READINESS_TYPE_LABEL %in% c('all'),
-                              "ADD_READINESS_CAT_TYPE1"] -
-            schools.of.interest[schools.of.interest$ADD_READINESS_TYPE_LABEL %in% 'all',
-                                "ADD_READINESS_CAT_TYPE3"])
-
-
-table(schools.of.interest[schools.of.interest$ADD_READINESS_TYPE_LABEL %in% c('all'),
-                              "ADD_READINESS_CAT_TYPE1"] -
-            schools.of.interest[schools.of.interest$ADD_READINESS_TYPE_LABEL %in% 'all',
-                                "ADD_READINESS_CAT_TYPE4"])
+table(schools.of.interest[schools.of.interest$HS_ADD_READINESS_TYPE_LABEL %in% c('all'),
+                              "HS_ADD_READINESS_CAT_TYPE1"] -
+            schools.of.interest[schools.of.interest$HS_ADD_READINESS_TYPE_LABEL %in% 'all',
+                                "HS_ADD_READINESS_CAT_TYPE4"])
 
 
 
-table(schools.of.interest[,c("SCHOOL_YEAR","ADD_READINESS_CAT")])
-prop.table(table(schools.of.interest[,c("SCHOOL_YEAR","ADD_READINESS_CAT")]))
-prop.table(table(schools.of.interest[,c("SCHOOL_YEAR","ADD_READINESS_CAT_TYPE1")]))
+table(schools.of.interest[,c("SCHOOL_YEAR","HS_ADD_READINESS_CAT")])
+prop.table(table(schools.of.interest[,c("SCHOOL_YEAR","HS_ADD_READINESS_CAT")]))
+prop.table(table(schools.of.interest[,c("SCHOOL_YEAR","HS_ADD_READINESS_CAT_TYPE1")]))
 ##compare tested readiness category to 4yr graduation rate
 schools[schools$SCHOOL_YEAR==current.school.year &
           schools$WAEA_SCHOOL_TYPE %in% HS.types &
           schools$SCHOOL_ID != state.school.id &
-          schools$ADD_READINESS_TYPE_LABEL %in% c('tested only'),c("ADD_READINESS_CAT",
+          schools$HS_ADD_READINESS_TYPE_LABEL %in% c('tested only'),c("HS_ADD_READINESS_CAT",
                                                                    "GRAD_RATE_4_YR.2012.13")]
 
 
+write.csv(file="results/additional-readiness-cfds.csv", 
+          schools[schools$WAEA_SCHOOL_TYPE %in% HS.types &
+                    schools$SCHOOL_YEAR==current.school.year &
+                    schools$HS_ADD_READINESS_TYPE == 1 &
+                    schools$HS_ADD_READINESS_N_TYPE1 >= 10 &
+                    schools$SCHOOL_ID != state.school.id,
+                  c("SCHOOL_YEAR", "SCHOOL_ID", "ALTERNATIVE_SCHOOL", "HS_ADD_READINESS_SCORE_TYPE1")],
+          na="",
+          row.names=FALSE)
+
+write.csv(file="results/alternative-school-add-readiness-cat-cross-tab.csv",
+          table(schools.of.interest[,c("ALTERNATIVE_SCHOOL","HS_ADD_READINESS_CAT")]),
+          na="")
+#checks

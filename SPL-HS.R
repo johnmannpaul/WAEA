@@ -1,53 +1,127 @@
-schools$N_INDICATORS_HS <- apply(schools[,c("ACHIEVEMENT_TARGET_LEVEL_HS", 
-                                         "READINESS_TARGET_LEVEL", 
-                                         "EQUITY_TARGET_LEVEL_HS",
-                                         "N_ACHIEVEMENT_HS",
-                                         "N_TOTAL_READINESS_HS",
-                                         "N_EQUITY_HS")],  
-                              c(1),                                                                                      
-                              FUN=count_indicators.hs)
+
+hs.target.level.labels <- c(achievement="HS_ACHIEVEMENT_TARGET_LEVEL",
+                            equity="HS_EQUITY_TARGET_LEVEL",
+                            readiness="HS_ADD_READINESS_CAT",                            
+                            grad.rate="IMPROVE_CAT_2013")
+
+hs.achievement.target.level.labels <- hs.target.level.labels[1:2]
+hs.readiness.target.level.labels <- hs.target.level.labels[3:4]
+
+hs.overall.target.level.labels <- c(readiness="HS_OVERALL_READINESS",
+                                    achievement="HS_OVERALL_ACHIEVEMENT")
+
+hs.participation.labels <- c(achievement="HS_ACHIEVEMENT_PARTICIPATION_RATE",
+                              tested.readiness="HS_TESTED_READINESS_PARTICIPATION_RATE",
+                             equity="HS_EQUITY_PARTICIPATION_RATE"
+                             )
+
+schools$HS_ACHIEVEMENT_INDICATORS_N <- apply(schools[,hs.achievement.target.level.labels],
+                                  c(1),                                                                                      
+                                  FUN=function (indicators) {                                
+                                    sum(!is.na(indicators))
+                                  })
+schools$HS_READINESS_INDICATORS_N <- apply(schools[,hs.readiness.target.level.labels],
+                                             c(1),                                                                                      
+                                             FUN=function (indicators) {                                
+                                               sum(!is.na(indicators))
+                                             })
+schools$HS_INDICATORS_N <- schools$HS_ACHIEVEMENT_INDICATORS_N + schools$HS_READINESS_INDICATORS_N
+#look at the distribution of indicator combinations for 3-8
+
+
+hs.compose.indicators <- function (school, labels, lookup) {
+  
+  if (!(school[["WAEA_SCHOOL_TYPE"]] %in% HS.types))
+    NA
+  else {
+    
+    scores <- school[labels]
+    scores <- scores[!is.na(scores)]
+    
+    if (length(scores) == 0)
+      NA
+    else {
+      if (length(scores) == 1)
+        scores
+      else
+        lookup[scores[1],
+               scores[2]]
+    }
+  }
+  
+}
+
+
+schools[,hs.overall.target.level.labels["readiness"]] <- apply(schools[,c("WAEA_SCHOOL_TYPE", 
+                                                                          hs.readiness.target.level.labels)],
+                                                               c(1),
+                                                               FUN=hs.compose.indicators, hs.readiness.target.level.labels, SPL.lookup[["HS"]][["Readiness"]] )
+
+schools[,hs.overall.target.level.labels["achievement"]] <- apply(schools[,c("WAEA_SCHOOL_TYPE", 
+                                                 hs.achievement.target.level.labels)],
+                                      c(1),
+                                      FUN=hs.compose.indicators, hs.achievement.target.level.labels, SPL.lookup[["HS"]][["Achievement"]] )
+
+schools$HS_SPL <- apply(schools[,c("WAEA_SCHOOL_TYPE", 
+                                   hs.overall.target.level.labels)],
+                        c(1),
+                        function (school) {
+                          
+                          if (!(school[["WAEA_SCHOOL_TYPE"]] %in% HS.types))
+                            NA
+                          else {
+                            
+                            scores <- school[hs.overall.target.level.labels]
+                            scores <- scores[!is.na(scores)]
+                            
+                            if (length(scores) < 2)
+                              NA
+                            else 
+                              SPL.lookup[["HS"]][["Overall"]][scores[1],
+                                                              scores[2]]
+                          }
+                          
+                        })
+
+
+table(schools[c("SCHOOL_YEAR", "HS_SPL")])
+
+
+schools$HS_PARTICIPATION_RATE_CAT <- apply(schools[, c("WAEA_SCHOOL_TYPE", hs.participation.labels)],
+                                      c(1),
+                                      function (school) {
+                                        
+                                        if (!(school[["WAEA_SCHOOL_TYPE"]] %in% HS.types))
+                                          NA
+                                        else
+                                          findInterval(min(school[hs.participation.labels], na.rm=TRUE), c(90,95)) + 1
+                                      })
+  
+
+schools[schools$SCHOOL_YEAR==current.school.year & 
+          schools$WAEA_SCHOOL_TYPE %in% HS.types &
+          schools$HS_PARTICIPATION_RATE_CAT==1,c("SCHOOL_ID", "NAME", hs.participation.labels)]
+
+table(schools[c("SCHOOL_YEAR", "HS_PARTICIPATION_RATE_CAT")])
+table(apply(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types &
+                      schools$SCHOOL_YEAR==current.school.year, hs.participation.labels],
+            c(1),
+            function (school)
+              min(school, na.rm=TRUE)))
+
+
+schools$HS_SPL_ACCOUNTABILITY <- apply(schools[,c("HS_SPL", hs.participation.labels)],
+                                        c(1),
+                                        FUN=calc.SPL.accountability, "HS_SPL",  hs.participation.labels)
 
 
 
-
-schools$PARTICIPATION_RATE_HS <- apply(schools[,c(act.achievement.labels["part.rate"],
-                                                  tested.readiness.labels["part.rate"])], c(1),
-                                       function (school) {
-                                         
-                                         if (sum(is.na(school)) < 2)
-                                           min(school[which(!is.na(school))])
-                                         else
-                                           NA                                         
-                                       })
+table(schools[c("SCHOOL_YEAR", "HS_SPL_ACCOUNTABILITY")])
 
 
+schools[!is.na(schools$HS_SPL) & schools$HS_SPL !=  schools$HS_SPL_ACCOUNTABILITY,]
 
 
-schools$PARTICIPATION_RATE_LEVEL_HS <- sapply(schools[,c("PARTICIPATION_RATE_HS")],
-                                              rate.participation)
-
-schools <- calc.SPLs(schools, "HS")
-
-# schools$SPL_HS <- calc.SPLs(schools, "HS")
-# schools$SPL_ADJUSTED_HS <- apply(schools[,c("SPL_HS",  "PARTICIPATION_RATE_LEVEL_HS")], c(1),
-#                               FUN= function (school) {
-#                                 SPL <- school[["SPL_HS"]]
-#                                 PRL <- school[["PARTICIPATION_RATE_LEVEL_HS"]]
-#                                 
-#                                 if (is.na(SPL))
-#                                   NA
-#                                 else {
-#                                   
-#                                   if (PRL == 3)
-#                                     SPL
-#                                   else {
-#                                     
-#                                     if (PRL == 2)
-#                                       max(1, SPL-1)
-#                                     else  #not met
-#                                       1
-#                                   }
-#                                   
-#                                 }                               
-#                                 
-#                               }) 
+schools$SPL_ACCOUNTABILITY <- apply(schools[,c("G38_SPL_ACCOUNTABILITY", "HS_SPL_ACCOUNTABILITY")],
+                                    c(1),
+                                    function (scores) scores[order(scores)][1])

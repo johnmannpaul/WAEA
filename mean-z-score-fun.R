@@ -2,19 +2,26 @@ calc.mean.score <- function (df, subject.labels=c(MATH="MATH", READING="READING"
                              testing.status.prefix="TESTING_STATUS_CODE",
                              score.prefix="ACCOUNTABILITY_Z_SCORE",
                              prefix.sep="_",
-                             agg.function=function (g) round(100*mean(g),0)) 
+                             agg.function=function (g) round(100*mean(g),0),
+                             already.long = FALSE) 
 {
   
-  testing.status.labels <- unlist(lapply(subject.labels, function (l) paste(testing.status.prefix, l, sep=prefix.sep)))
-  score.labels <- unlist(lapply(subject.labels, function (l) paste(score.prefix, l, sep=prefix.sep)))
   
-  df.long <- reshape(df,
-                     varying=list(testing.status.labels,
-                                    score.labels),
-                     v.names=c(testing.status.prefix, score.prefix),
-                     timevar = "SUBJECT",
-                     times = subject.labels,
-                     direction="long")
+  
+  df.long <- if (!already.long) {
+    testing.status.labels <- unlist(lapply(subject.labels, function (l) paste(testing.status.prefix, l, sep=prefix.sep)))
+    score.labels <- unlist(lapply(subject.labels, function (l) paste(score.prefix, l, sep=prefix.sep)))
+    
+    reshape(df,
+            varying=list(testing.status.labels,
+                         score.labels),
+            v.names=c(testing.status.prefix, score.prefix),
+            timevar = "SUBJECT",
+            times = subject.labels,
+            direction="long")
+  }
+  else
+    df
   
   
   #should be empty
@@ -25,7 +32,7 @@ calc.mean.score <- function (df, subject.labels=c(MATH="MATH", READING="READING"
   #table(act.fay.long$TESTING_STATUS_CODE)
   
   
-  df.long.testers <- df.long[df.long$TESTING_STATUS_CODE == 'T',]
+  df.long.testers <- df.long[df.long[[testing.status.prefix]] == 'T',]
   
   #convert score column to numeric if it's not already
   df.long.testers[[score.prefix]] <- as.numeric(df.long.testers[[score.prefix]])
@@ -34,7 +41,8 @@ calc.mean.score <- function (df, subject.labels=c(MATH="MATH", READING="READING"
                               by=list(SCHOOL_YEAR=df.long.testers$SCHOOL_YEAR,
                                       SCHOOL_ID=df.long.testers$SCHOOL_ID),
                               agg.function)
-  
+
+    
   N.df <- aggregate(data.frame(N=df.long.testers$WISER_ID),
                                 by=list(SCHOOL_YEAR=df.long.testers$SCHOOL_YEAR,
                                         SCHOOL_ID=df.long.testers$SCHOOL_ID),

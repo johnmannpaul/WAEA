@@ -71,3 +71,61 @@ calc.participation.rate <- function (df, subject.labels=c("MATH", "READING", "SC
   participation.df
 
 }
+
+
+
+calc.participation.rate.long <- function (df,                                           
+                                          status.prefix='TESTING_STATUS_CODE',                                           
+                                          status.codes=c(exempt='X', participated='T', did.not.participate='N'),                              
+                                          total.participation.labels = c("ACHIEVEMENT_TESTED_HS", "ACHIEVEMENT_PARTICIPANTS_HS", "PARTICIPATION_RATE_ACHIEVEMENT_HS"),
+                                          precision=1)
+{  
+  
+  participation.cols <- c("TESTED","PARTICIPANTS")
+  
+  encode.status <- function (row) {
+    status <- row[[status.prefix]]
+    participants <- c(ifelse(status == status.codes["participated"], 1, 0),
+                               ifelse(status == status.codes["exempt"], 0, 1))
+    names(participants) <- participation.cols
+    participants
+    
+  }
+  
+  participants.df <- data.frame(t(apply(df[status.prefix],
+                                        c(1),
+                                        encode.status)))
+  
+  participation.df <- aggregate(participants.df,
+                                by = list(SCHOOL_YEAR=df$SCHOOL_YEAR,
+                                          SCHOOL_ID=df$SCHOOL_ID),
+                                sum)
+  
+  
+  
+  #do state participation   
+  participation.state.df <- aggregate(participation.df[,participation.cols],
+                                      by=list(SCHOOL_YEAR=participation.df$SCHOOL_YEAR), 
+                                      sum)
+  
+  
+  participation.state.df <- cbind(SCHOOL_ID=rep(state.school.id, nrow(participation.state.df)), participation.state.df)
+  
+  participation.df <- rbind(participation.df, participation.state.df[,c(names(participation.df))])
+  
+  #tail(participation.df)
+  
+  
+    
+  participation.df$PARTICIPATION_RATE <- ifelse(participation.df$PARTICIPANTS == 0, 
+                                                   NA, 
+                                                   round((participation.df$TESTED / participation.df$PARTICIPANTS) * 100, 
+                                                         precision))                                   
+  
+  
+  names(participation.df)[3:5] <- total.participation.labels
+  
+  
+  participation.df
+  
+}

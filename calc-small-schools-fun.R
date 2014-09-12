@@ -79,7 +79,7 @@ calc.small.schools <- function (df,
     
   }
 
-  years.back.label <- paste("YEARS_BACK", attribute, sep="_")
+  years.back.label <- paste(attribute, "YEARS_BACK", sep="_")
   small.schools[years.back.label] <- apply(small.schools, c(1),
                                                 FUN=compute.years.back)
   
@@ -92,7 +92,7 @@ calc.small.schools <- function (df,
   ##now assign back to schools dataframe
   
   
-  small.school.label <- paste("SMALL_SCHOOL", attribute, sep="_")
+  small.school.label <- paste( attribute, "SMALL_SCHOOL", sep="_")
   small.school.labels <- c(small.school.label, years.back.label)
   result.schools <- cbind(schools.df[,c("SCHOOL_YEAR", "YEAR", "SCHOOL_ID")], data.frame(t(apply(schools.df[,c("SCHOOL_ID",                                                     
                                           "SCHOOL_YEAR",                                                     
@@ -100,14 +100,18 @@ calc.small.schools <- function (df,
                                FUN=function (school) {
                                  small.school <- with(small.schools, small.schools[SCHOOL_ID == school[["SCHOOL_ID"]] &
                                                                                                              SCHOOL_YEAR == school[["SCHOOL_YEAR"]],])
-                                 if (nrow(small.school) == 0)
-                                   result <- c('F', NA)
+                                 if (!(school[["WAEA_SCHOOL_TYPE"]] %in% waea.school.types))
+                                   result <- c(NA, NA)
                                  else {
-                                   result <- c('T', small.school[,years.back.label])  
-#                                    if (small.school[,years.back.label] < Inf)
-#                                       result <- c('F', small.school[,years.back.label])
-#                                    else
-#                                       result <- c('T', small.school[,years.back.label])  
+                                   if (nrow(small.school) == 0)
+                                     result <- c('F', NA)  
+                                   else {
+                                     #result <- c('T', small.school[,years.back.label])  
+                                     if (small.school[,years.back.label] < Inf)
+                                       result <- c('F', small.school[,years.back.label])
+                                     else
+                                       result <- c('T', small.school[,years.back.label])  
+                                   }
                                  }
                                  names(result) <- small.school.labels
                                  result
@@ -120,9 +124,13 @@ calc.small.schools <- function (df,
 
   
   #these are the ones we can actually do something about
-  small.schools.fix <- result.schools[eval(bquote(result.schools[.(small.school.label)] == 'T' &
-                                                    result.schools[.(years.back.label)] < Inf)),]
-  
+#   small.schools.fix <- result.schools[eval(bquote(result.schools[.(small.school.label)] == 'T' &
+#                                                     result.schools[.(years.back.label)] < Inf)),]
+
+
+  small.schools.fix <- result.schools[eval(bquote(!is.na(result.schools[.(years.back.label)]) &
+                                                  result.schools[.(years.back.label)] < Inf)),]
+
   
   get.students.years.back <- function (school, df, id.column, years.back.label) {
     
@@ -165,3 +173,8 @@ calc.small.schools <- function (df,
   list(result.schools=result.schools, result.students=small.schools.additional.student.records)
   ##end small schools
 }
+
+
+
+
+

@@ -1,123 +1,96 @@
-#based on data/PAWS_ACCOUNTABILITY_LONG.csv
-##assumes achievement.R has been used to define paws.df
-##growth
+load("data/growth-2013-14.Rdata")
+load("data/g38.achieve.Rdata")
+load("data/paws.Rdata")
 
-growth.df <- paws.df[!is.na(paws.df$SGP),]
-growth.df$ACHIEVEMENT_LEVEL_PRIOR <- as.numeric(growth.df$ACHIEVEMENT_LEVEL_PRIOR)
+nrow(sgp.df@SGP$SGPercentiles$READING.2013_2014)
+growth.reading <- merge(g38.achieve[g38.achieve$SUBJECT == 'Reading',],
+                   sgp.df@SGP$SGPercentiles$READING.2013_2014[,c("ID","SGP")],
+                   by.x="WISER_ID",
+                   by.y="ID")
+nrow(growth.reading)
 
-growth <- aggregate(growth.df$SGP, by=list(SCHOOL_YEAR=growth.df$SCHOOL_YEAR, 
-                                           SCHOOL_ID=growth.df$SCHOOL_ID), 
-                    median)
+nrow(sgp.df@SGP$SGPercentiles$MATHEMATICS.2013_2014)
+growth.math <- merge(g38.achieve[g38.achieve$SUBJECT == 'Math',],
+                        sgp.df@SGP$SGPercentiles$MATHEMATICS.2013_2014[,c("ID","SGP")],
+                        by.x="WISER_ID",
+                        by.y="ID")
+nrow(growth.math)
 
-#state SGP has to ignore the records from previous years to buttress small schools
-growth.state <- aggregate(growth.df$SGP, by=list(SCHOOL_YEAR=growth.df$SCHOOL_YEAR), 
-                    median)
-
-growth.state <- cbind(SCHOOL_ID=rep(state.school.id, nrow(growth.state)), growth.state)
-
-growth <- rbind(growth, growth.state)
-
-names(growth)[3] <- "MGP"
-
-head(growth)
-tail(growth)
-
-PROFICIENT_PRIOR <- ifelse(growth.df$ACHIEVEMENT_LEVEL_PRIOR %in% c(3,4), 1, 0)
-
-growth.N <- aggregate(data.frame(PROFICIENT_PRIOR=PROFICIENT_PRIOR, N_SGP=rep(1, nrow(growth.df))), by=list(SCHOOL_YEAR=growth.df$SCHOOL_YEAR, 
-                                                       SCHOOL_ID=growth.df$SCHOOL_ID), 
-                      sum)
+growth.2013.14 <- rbind(growth.reading, growth.math)
 
 
-#get the state in there
-growth.N.state <- aggregate(data.frame(PROFICIENT_PRIOR=PROFICIENT_PRIOR, N_SGP=rep(1, nrow(growth.df))), by=list(SCHOOL_YEAR=growth.df$SCHOOL_YEAR), 
-                      sum)
-growth.N.state <- cbind(SCHOOL_ID = rep(state.school.id, nrow(growth.N.state)), growth.N.state)
+paws$SGP <- as.numeric(paws$SGP)
+table(paws$SGP, useNA="ifany")
 
-growth.N <- rbind(growth.N, growth.N.state)
+paws.lookback.for.growth <- paws[!is.na(paws$SGP) &
+                        paws$SCHOOL_YEAR >= '2011-12',]
 
-growth <- merge (growth, growth.N)
-growth$PERCENT_PROFICIENT_PRIOR <- round(growth$PROFICIENT_PRIOR/growth$N_SGP * 100, 1)
+paws.lookback.for.growth$SUBJECT <- sapply(paws.lookback.for.growth$SUBJECT_CODE, function (c) switch(c, MA="Math", RE="Reading", SC="Science", NA))
 
-head(growth)
-tail(growth)
+growth.lookback <- data.frame(paws.lookback.for.growth[c("SCHOOL_YEAR","SCHOOL_ID","WISER_ID")],
+                              SNAPSHOT=NA,
+                              SUBJECT_CODE=NA,
+                              paws.lookback.for.growth[c("SUBJECT","SCHOOL_FULL_ACADEMIC_YEAR",
+                                                "GRADE_ENROLLED","TEST_TYPE", "TESTING_STATUS_CODE")],
+                              PERFORMANCE_LEVEL=paws.lookback.for.growth$STANDARD_PAWS_PERF_LEVEL,
+                              SCALE_SCORE=paws.lookback.for.growth$STANDARD_PAWS_SCALE_SCORE,
+                              WY_ACT_SCALE_SCORE=NA,
+                              paws.lookback.for.growth["SGP"]
+)
+growth.all <- rbind(growth.lookback, growth.2013.14)
 
-growth.students <- with(growth.df, growth.df[, c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID")])
-
-growth.students.school <- cast(growth.students, SCHOOL_YEAR+SCHOOL_ID~., function (x) length(unique(x)))
-
-#get the state in there
-growth.students.school.state <- cast(growth.students, SCHOOL_YEAR~., value="WISER_ID", function (x) length(unique(x)))
-growth.students.school.state <- cbind(SCHOOL_ID=(rep(state.school.id, nrow(growth.students.school.state))), growth.students.school.state)
-
-growth.students.school <- rbind(growth.students.school, growth.students.school.state)
-
-names(growth.students.school)[3] <- "GROWTH_ACCOUNTABILITY_N"
-head(with(growth.students.school, growth.students.school[SCHOOL_YEAR==current.school.year,]))
-tail(with(growth.students.school, growth.students.school[SCHOOL_YEAR==current.school.year,]))
-
-growth <- merge (growth, growth.students.school)
-
-head(with(growth, growth[SCHOOL_YEAR==current.school.year,]))
-tail(with(growth, growth[SCHOOL_YEAR==current.school.year,]))
-
-
-##assign growth SPL
-#drop growth columns
-schools <- calc.school.growth(schools)
-
-#look at distribution of computed target levels
-table(schools[schools$SCHOOL_YEAR==current.school.year,]$GROWTH_TARGET_LEVEL)
+table(growth.all[c("SCHOOL_YEAR", "SUBJECT")])
 
 
 
-# growth.subject.N <- aggregate(data.frame(N=rep(1, nrow(growth.df))), 
-#                               by=list(SCHOOL_YEAR=growth.df$SCHOOL_YEAR, 
-#                                       SCHOOL_ID=growth.df$SCHOOL_ID,
-#                                       SUBJECT_CODE=growth.df$SUBJECT_CODE), 
-#                               sum)
-# 
-# growth.Accountability.N <- aggregate(data.frame(OLD_GROWTH_ACCOUNTABILITY_N=growth.subject.N$N), 
-#                                      by=list(SCHOOL_YEAR=growth.subject.N$SCHOOL_YEAR, 
-#                                              SCHOOL_ID=growth.subject.N$SCHOOL_ID),
-#                                      max)
-# 
-# growth <- merge (growth, growth.Accountability.N)
-# 
-# head(with(growth, growth[SCHOOL_YEAR==current.school.year,]))
-# 
-# with(growth, growth[OLD_GROWTH_ACCOUNTABILITY_N != GROWTH_ACCOUNTABILITY_N,])
-###
+growth.g38.indicator <- compute.indicator.long(growth.all, 
+                                               growth.all,
+                                               schools,
+                                               school.types = nonHS.types,
+                                               indicator.label="G38_GROWTH",
+                                               score.prefix="SGP",
+                                                    agg.fun=function (g) c(N_TESTS=length(g),                                                                           
+                                                                           MGP=median(g)))
+
+growth.labels <- names(growth.g38.indicator$schools)[grep("^G38_GROWTH", 
+                                                          names(growth.g38.indicator$schools))]
+
+schools[,growth.labels] <- growth.g38.indicator$schools[,growth.labels]
+
+table(schools[c("SCHOOL_YEAR", "G38_GROWTH_SMALL_SCHOOL")])
+
+quantile(with(schools,
+              schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                        schools$SCHOOL_YEAR == current.school.year &
+                        schools$G38_GROWTH_N >= min.N.growth 
+                      ,]$G38_GROWTH_MGP), 
+         probs=c(.35,.65),
+         type=6)
+
+#start with last year's cuts
+schools$G38_GROWTH_TARGET_LEVEL <- findInterval(schools$G38_GROWTH_MGP,
+                                            c(45, 60)) + 1
+
+table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "G38_GROWTH_TARGET_LEVEL")])
+prop.table(table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "G38_GROWTH_TARGET_LEVEL")]),1)
+
+schools[schools$SCHOOL_YEAR==current.school.year &
+          schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+          schools$GRADE_BAND_COMPOSITION == '> 6 only' &
+          schools$G38_GROWTH_TARGET_LEVEL == 3,]
 
 
-# Sturges <- function (sample) {
-#   ceiling(log(length(sample),2)) + 1 
-# }
-# 
-# Scott <- function (sample) {
-#   h<-3.5 * sqrt(var(sample))/length(sample)^(1/3)  
-#   ceiling((max(sample) - min(sample))/h)
-# }
 
 
+# write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+#                     schools$SCHOOL_YEAR == current.school.year &
+#                     schools$G38_GROWTH_N >= min.N.growth, 
+#                   c("SCHOOL_YEAR", "NAME", "SCHOOL_ID", 
+#                     "GRADE_BAND_COMPOSITION", 
+#                     "G38_GROWTH_N", 
+#                     "G38_GROWTH_MGP"),],
+#           file="results/g38-growth-cfds.csv",
+#           na="",
+#           row.names=FALSE)
 
-#creates a folder called "plots" if it doesn't already exist
-# if (!file.exists("plots"))
-#   dir.create("plots")
 
-#create histgram pdfs for 2010-11 and 2011-12 MGPs in plots folder
-# sapply(c("2010-11", "2011-12"), function (year) {
-#   k<-Scott(growth[growth$SCHOOL_YEAR=='2011-12' & growth$N > 5,"MGP"])
-#   #k<-Sturges(growth[growth$SCHOOL_YEAR=='2011-12' & growth$N > 5,"MGP"])
-#   pdf(file=paste("plots/MGP", year, "hist.pdf", sep="-"))
-#   hist(growth[growth$SCHOOL_YEAR==year & growth$N > 5 ,"MGP"], 
-#        n=k, 
-#        xlab="MGP", 
-#        main=paste("Histogram of", year, "MGPs for schools with N > 5", sep=" "))
-#   dev.off()
-# })
-
-#35th and 65th percentiles for 2012-12 MGPs for schools with N > 5
-# quantile(growth[growth$SCHOOL_YEAR=='2011-12' & growth$N > 5,]$MGP, c(.35, .65))
-# 
-# quantile(growth[growth$SCHOOL_YEAR=='2011-12' & growth$N > 5,]$MGP, probs=c(.01,.1,.25,.5,.75,.9,.99), type=6)
