@@ -82,15 +82,16 @@ schools[schools$SCHOOL_YEAR==current.school.year &
 
 
 
-# write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
-#                     schools$SCHOOL_YEAR == current.school.year &
-#                     schools$G38_GROWTH_N >= min.N.growth, 
-#                   c("SCHOOL_YEAR", "NAME", "SCHOOL_ID", 
-#                     "GRADE_BAND_COMPOSITION", 
-#                     "G38_GROWTH_N", 
-#                     "G38_GROWTH_MGP"),],
-#           file="results/g38-growth-cfds.csv",
-#           na="",
-#           row.names=FALSE)
+write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                    schools$SCHOOL_YEAR == current.school.year &
+                    schools$G38_GROWTH_N >= min.N.growth &
+                    schools$SCHOOL_ID != state.school.id, 
+                  c("SCHOOL_YEAR", "NAME", "SCHOOL_ID", 
+                    "GRADE_BAND_COMPOSITION", 
+                    "G38_GROWTH_N", 
+                    "G38_GROWTH_MGP"),],
+          file=get.filename("g38-growth-cfds", "results/cfds"),
+          na="",
+          row.names=FALSE)
 
 

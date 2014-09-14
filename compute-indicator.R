@@ -132,7 +132,8 @@ compute.indicator.long <- function (student.df.participation,
                                     student.key="WISER_ID")   
 {
   
-
+  #we can limit the participation data.frame to the schools of interest right here
+  student.df.participation <- merge(student.df.participation, schools[school.key])  
   student.df.participation$SCHOOL_ID <- apply(student.df.participation[,c("SCHOOL_YEAR", "SCHOOL_ID")],
                                        c(1),
                                        function (school) {
@@ -143,7 +144,7 @@ compute.indicator.long <- function (student.df.participation,
                                                 school[["SCHOOL_ID"]], 
                                                 paired.school)
                                        })
-  
+  #we can't do the same for scores because of lookbacks limit the participation data.frame to the schools of interest right here
   student.df.scores$SCHOOL_ID <- apply(student.df.scores[,c("SCHOOL_YEAR", "SCHOOL_ID")],
                                        c(1),
                                        function (school) {
@@ -163,6 +164,7 @@ compute.indicator.long <- function (student.df.participation,
                                       USE.NAMES=FALSE)
   
   #count student participation by subject and total
+  #limit to schools and years of interest  
   participation <- calc.participation.rate.long(student.df.participation,
                                            status.prefix=status.prefix, 
                                            status.codes=status.codes,
@@ -193,12 +195,16 @@ compute.indicator.long <- function (student.df.participation,
   
   #small school
   small.schools <- calc.small.schools(student.df.fay, schools.df, school.types, student.key, attribute=indicator.label)
+
+
   
   #label schools as small schools status along with their number of lookback years
   schools.df <- cbind(schools.df, small.schools$result.schools[,setdiff(names(small.schools$result.schools), names(schools.df))])  
   #add lookback records to the student data.frame
   student.df.fay$SCHOOL_YEAR_ORIGINAL <- student.df.fay$SCHOOL_YEAR
-  student.df.fay <- rbind(student.df.fay, small.schools$result.students)
+  
+  #now we can filter student score records to years of interest along with those lookback records we calculated
+  student.df.fay <- rbind(merge(student.df.fay, schools[school.key]), small.schools$result.students)
   
   
   

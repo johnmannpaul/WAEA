@@ -49,17 +49,18 @@ schools$G38_ACHIEVEMENT_ALL_TARGET_LEVEL <- findInterval(schools$G38_ACHIEVEMENT
                                                                         type=6)
                                                                ,0)) + 1
 
-# write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
-#                     schools$SCHOOL_YEAR == current.school.year &
-#                     schools$G38_ACHIEVEMENT_ALL_N >= min.N.achievement, 
-#                   c("SCHOOL_YEAR", "NAME", "SCHOOL_ID", 
-#                     "GRADE_BAND_COMPOSITION", 
-#                     "G38_ACHIEVEMENT_ALL_N", 
-#                     "G38_ACHIEVEMENT_ALL_PARTICIPATION_RATE", 
-#                     "G38_ACHIEVEMENT_ALL_PERCENT_PROFICIENT"),],
-#           file="results/g38-achievement-cfds.csv",
-#           na="",
-#           row.names=FALSE)
+write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                    schools$SCHOOL_YEAR == current.school.year &
+                    schools$G38_ACHIEVEMENT_ALL_N >= min.N.achievement &
+                    schools$SCHOOL_ID != state.school.id, 
+                  c("SCHOOL_YEAR", "NAME", "SCHOOL_ID", 
+                    "GRADE_BAND_COMPOSITION", 
+                    "G38_ACHIEVEMENT_ALL_N", 
+                    "G38_ACHIEVEMENT_ALL_PARTICIPATION_RATE", 
+                    "G38_ACHIEVEMENT_ALL_PERCENT_PROFICIENT"),],
+          file=get.filename("g38-achievement-cfds", "results/cfds"),
+          na="",
+          row.names=FALSE)
 
 
 table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "G38_ACHIEVEMENT_ALL_TARGET_LEVEL")])

@@ -5,7 +5,11 @@ load(file="data/ACT/act.suite.readiness.Rdata")
 #remove non-high schools (e.g. schools that serve grade 9, but do not award diplomas)
 
 nrow(act.suite.readiness)
-readiness.all.df <- merge(act.suite.readiness,schools[schools$WAEA_SCHOOL_TYPE %in% HS.types, c("SCHOOL_YEAR", "SCHOOL_ID")])
+
+readiness.all.df <- merge(act.suite.readiness,
+                          data.frame(SCHOOL_ID=unique(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types, "SCHOOL_ID"])))
+
+
 nrow(readiness.all.df)
 
 
@@ -90,7 +94,7 @@ table(findInterval(schools[schools$SCHOOL_YEAR==current.school.year,"HS_TESTED_R
 ##end checks
 
 
-write.csv(file="results/tested-readiness-cfds.csv", schools[
+write.csv(file=get.filename("tested-readiness-cfds", "results/cfds"), schools[
   schools$WAEA_SCHOOL_TYPE %in% HS.types &
     schools$SCHOOL_YEAR==current.school.year & 
     schools$HS_TESTED_READINESS_N >= min.N.tested.readiness &

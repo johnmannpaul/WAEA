@@ -1034,3 +1034,21 @@ calc.SPL.accountability <- function (school, SPL.label, participation.labels) {
     
   }
 }
+
+
+get.filename <- function (file.prefix, directory) {
+  results.files <- dir(directory)[grep(paste(file.prefix,"-[0-9]+\\.csv", sep=""), dir(directory))]
+  results.files <- results.files[order(results.files, decreasing=TRUE)]
+  result.file <- if (length(results.files) == 0) {
+    paste(file.prefix,"-001.csv", sep="")      
+  }else {
+    
+    last.file <- results.files[1]
+    prefix <- strsplit(strsplit(last.file, ".", fixed=TRUE)[[1]][1], "-", fixed=TRUE)
+    raw.index <- paste("00", as.numeric(prefix[[1]][length(prefix[[1]])]) + 1, sep="")
+    index <- substr(raw.index, nchar(raw.index) - 2, nchar(raw.index))
+    
+    paste(do.call(paste, as.list(c(prefix[[1]][1:(length(prefix[[1]])-1)], index, sep="-"))), "csv", sep=".")
+  }
+  paste(directory, result.file, sep="/")
+}

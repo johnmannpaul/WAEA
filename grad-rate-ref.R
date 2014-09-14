@@ -29,3 +29,16 @@ schools[schools$SCHOOL_YEAR==current.school.year &
           schools$SCHOOL_ID != state.school.id ,]
 
 
+write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & 
+                    !(is.na(schools$COHORT_EXTENDED_N.2012.13)) &
+                    schools$COHORT_EXTENDED_N.2012.13 >= min.N.grad &
+                    schools$SCHOOL_YEAR==current.school.year &
+                    schools$SCHOOL_ID != state.school.id,c("SCHOOL_ID", 
+                                                           "SCHOOL_YEAR", 
+                                                           "ALTERNATIVE_SCHOOL", 
+                                                           "GRAD_RATE_4_YR.2012.13", 
+                                                           "GRAD_RATE_EXTENDED",
+                                                           "CAT_4_YR_2013", 
+                                                           "CAT_EXTENDED_2013",
+                                                           "IMPROVE_CAT_2013")], 
+          file=get.filename("grad-rate-cfds", "results/cfds"), na="", row.names=FALSE)

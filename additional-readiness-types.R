@@ -354,17 +354,17 @@ schools[schools$SCHOOL_YEAR==current.school.year &
                                                                    "GRAD_RATE_4_YR.2012.13")]
 
 
-write.csv(file="results/additional-readiness-cfds.csv", 
+write.csv(file=get.filename("additional-readiness-cfds", "results/cfds"), 
           schools[schools$WAEA_SCHOOL_TYPE %in% HS.types &
                     schools$SCHOOL_YEAR==current.school.year &
                     schools$HS_ADD_READINESS_TYPE == 1 &
                     schools$HS_ADD_READINESS_N_TYPE1 >= 10 &
                     schools$SCHOOL_ID != state.school.id,
-                  c("SCHOOL_YEAR", "SCHOOL_ID", "ALTERNATIVE_SCHOOL", "HS_ADD_READINESS_SCORE_TYPE1")],
+                  c("SCHOOL_YEAR", "SCHOOL_ID", "ALTERNATIVE_SCHOOL", "HS_ADD_READINESS_N_TYPE1", "HS_ADD_READINESS_SCORE_TYPE1")],
           na="",
           row.names=FALSE)
 
-write.csv(file="results/alternative-school-add-readiness-cat-cross-tab.csv",
-          table(schools.of.interest[,c("ALTERNATIVE_SCHOOL","HS_ADD_READINESS_CAT")]),
-          na="")
+# write.csv(file="results/alternative-school-add-readiness-cat-cross-tab.csv",
+#           table(schools.of.interest[,c("ALTERNATIVE_SCHOOL","HS_ADD_READINESS_CAT")]),
+#           na="")
 #checks

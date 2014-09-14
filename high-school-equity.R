@@ -112,10 +112,10 @@ schools$HS_EQUITY_TARGET_LEVEL <- findInterval(schools$HS_EQUITY_MEAN,
 head(schools[schools$SCHOOL_YEAR==current.school.year & schools$WAEA_SCHOOL_TYPE %in% HS.types,],50)
 
 
-# write.csv(file="results/high-school-equity-cfds.csv", schools[schools$WAEA_SCHOOL_TYPE %in% HS.types &
-#                                                               schools$SCHOOL_YEAR==current.school.year & 
-#                                                               schools$HS_EQUITY_N >= min.N.equity.hs &
-#                                                                 schools$SCHOOL_ID != state.school.id,
-#                                                             c("SCHOOL_YEAR", "SCHOOL_ID", "ALTERNATIVE_SCHOOL", "HS_EQUITY_PARTICIPATION_RATE", "HS_EQUITY_MEAN")],
-#           na="",
-#           row.names=FALSE)
+write.csv(file=get.filename("high-school-equity-cfds", "results/cfds"), schools[schools$WAEA_SCHOOL_TYPE %in% HS.types &
+                                                              schools$SCHOOL_YEAR==current.school.year & 
+                                                              schools$HS_EQUITY_N >= min.N.equity.hs &
+                                                                schools$SCHOOL_ID != state.school.id,
+                                                            c("SCHOOL_YEAR", "SCHOOL_ID", "ALTERNATIVE_SCHOOL", "HS_EQUITY_PARTICIPATION_RATE", "HS_EQUITY_MEAN")],
+          na="",
+          row.names=FALSE)

@@ -43,11 +43,13 @@ schools$SMALL_SCHOOL_GRADE_NINE_CREDIT <- apply(schools[,c("SCHOOL_ID", "SCHOOL_
 
 head(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & schools$SCHOOL_YEAR==current.school.year,])
 
-# write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & 
-#                     schools$SCHOOL_YEAR==current.school.year,c("SCHOOL_ID", 
-#                                                                "SCHOOL_YEAR", 
-#                                                                "ALTERNATIVE_SCHOOL", 
-#                                                                "GRADE_NINE_CREDITS_N", "GRADE_NINE_CREDITS_MET_N", "SMALL_SCHOOL_GRADE_NINE_CREDIT", "PERCENT_GD_9_CREDIT_MET")], 
-#           file="results/grade-nine-credits-subindicator.csv", na="", row.names=FALSE)
+write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & 
+                    schools$SCHOOL_YEAR==current.school.year &
+                    schools$GRADE_NINE_CREDITS_N >= min.N.grade.nine.credits &
+                    schools$SCHOOL_ID != state.school.id,c("SCHOOL_ID", 
+                                                               "SCHOOL_YEAR", 
+                                                               "ALTERNATIVE_SCHOOL", 
+                                                               "GRADE_NINE_CREDITS_N", "GRADE_NINE_CREDITS_MET_N", "SMALL_SCHOOL_GRADE_NINE_CREDIT", "PERCENT_GD_9_CREDIT_MET")], 
+          file=get.filename("grade-nine-credits-cfds", "results/cfds"), na="", row.names=FALSE)
 
 

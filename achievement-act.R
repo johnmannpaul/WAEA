@@ -119,15 +119,15 @@ plot.hist(achievement.hs.scores,15)
 #        na="",
 #        row.names=FALSE)
 
-# write.csv(file="results/high-school-achievement-cfds.csv",
-#           schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & 
-#                     schools$SCHOOL_YEAR==current.school.year &
-#                     schools$N_HS_ACHIEVEMENT >= min.N.achievement.hs &
-#                     schools$SCHOOL_ID != state.school.id, c("SCHOOL_YEAR", "SCHOOL_ID", 
-#                                                             "ALTERNATIVE_SCHOOL",
-#                                                             "N_HS_ACHIEVEMENT", 
-#                                                             "HS_ACHIEVEMENT_PARTICIPATION_RATE",
-#                                                             "PERCENT_PROFICIENT_HS_ACHIEVEMENT")],
-#           na="",
-#           row.names=FALSE)
+write.csv(file=get.filename("high-school-achievement-cfds", "results/cfds"),
+          schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & 
+                    schools$SCHOOL_YEAR==current.school.year &
+                    schools$HS_ACHIEVEMENT_N >= min.N.achievement.hs &
+                    schools$SCHOOL_ID != state.school.id, c("SCHOOL_YEAR", "SCHOOL_ID", 
+                                                            "ALTERNATIVE_SCHOOL",
+                                                            "HS_ACHIEVEMENT_N", 
+                                                            "HS_ACHIEVEMENT_PARTICIPATION_RATE",
+                                                            "HS_ACHIEVEMENT_PERCENT_PROFICIENT")],
+          na="",
+          row.names=FALSE)
 

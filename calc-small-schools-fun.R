@@ -10,8 +10,7 @@ calc.small.schools <- function (df,
                                 attribute="ACHIEVEMENT") {
   
   #determine "small" schools in df 
-  schools.N <- with(df, cast(merge(schools.df[schools.df$WAEA_SCHOOL_TYPE %in% waea.school.types,
-                                              c("SCHOOL_YEAR", "SCHOOL_ID")],
+  schools.N <- with(df, cast(merge(data.frame(SCHOOL_ID=unique(schools.df[schools.df$WAEA_SCHOOL_TYPE %in% waea.school.types,"SCHOOL_ID"])),
                                    df[, c("SCHOOL_YEAR","SCHOOL_ID",id.column)]), SCHOOL_YEAR+SCHOOL_ID~., 
                              function (x) length(unique(x))))
   
@@ -22,7 +21,7 @@ calc.small.schools <- function (df,
   
   
   #merge schools with no scores
-  schools.N.0 <- merge(schools.df[schools.df$WAEA_SCHOOL_TYPE %in% waea.school.types,c("SCHOOL_YEAR", "SCHOOL_ID")],
+  schools.N.0 <- merge(schools.df[schools.df$WAEA_SCHOOL_TYPE %in% waea.school.types,c("SCHOOL_ID", "SCHOOL_YEAR")],
                        df[, c("SCHOOL_YEAR","SCHOOL_ID",id.column)],
                        all.x=TRUE)
   
@@ -47,7 +46,8 @@ calc.small.schools <- function (df,
   schools.N[N.label] <- as.numeric(schools.N[[N.label]])
   
   
-  small.schools <- schools.N[eval(bquote(schools.N[.(N.label)] < min.N)),]
+  small.schools <- merge(schools.N[eval(bquote(schools.N[.(N.label)] < min.N)),],
+                         schools.df[,c("SCHOOL_ID", "SCHOOL_YEAR")])
   
   
   #now we need to determine how far back to go 
@@ -61,12 +61,18 @@ calc.small.schools <- function (df,
   
   
   #this is a dataframe
-  go.back <- cbind(SCHOOL_ID = small[,"SCHOOL_ID"], as.data.frame(t(apply(small, c(1),
-                                                                          FUN=function (school) {
-                                                                            compute.N.years(school, min.N)          
-                                                                          }
-  ))))
-  
+  go.back <- if (ncol(small) > 2) { #at least one year to look back to
+    cbind(SCHOOL_ID = small[,"SCHOOL_ID"], as.data.frame(t(apply(small, c(1),
+                                                                 FUN=function (school) {
+                                                                   compute.N.years(school, min.N)          
+                                                                 }
+    ))))
+  }
+  else { #no years to go back
+    result <- cbind(small["SCHOOL_ID"], Inf)
+    names(result)[2] <- names(small[2])
+    result
+  }
   
   compute.years.back <- function (school) {
     
@@ -119,17 +125,16 @@ calc.small.schools <- function (df,
   
   result.schools[years.back.label] <- as.numeric(result.schools[[years.back.label]])
   
-  #here are your small schools again  
-  result.schools[eval(bquote(result.schools[.(small.school.label)] == 'T')),]
-
+  #here are your small schools again    
+  result.schools[result.schools[[small.school.label]] %in% 'T',]
   
   #these are the ones we can actually do something about
 #   small.schools.fix <- result.schools[eval(bquote(result.schools[.(small.school.label)] == 'T' &
 #                                                     result.schools[.(years.back.label)] < Inf)),]
 
 
-  small.schools.fix <- result.schools[eval(bquote(!is.na(result.schools[.(years.back.label)]) &
-                                                  result.schools[.(years.back.label)] < Inf)),]
+  small.schools.fix <- result.schools[!is.na(result.schools[[years.back.label]]) &
+                                                  result.schools[[years.back.label]] < Inf,]
 
   
   get.students.years.back <- function (school, df, id.column, years.back.label) {
@@ -163,10 +168,11 @@ calc.small.schools <- function (df,
     
   }
   
-
+  #takes a long time for big data frames
   small.schools.additional.student.records <- do.call(rbind, apply(small.schools.fix[,c("SCHOOL_YEAR", "YEAR", "SCHOOL_ID", years.back.label)], c(1),
                                                                        FUN=function (school) get.students.years.back(school,
-                                                                                                                     df, 
+                                                                                                                     merge(df, 
+                                                                                                                           data.frame(SCHOOL_ID = unique(small.schools.fix$SCHOOL_ID))), #only care about the student records for the small schools 
                                                                                                                      id.column,
                                                                                                                      years.back.label)))
   

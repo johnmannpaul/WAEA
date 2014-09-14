@@ -105,11 +105,12 @@ head(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & schools$SCHOOL_YEAR==curre
 #           file="results/hathaway-elligibility-subindicator.csv", na="", row.names=FALSE)
 
 
-# write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & 
-#                     !is.na(schools$HATH_INDEX_SCORE_N) &
-#                     schools$HATH_INDEX_SCORE_N >= min.N.hath.eligibility &
-#                     schools$SCHOOL_YEAR==current.school.year ,c("SCHOOL_ID", 
-#                                                                            "SCHOOL_YEAR", 
-#                                                                            "ALTERNATIVE_SCHOOL", 
-#                                                                            "HATH_INDEX_SCORE_N", "HATH_INDEX_SCORE_MEAN")], 
-#           file="results/hathaway-elligibility-subindicator-index.csv", na="", row.names=FALSE)
+write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & 
+                    !is.na(schools$HATH_INDEX_SCORE_N) &
+                    schools$HATH_INDEX_SCORE_N >= min.N.hath.eligibility &
+                    schools$SCHOOL_YEAR==current.school.year &
+                    schools$SCHOOL_ID != state.school.id,c("SCHOOL_ID", 
+                                                           "SCHOOL_YEAR", 
+                                                           "ALTERNATIVE_SCHOOL", 
+                                                           "HATH_INDEX_SCORE_N", "HATH_INDEX_SCORE_MEAN", "HATH_CAT_MEAN")], 
+          file=get.filename("hathaway-elligibility-cfds", "results/cfds"), na="", row.names=FALSE)

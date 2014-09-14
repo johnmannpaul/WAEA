@@ -1,69 +1,67 @@
-###based on data/PAWS_ACCOUNTABILITY_LONG.csv
-##assumes that growth.R has been run to define growth.df
-below.proficient.priors <- growth.df[growth.df$ACHIEVEMENT_LEVEL_PRIOR %in% c(1,2),]
-subgroup.students <- unique(below.proficient.priors[, c("SCHOOL_YEAR", "WISER_ID", "SCHOOL_ID")])
+load(file="data/achievement-for-equity.Rdata")
 
-#scores for all the students in the subgroup
-consolidated.subgroup.df <- merge(subgroup.students, growth.df)
-
-#Under this strategy we do not use multiyear records to compute equity.  We should have applied this rule.  But we didn't.
-#consolidated.subgroup.df <- with(consolidated.subgroup.df, consolidated.subgroup.df[SCHOOL_YEAR == SCHOOL_YEAR_ORIGINAL,])
-
-#growth.df[growth.df$ACHIEVEMENT_LEVEL_PRIOR %in% c(1,2),]
-
-met.agp <- ifelse(consolidated.subgroup.df$MET_AGP == 'T', 1, 0)
-
-equity <- aggregate(data.frame(MET_AGP=met.agp, N=rep(1,length(met.agp))), 
-                    by=list(SCHOOL_YEAR=consolidated.subgroup.df$SCHOOL_YEAR, 
-                            SCHOOL_ID=consolidated.subgroup.df$SCHOOL_ID), 
-                    sum)
-
-#get the state value
-equity.state <- aggregate(data.frame(MET_AGP=met.agp, N=rep(1,length(met.agp))), 
-                          by=list(SCHOOL_YEAR=consolidated.subgroup.df$SCHOOL_YEAR), 
-                          sum)
-
-equity.state <- cbind(SCHOOL_ID=rep(state.school.id, nrow(equity.state)), equity.state)
-
-equity <- rbind(equity, equity.state)
-head(equity)
-tail(equity)
-
-percent.meeting.agp <- round((equity$MET_AGP / equity$N) * 100, precision)
-
-equity$PERCENT_MEETING_AGP <- percent.meeting.agp
+equity.g38.indicator <- compute.indicator.long(achievement.for.equity.all, 
+                                               achievement.for.equity.all,
+                                               schools,
+                                               school.types = nonHS.types,
+                                               indicator.label="G38_EQUITY",
+                                               score.prefix="STD_SCORE",
+                                               agg.fun=function (g) c(N_TESTS=length(g),                                                                           
+                                                                      MEAN=round(mean(g), 0)))
 
 
-subgroup.N <- aggregate(data.frame(N_SUBGROUP=rep(1,nrow(subgroup.students))),
-                        by=list(SCHOOL_YEAR=subgroup.students$SCHOOL_YEAR, 
-                                SCHOOL_ID=subgroup.students$SCHOOL_ID), 
-                        sum)
+equity.g38.labels <- names(equity.g38.indicator$schools)[grep("^G38_EQUITY", 
+                                                              names(equity.g38.indicator$schools))]
 
-#compute state value
-subgroup.N.state <- aggregate(data.frame(N_SUBGROUP=rep(1,nrow(subgroup.students))),
-                        by=list(SCHOOL_YEAR=subgroup.students$SCHOOL_YEAR), 
-                        sum)
+schools[,equity.g38.labels] <- equity.g38.indicator$schools[,equity.g38.labels]
 
-subgroup.N.state <- cbind(SCHOOL_ID = rep(state.school.id, nrow(subgroup.N.state)), subgroup.N.state)
+table(schools[c("SCHOOL_YEAR", "G38_EQUITY_SMALL_SCHOOL")])
 
-subgroup.N <-rbind(subgroup.N, subgroup.N.state)
+table(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types,
+              c("SCHOOL_YEAR", "G38_EQUITY_YEARS_BACK")], useNA="ifany")
+equity.g38.participation.rate <- schools[schools$SCHOOL_YEAR==current.school.year &
+                                           schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                                           schools$G38_EQUITY_N >= min.N.subgroup,"G38_EQUITY_PARTICIPATION_RATE"]
 
-equity <- merge(equity, subgroup.N)
-
-with(equity, head(equity[SCHOOL_YEAR=='2012-13',]))
-with(equity, tail(equity[SCHOOL_YEAR=='2012-13',]))
-
-##equity analysis - can skip
-xy <- merge(equity[equity$SCHOOL_YEAR=='2011-12', c("SCHOOL_ID", "PERCENT_MEETING_AGP"),],
-            equity[equity$SCHOOL_YEAR=='2012-13', c("SCHOOL_ID", "PERCENT_MEETING_AGP"),], by=c("SCHOOL_ID"))
-cor(xy$PERCENT_MEETING_AGP.x, xy$PERCENT_MEETING_AGP.y)
+equity.g38.participation.rate[order(equity.g38.participation.rate)]
 
 
+quantile(with(schools,
+              schools[schools$SCHOOL_YEAR==current.school.year &
+                        schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                        schools$G38_EQUITY_N >= min.N.subgroup
+                      ,]$G38_EQUITY_MEAN), 
+         probs=c(.35,.65),
+         type=6)
 
-##assign equity SPL
+schools$G38_EQUITY_TARGET_LEVEL <- findInterval(schools$G38_EQUITY_MEAN,
+                                                round(quantile(with(schools,
+                                                                    schools[schools$SCHOOL_YEAR==current.school.year &
+                                                                              schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                                                                              schools$G38_EQUITY_N >= min.N.subgroup
+                                                                            ,]$G38_EQUITY_MEAN), 
+                                                               probs=c(.35,.65),
+                                                               type=6),0)) + 1
 
-schools <- calc.school.equity(schools)
+table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "G38_EQUITY_TARGET_LEVEL")])
+prop.table(table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "G38_EQUITY_TARGET_LEVEL")]),1)
 
-#look at distribution of computed target levels
-table(schools[schools$SCHOOL_YEAR==current.school.year,]$EQUITY_TARGET_LEVEL)
-schools[schools$SCHOOL_ID==state.school.id,]
+schools[schools$SCHOOL_YEAR==current.school.year &
+          schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+          schools$G38_EQUITY_N >= min.N.subgroup &
+          schools$G38_EQUITY_PARTICIPATION_RATE < 95
+        ,]
+
+write.csv(schools[schools$SCHOOL_YEAR==current.school.year &
+                    schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+                    schools$G38_EQUITY_N >= min.N.subgroup &
+                    schools$SCHOOL_ID != state.school.id, 
+                  c("SCHOOL_YEAR", "NAME", "SCHOOL_ID", 
+                    "GRADE_BAND_COMPOSITION", 
+                    "G38_EQUITY_YEARS_BACK",
+                    "G38_EQUITY_N", 
+                    "G38_EQUITY_MEAN"),],
+          file=get.filename("g38-equity-cfds", "results/cfds"),
+          na="",
+          row.names=FALSE)
+
