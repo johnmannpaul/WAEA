@@ -69,7 +69,7 @@ quantile(with(schools,
 
 #start with last year's cuts
 schools$G38_GROWTH_TARGET_LEVEL <- findInterval(schools$G38_GROWTH_MGP,
-                                            c(45, 60)) + 1
+                                            g38.growth.cuts) + 1
 
 table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "G38_GROWTH_TARGET_LEVEL")])
 prop.table(table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "G38_GROWTH_TARGET_LEVEL")]),1)

@@ -107,7 +107,7 @@ type.1.additional.readiness <- data.frame(t(apply(schools[schools$SCHOOL_YEAR==c
                                                                                                       "GRADE_NINE_CREDITS_MET_N",
                                                                                                       "HATH_INDEX_SCORE_N")],
                                                   c(1),
-                                                  compute.add.readiness, c(.35,.15,.50),
+                                                  compute.add.readiness, additional.readiness.weights,
                                                   precision.add.readiness, 
                                                   result.labels=c("HS_ADD_READINESS_SCORE_TYPE1", "HS_ADD_READINESS_N_TYPE1"))))
                                           
@@ -124,13 +124,11 @@ quantile(schools[schools$SCHOOL_YEAR==current.school.year &
          probs=c(.30, .70))
 
 
-type.1.additional.readiness.cuts <- c(58, 66)
 
-type.1.additional.readiness$HS_ADD_READINESS_CAT_TYPE1 <- sapply(type.1.additional.readiness$HS_ADD_READINESS_SCORE_TYPE1,
-                                                        function (s) {
-                                                          
-                                                          findInterval(s, type.1.additional.readiness.cuts) + 1
-                                                        })
+
+type.1.additional.readiness$HS_ADD_READINESS_CAT_TYPE1 <- findInterval(type.1.additional.readiness$HS_ADD_READINESS_SCORE_TYPE1, 
+                                                                       type.1.additional.readiness.cuts) + 1
+                                                        
 
 prop.table(table(type.1.additional.readiness$HS_ADD_READINESS_CAT_TYPE1))
 

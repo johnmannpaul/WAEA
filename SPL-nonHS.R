@@ -1,12 +1,7 @@
 #names(schools)[grep("TARGET_LEVEL", names(schools))]
 #names(schools)[grep("_N$", names(schools))]
 
-g38.target.level.labels <- c(achievement="G38_ACHIEVEMENT_ALL_TARGET_LEVEL",
-                             growth="G38_GROWTH_TARGET_LEVEL",
-                             equity="G38_EQUITY_TARGET_LEVEL")
 
-g38.participation.labels <- c(achievement="G38_ACHIEVEMENT_ALL_PARTICIPATION_RATE",
-                             equity="G38_EQUITY_PARTICIPATION_RATE")
 
 schools$G38_INDICATORS_N <- apply(schools[,c(g38.target.level.labels["achievement"], g38.target.level.labels["growth"], g38.target.level.labels["equity"])],
                               c(1),                                                                                      

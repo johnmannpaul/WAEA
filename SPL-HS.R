@@ -1,20 +1,3 @@
-
-hs.target.level.labels <- c(achievement="HS_ACHIEVEMENT_TARGET_LEVEL",
-                            equity="HS_EQUITY_TARGET_LEVEL",
-                            readiness="HS_ADD_READINESS_CAT",                            
-                            grad.rate="IMPROVE_CAT_2013")
-
-hs.achievement.target.level.labels <- hs.target.level.labels[1:2]
-hs.readiness.target.level.labels <- hs.target.level.labels[3:4]
-
-hs.overall.target.level.labels <- c(readiness="HS_OVERALL_READINESS",
-                                    achievement="HS_OVERALL_ACHIEVEMENT")
-
-hs.participation.labels <- c(achievement="HS_ACHIEVEMENT_PARTICIPATION_RATE",
-                              tested.readiness="HS_TESTED_READINESS_PARTICIPATION_RATE",
-                             equity="HS_EQUITY_PARTICIPATION_RATE"
-                             )
-
 schools$HS_ACHIEVEMENT_INDICATORS_N <- apply(schools[,hs.achievement.target.level.labels],
                                   c(1),                                                                                      
                                   FUN=function (indicators) {                                

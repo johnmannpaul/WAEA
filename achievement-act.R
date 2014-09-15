@@ -42,22 +42,21 @@ quantile(with(schools,
          type=6)
 
 
+# schools$HS_ACHIEVEMENT_TARGET_LEVEL <- findInterval(schools$HS_ACHIEVEMENT_PERCENT_PROFICIENT,
+#                                                     round(quantile(with(schools,
+#                                                                         schools[SCHOOL_YEAR == current.school.year &                     
+#                                                                                   HS_ACHIEVEMENT_N >= min.N.achievement.hs &
+#                                                                                   !is.na(HS_ACHIEVEMENT_PARTICIPATION_RATE) &  
+#                                                                                   HS_ACHIEVEMENT_PARTICIPATION_RATE >= .90 & 
+#                                                                                   SCHOOL_ID != state.school.id,]$HS_ACHIEVEMENT_PERCENT_PROFICIENT), 
+#                                                                    probs=c(.35,.65),
+#                                                                    type=6)
+#                                                                          ,0)) + 1
+
 schools$HS_ACHIEVEMENT_TARGET_LEVEL <- findInterval(schools$HS_ACHIEVEMENT_PERCENT_PROFICIENT,
-                                                    round(quantile(with(schools,
-                                                                        schools[SCHOOL_YEAR == current.school.year &                     
-                                                                                  HS_ACHIEVEMENT_N >= min.N.achievement.hs &
-                                                                                  !is.na(HS_ACHIEVEMENT_PARTICIPATION_RATE) &  
-                                                                                  HS_ACHIEVEMENT_PARTICIPATION_RATE >= .90 & 
-                                                                                  SCHOOL_ID != state.school.id,]$HS_ACHIEVEMENT_PERCENT_PROFICIENT), 
-                                                                   probs=c(.35,.65),
-                                                                   type=6)
-                                                                         ,0)) + 1
+                                                    hs.achievement.cuts) + 1
 
 
-# schools <- bind.indicator(schools, 
-#                           act.achieve.fay.school[act.achieve.fay.school$SCHOOL_YEAR==current.school.year,],                               
-#                           indicator.labels.min.N = c("PERCENT_PROFICIENT", N="N_ACHIEVEMENT", "HS_ACHIEVEMENT_TARGET_LEVEL"),
-#                           min.N.achievement.hs)
 
 table(schools[c("SCHOOL_YEAR","HS_ACHIEVEMENT_TARGET_LEVEL")])
 

@@ -38,16 +38,19 @@ g38.participation.rate <- schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
 g38.participation.rate[order(g38.participation.rate)]
 
 
+# schools$G38_ACHIEVEMENT_ALL_TARGET_LEVEL <- findInterval(schools$G38_ACHIEVEMENT_ALL_PERCENT_PROFICIENT,
+#                                                          round(quantile(with(schools,
+#                                                                              schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+#                                                                                        schools$SCHOOL_YEAR == current.school.year &
+#                                                                                        schools$G38_ACHIEVEMENT_ALL_N >= min.N.achievement &
+#                                                                                        schools$G38_ACHIEVEMENT_ALL_PARTICIPATION_RATE > 0.9
+#                                                                                      ,]$G38_ACHIEVEMENT_ALL_PERCENT_PROFICIENT), 
+#                                                                         probs=c(.35,.65),
+#                                                                         type=6)
+#                                                                ,0)) + 1
+
 schools$G38_ACHIEVEMENT_ALL_TARGET_LEVEL <- findInterval(schools$G38_ACHIEVEMENT_ALL_PERCENT_PROFICIENT,
-                                                         round(quantile(with(schools,
-                                                                             schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
-                                                                                       schools$SCHOOL_YEAR == current.school.year &
-                                                                                       schools$G38_ACHIEVEMENT_ALL_N >= min.N.achievement &
-                                                                                       schools$G38_ACHIEVEMENT_ALL_PARTICIPATION_RATE > 0.9
-                                                                                     ,]$G38_ACHIEVEMENT_ALL_PERCENT_PROFICIENT), 
-                                                                        probs=c(.35,.65),
-                                                                        type=6)
-                                                               ,0)) + 1
+                                                         g38.achievement.cuts) + 1
 
 write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
                     schools$SCHOOL_YEAR == current.school.year &

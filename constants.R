@@ -77,25 +77,6 @@ band.lookup <- list(`03`=1,
                     `11`=3)
 
 
-# school.pairing.lookup <- list(`2010-11` = list(`0701008`='0701009',
-#                                                `0706001`='0706002',
-#                                                `1001006`='1001002',
-#                                                `1101010`='1101022',
-#                                                `1202001`='1202005',
-#                                                `1202003`='1202004'),
-#                               `2011-12` = list(`0701008`='0701009',
-#                                                `0706001`='0706002',
-#                                                `1001006`='1001002',
-#                                                `1101010`='1101022',
-#                                                `1202001`='1202005',
-#                                                `1202003`='1202004'),
-#                               `2012-13` = list(`0701008`='0701009',
-#                                                `0706001`='0706002',
-#                                                `1001006`='1001002',
-#                                                `1101010`='1101022',
-#                                                `1202001`='1202005',
-#                                                `1202003`='1202004'
-#                               ))
 
 #PODER Academy (1101040) is of type 6, but current not paired with any school
 school.pairing.lookup <- list(`2010-11` = list(`0501002` = '0501010',
@@ -169,6 +150,8 @@ school.pairing.lookup <- list(`2010-11` = list(`0501002` = '0501010',
                                                `2301003` = '2301001')
 )
 
+participation.level.lookup <- c(90, 95)
+
 participation.labels <- c("Not Met", "Docked", "Met")
 indicator.labels <- c("Not Meeting Targets", "Meeting Targets", "Exceeding Targets")
 SPL.labels <- c("Not Meeting Expectations",
@@ -179,105 +162,32 @@ SPL.labels <- c("Not Meeting Expectations",
 #reflect the 2012-13 PJP matrix decisions
 SPL.lookup <- list( nonHS = list( `3` = cast(read.csv(file="const/AGE.csv"), ACHIEVEMENT~GROWTH~EQUITY),
                                   `2` = as.matrix(cast(read.csv(file="const/AG.csv"), ACHIEVEMENT~GROWTH))),
-                    HS = list( Readiness = as.matrix(cast(read.csv(file="const/Overall-Readiness.csv"), ADD_READINESS~GRAD_RATE)),
+                    HS = list( Readiness = as.matrix(cast(read.csv(file="const/Readiness-GradRate.csv"), ADD_READINESS~GRAD_RATE)),
                                Achievement = as.matrix(cast(read.csv(file="const/Achievement-Equity.csv"), ACHIEVEMENT~EQUITY)),
                                Overall = as.matrix(cast(read.csv(file="const/Achievement-Readiness.csv"), READINESS~ACHIEVEMENT))))
 
 
-#achievement
-
-# lapply(seq(1,3), 
-#        function (band) {
-#          quantile(achievement[achievement$SCHOOL_YEAR == current.school.year & achievement$SCHOOL_ID != state.school.id &
-#                                 achievement$ACCOUNTABILITY_N_BAND > min.N.achievement &
-#                                 achievement$GRADE_BAND == band,]$PERCENT_PROFICIENT, 
-#                   probs=c(.35,.65))
-#          
-#        })
-
-
 
 #default values based on the above percentiles
-achievement.level.lookup.year <- list(`2011-12` = list(c(79,85), 
-                                                       c(68,76)),
-                                      #                                       `2012-13` = list(c(76, 82),
-                                      #                                                        c(67,74))
-                                      `2012-13` = list(c(75, 86), #2012-13 PJP cuts
-                                                       c(68,80)))
-
-achievement.level.lookup <- achievement.level.lookup.year[[current.school.year]]
-
-achievement.labels <- c(cut.1="ACHIEVEMENT_CUT_1", cut.2="ACHIEVEMENT_CUT_2", "PERCENT_PROFICIENT", N="N_ACHIEVEMENT", "ACHIEVEMENT_TARGET_LEVEL")
-achievement.grade.band.labels <- c("PERCENT_PROFICIENT_BAND_1", "PERCENT_PROFICIENT_BAND_2", "N_ACHIEVEMENT_BAND_1", "N_ACHIEVEMENT_BAND_2")
+g38.achievement.cuts.lookup.year <- list(`2013-14` = c(52, 61))
+g38.achievement.cuts <- g38.achievement.cuts.lookup.year[[current.school.year]]
 
 
-
-#growth
-# quantile(growth[growth$SCHOOL_YEAR == current.school.year & growth$SCHOOL_ID != state.school.id &
-#                   growth$GROWTH_ACCOUNTABILITY_N > 5,]$MGP, 
-#          probs=c(.35,.65))
-
-
-#default values based on the above percentiles
-
-# growth.level.lookup.year <- list(`2011-12` = c(47,55),                                                        
-#                                  `2012-13` = c(47, 55))
-
-growth.level.lookup.year <- list(`2011-12` = c(47,55),                                                        
-                                 `2012-13` = c(45, 60))  #2012-13 PJP cuts
-
-growth.level.lookup <- growth.level.lookup.year[[current.school.year]]
-
-growth.labels <- c(cut.1="GROWTH_CUT_1", cut.2="GROWTH_CUT_2", "PERCENT_PROFICIENT_PRIOR", "MGP", N="N_GROWTH", "GROWTH_TARGET_LEVEL")
+g38.growth.cuts.lookup.year <- list(`2011-12` = c(47,55),                                                        
+                                 `2012-13` = c(45, 60), #2012-13 PJP cuts
+                                 `2013-14` = c(45, 60))  
+g38.growth.cuts <- g38.growth.cuts.lookup.year[[current.school.year]]
 
 
-#equity
-# quantile(equity[equity$SCHOOL_YEAR == current.school.year & 
-#                   equity$N_SUBGROUP > 14 & equity$SCHOOL_ID != state.school.id,]$PERCENT_MEETING_AGP, 
-#          probs=c(.35,.65))
+g38.equity.cuts.lookup.year <- list(`2011-12` = c(49,58),                                                        
+                                 `2012-13` = c(40, 55), #2012-13 PJP cuts
+                                 `2013-14` = c(82, 85)) 
+g38.equity.cuts<- g38.equity.cuts.lookup.year[[current.school.year]]
 
 
-# equity.level.lookup.year <- list(`2011-12` = c(49,58),                                                        
-#                                  `2012-13` = c(37, 45))
+hs.achievement.cuts.lookup.year <- list(`2013-14` = c(28, 38))
+hs.achievement.cuts <- hs.achievement.cuts.lookup.year[[current.school.year]]
 
-equity.level.lookup.year <- list(`2011-12` = c(49,58),                                                        
-                                 `2012-13` = c(40, 55)) #2012-13 PJP cuts
-
-equity.level.lookup <- equity.level.lookup.year[[current.school.year]]
-
-equity.labels <- c(cut.1="EQUITY_CUT_1", cut.2="EQUITY_CUT_2", "PERCENT_MEETING_AGP", N="N_SUBGROUP", "EQUITY_TARGET_LEVEL")
-
-
-#act achievement
-high.school.baseline.achievement.stats <- read.csv(file="const/HighSchoolBaselineStats.csv")
-
-# quantile(achievement.hs[achievement.hs$SCHOOL_YEAR == current.school.year & 
-#                           achievement.hs$N_ACHIEVEMENT_HS >= min.N.achievement.hs &
-#                           achievement.hs$PARTICIPATION_RATE_ACHIEVEMENT_HS >= 90 & 
-#                           achievement.hs$SCHOOL_ID != state.school.id,]$ACHIEVEMENT_HS, 
-#          probs=c(.35,.65),
-#          type=6)
-
-##based on above percentiles
-act.achievement.level.lookup.year <- list(`2013-14` = c(-6, 13))
-
-achievement.hs.level.lookup <- act.achievement.level.lookup.year[[current.school.year]]
-
-act.achievement.participation.labels <- c("ACHIEVEMENT_TESTED_HS", 
-                                          "ACHIEVEMENT_PARTICIPANTS_HS", 
-                                          "PARTICIPATION_RATE_ACHIEVEMENT_HS")
-
-act.accountability.z.score.labels <- c(math="ACCOUNTABILITY_Z_SCORE_MATH", 
-                                       reading="ACCOUNTABILITY_Z_SCORE_READING",
-                                       science="ACCOUNTABILITY_Z_SCORE_SCIENCE", 
-                                       writing="ACCOUNTABILITY_Z_SCORE_ENG_WRITING")
-
-act.achievement.labels <- c(part.rate="PARTICIPATION_RATE_ACHIEVEMENT_HS",
-                            N="N_ACHIEVEMENT_HS", 
-                            score="ACHIEVEMENT_HS", 
-                            cut.1="ACHIEVEMENT_CUT_1_HS", 
-                            cut.2="ACHIEVEMENT_CUT_2_HS",                                                                                      
-                            target.level="ACHIEVEMENT_TARGET_LEVEL_HS")
 
 #act readiness
 calc.index <- function (domain.runs, range) {
@@ -355,105 +265,65 @@ readiness.indeces <- list(ALT=alt_index,
                           PLAN=plan_index,
                           EXPLORE=explore_index)
 
-tested.readiness.labels <- c( 
-  "TESTED_READINESS", 
-  N="N_TESTED_READINESS", 
-  part.rate="PART_RATE_TESTED_READINESS")
-
 
 ##grad rate index
 grad.index.runs = list('Non-Graduate', 'Returning', '6YR', '5YR', '4YR')
 #grad.index.range = c(0, 50, 75, 75, 100)
 grad.index.range = c(0, 50, 100, 100, 100) #2012-13 PJP index
 grad.index <- calc.index(grad.index.runs, grad.index.range)
-# grad.index <- c(0, 50, 75, 75, 100)
-# names(grad.index) <- c('Non-Graduate', 'Returning', '5YR', '6YR', '4YR')
-
-grad.index.labels <- c(Indicator="SCHOOL_GRADUATION_INDEX", 
-                       N="N_GRADUATION")
 
 
-#hs readiness weights
-# hs.readiness.weights = c(TESTED_READINESS=0.44,
-#                          SCHOOL_GRADUATION_INDEX=0.56)
+hs.grad.rate.cuts.lookup.year <- list(`2013-14` = c(.8, .9))  #2012-13 PJP cuts, corrected
+hs.grad.rate.cuts <- hs.grad.rate.cuts.lookup.year[[current.school.year]]
 
-#hathaway eligibility
+
 hathaway.eligibility.index <- c(20, 40, 60, 80, 100)  #PJP 2014 will define
 
-#PJP 2013 changed to this
-hs.readiness.weights = c(TESTED_READINESS=0.4,
-                         SCHOOL_GRADUATION_INDEX=0.6)
+additional.readiness.weights <- c(tested=.35,
+                                  grade.nine=.15,
+                                  hathaway=.50)
 
 
 
-# quantile(with(schools, schools[!is.na(TOTAL_READINESS_HS) & (N_TESTED_READINESS > 5 & N_GRADUATION > 5),]$TOTAL_READINESS_HS),
-#          probs=c(.35,.65))
 
-#based on the above quantiles
-#total.readiness.level.lookup.year <- list(`2012-13` = c(63,72))
-#total.readiness.level.lookup.year <- list(`2012-13` = c(68,80))  #2012-13 PJP cuts
-total.readiness.level.lookup.year <- list(`2012-13` = c(71,81))  #2012-13 PJP cuts, corrected
-total.readiness.level.lookup <- total.readiness.level.lookup.year[[current.school.year]]
-total.readiness.labels <- c(cut.1="READINESS_CUT_1", cut.2="READINESS_CUT_2", "READINESS_TARGET_LEVEL")
+type.1.additional.readiness.cuts.lookup.year <- list(`2013-14` = c(58, 66))  #2012-13 PJP cuts, corrected
+type.1.additional.readiness.cuts <- type.1.additional.readiness.cuts.lookup.year[[current.school.year]]
 
-##hs equity
-#quantile(hs.equity.df$EQUITY_VALUE, c(.1,.5))
-
-# <= first cut gets 3 (exceeds), >= first cut and <= second cut gets 2, > second cut gets 1
-
-
-#quantile(hs.equity.df[hs.equity.df$N_ACHIEVEMENT > 14 & hs.equity.df$SCHOOL_ID!=state.school.id,"IMPROVEMENT_VALUE"], c(.33,.66))
-#quantile(hs.equity.df[hs.equity.df$N_ACHIEVEMENT > 14 & hs.equity.df$SCHOOL_ID!=state.school.id,"PERCENT_NONPROFICIENT"], c(.33,.66))  
-#based on the above quantiles
 
 #not set by PJP
 subgroup.hs.math.cut <- 17  
 subgroup.hs.reading.cut <- 16
 
 subgroup.labels.hs <- c("SUBGROUP_MATH_HS", "SUBGROUP_READING_HS", "SUBGROUP_CONSOLIDATED_HS")
-
-hs.equity.level.lookup.year <- list(`2012-13` = list(#IMPROVEMENT_VALUE = c(-3.120,2.764),
-  #IMPROVEMENT_VALUE = c(-12.085,-7.15),
-  IMPROVEMENT_VALUE = c(-3.2,3.4), #once 2013 act cuts were corrected
-  #PERCENT_NONPROFICIENT=c(13.43, 28.596)
-  #PERCENT_NONPROFICIENT=c(13.63, 18.86)
-  PERCENT_NONPROFICIENT=c(21.70, 29.86)  #This is not used anymore in the current model
-))
-
-#decimal place to which the percent non proficient is rounded in the current and prior year
+hs.equity.cuts.lookup.year <- list(`2013-14` = c(121, 126))
+hs.equity.cuts <- hs.equity.cuts.lookup.year[[current.school.year]]
 hs.equity.precision  <- 3
-#hs.equity.precision  <- 1
-hs.equity.level.lookup <- hs.equity.level.lookup.year[[current.school.year]]
 
 
-hs.equity.labels <- c(N="N_EQUITY_HS", "N_ACHIEVEMENT_HS_PRIOR", "PERCENT_NONPROFICIENT", "PERCENT_NONPROFICIENT_PRIOR", "PERCENT_NONPROF_CUT_LOW_REV", 
-                      "PERCENT_NONPROF_CUT_HIGH_REV", "IMPROVEMENT_SCORE", cut.2="IMPROVEMENT_CUT_LOW_REVERSED",
-                      cut.1="IMPROVEMENT_CUT_HIGH_REVERSED", "PERCENT_NONPROFICIENT_CATEGORY", 
-                      "IMPROVEMENT_CATEGORY", "EQUITY_TARGET_LEVEL_HS")
 
-hs.equity.improve.labels <- c("Low", "Middle", "High")
-hs.equity.np.labels <- c("Minus", "Neutral", "Plus")
+g38.target.level.labels <- c(achievement="G38_ACHIEVEMENT_ALL_TARGET_LEVEL",
+                             growth="G38_GROWTH_TARGET_LEVEL",
+                             equity="G38_EQUITY_TARGET_LEVEL")
 
-# hs.equity.labels <- c("N_ACHIEVEMENT_PRIOR", HS_EQUITY_LOW", 
-#                       "HS_EQUITY_HIGH", 
-#                       "HS_EQUITY", 
-#                       "IMPROVEMENT_NONPROFICIENT",
-#                       "PERCENT_NONPROFICIENT",
-#                       "PERCENT_NONPROFICIENT_PRIOR",
-#                       "N_HS_EQUITY",                      
-#                       "N_HS_EQUITY_PRIOR",
-#                       "PARTICIPATION_RATE_HS_EQUITY", 
-#                       "HS_EQUITY_TARGET_LEVEL")
-
-#based on the above quantiles
-
-##small schools
-small.school.labels <- c("SMALL_SCHOOL", "YEARS_BACK")
-small.school.hs.labels <- c("SMALL_SCHOOL_HS", "YEARS_BACK_HS")
-
-small.school.labels.achievement <- c("SMALL_SCHOOL_ACHIEVEMENT", "YEARS_BACK_ACHIEVEMENT")
-small.school.labels.growth <- c("SMALL_SCHOOL_GROWTH", "YEARS_BACK_GROWTH")
-small.school.labels.equity <- c("SMALL_SCHOOL_EQUITY", "YEARS_BACK_EQUITY")
+g38.participation.labels <- c(achievement="G38_ACHIEVEMENT_ALL_PARTICIPATION_RATE",
+                              equity="G38_EQUITY_PARTICIPATION_RATE")
 
 
-##
+
+
+
+hs.target.level.labels <- c(achievement="HS_ACHIEVEMENT_TARGET_LEVEL",
+                            equity="HS_EQUITY_TARGET_LEVEL",
+                            readiness="HS_ADD_READINESS_CAT",                            
+                            grad.rate="IMPROVE_CAT_2013")
+
+hs.achievement.target.level.labels <- hs.target.level.labels[1:2]
+hs.readiness.target.level.labels <- hs.target.level.labels[3:4]
+
+hs.overall.target.level.labels <- c(readiness="HS_OVERALL_READINESS",
+                                    achievement="HS_OVERALL_ACHIEVEMENT")
+
+hs.participation.labels <- c(achievement="HS_ACHIEVEMENT_PARTICIPATION_RATE",
+                             tested.readiness="HS_TESTED_READINESS_PARTICIPATION_RATE",
+                             equity="HS_EQUITY_PARTICIPATION_RATE"
+)

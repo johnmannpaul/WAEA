@@ -34,14 +34,18 @@ quantile(with(schools,
          probs=c(.35,.65),
          type=6)
 
+# schools$G38_EQUITY_TARGET_LEVEL <- findInterval(schools$G38_EQUITY_MEAN,
+#                                                 round(quantile(with(schools,
+#                                                                     schools[schools$SCHOOL_YEAR==current.school.year &
+#                                                                               schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
+#                                                                               schools$G38_EQUITY_N >= min.N.subgroup
+#                                                                             ,]$G38_EQUITY_MEAN), 
+#                                                                probs=c(.35,.65),
+#                                                                type=6),0)) + 1
+
 schools$G38_EQUITY_TARGET_LEVEL <- findInterval(schools$G38_EQUITY_MEAN,
-                                                round(quantile(with(schools,
-                                                                    schools[schools$SCHOOL_YEAR==current.school.year &
-                                                                              schools$WAEA_SCHOOL_TYPE %in% nonHS.types &
-                                                                              schools$G38_EQUITY_N >= min.N.subgroup
-                                                                            ,]$G38_EQUITY_MEAN), 
-                                                               probs=c(.35,.65),
-                                                               type=6),0)) + 1
+                                                g38.equity.cuts) + 1
+
 
 table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "G38_EQUITY_TARGET_LEVEL")])
 prop.table(table(schools[schools$SCHOOL_YEAR == current.school.year, c("GRADE_BAND_COMPOSITION", "G38_EQUITY_TARGET_LEVEL")]),1)

@@ -1,3 +1,3 @@
 #setwd("C:/WDEJP/EA65/proto")
-setwd("C:/Users/jpaul/Documents/GitHub/WAEA")
+setwd("C:/Users/jpaul/Projects/GitHub/WAEA")
 #source("services.R")

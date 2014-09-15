@@ -97,16 +97,20 @@ quantile(with(schools,
          probs=c(.35,.65),
          type=6)
 
+# schools$HS_EQUITY_TARGET_LEVEL <- findInterval(schools$HS_EQUITY_MEAN,
+#                                                round(quantile(with(schools,
+#                                                                    schools[WAEA_SCHOOL_TYPE %in% HS.types &
+#                                                                              SCHOOL_YEAR == current.school.year &                     
+#                                                                              HS_EQUITY_N >= min.N.equity.hs &
+#                                                                              HS_EQUITY_PARTICIPATION_RATE >= .90 & 
+#                                                                              SCHOOL_ID != state.school.id,]$HS_EQUITY_MEAN), 
+#                                                               probs=c(.35,.65),
+#                                                               type=6),0)
+# ) + 1
+
+
 schools$HS_EQUITY_TARGET_LEVEL <- findInterval(schools$HS_EQUITY_MEAN,
-                                               round(quantile(with(schools,
-                                                                   schools[WAEA_SCHOOL_TYPE %in% HS.types &
-                                                                             SCHOOL_YEAR == current.school.year &                     
-                                                                             HS_EQUITY_N >= min.N.equity.hs &
-                                                                             HS_EQUITY_PARTICIPATION_RATE >= .90 & 
-                                                                             SCHOOL_ID != state.school.id,]$HS_EQUITY_MEAN), 
-                                                              probs=c(.35,.65),
-                                                              type=6),0)
-) + 1
+                                               hs.equity.cuts) + 1
 
 
 head(schools[schools$SCHOOL_YEAR==current.school.year & schools$WAEA_SCHOOL_TYPE %in% HS.types,],50)

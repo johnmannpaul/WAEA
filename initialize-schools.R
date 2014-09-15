@@ -59,10 +59,22 @@ table(schools$YEAR)
 #don't care about expiration date and effective date
 schools <- schools[,!(names(schools) %in% c("EXPIRATION_DATE", "EFFECTIVE_DATE", "TYPE_CODE"))]
 
+school.years <- unique(schools$SCHOOL_YEAR)
 schools <- rbind(schools, 
-                 list(DISTRICT_ID=NA, DISTRICT_NAME=NA, SCHOOL_ID=state.school.id, NAME="State of Wyoming", SCHOOL_YEAR='2010-11', SHORT_NAME='State of Wyoming', CATEGORY='K-12 School', LOW_GRADE='KG', HIGH_GRADE='12', GRADES_SERVED='K-12', WAEA_SCHOOL_TYPE=4, PAIRED_SCHOOL_ID=NA, PAIRED_SCHOOL_NAME=NA, YEAR=2011),
-                 list(DISTRICT_ID=NA, DISTRICT_NAME=NA, SCHOOL_ID=state.school.id, NAME="State of Wyoming", SCHOOL_YEAR='2011-12', SHORT_NAME='State of Wyoming', CATEGORY='K-12 School', LOW_GRADE='KG', HIGH_GRADE='12', GRADES_SERVED='K-12', WAEA_SCHOOL_TYPE=4, PAIRED_SCHOOL_ID=NA, PAIRED_SCHOOL_NAME=NA, YEAR=2012),
-                 list(DISTRICT_ID=NA, DISTRICT_NAME=NA, SCHOOL_ID=state.school.id, NAME="State of Wyoming", SCHOOL_YEAR='2012-13', SHORT_NAME='State of Wyoming', CATEGORY='K-12 School', LOW_GRADE='KG', HIGH_GRADE='12', GRADES_SERVED='K-12', WAEA_SCHOOL_TYPE=4, PAIRED_SCHOOL_ID=NA, PAIRED_SCHOOL_NAME=NA, YEAR=2013))
+                 data.frame(DISTRICT_ID=NA, 
+                            DISTRICT_NAME=NA, 
+                            SCHOOL_ID=state.school.id, 
+                            NAME="State of Wyoming", 
+                            SCHOOL_YEAR=school.years, 
+                            SHORT_NAME='State of Wyoming', 
+                            CATEGORY='K-12 School', 
+                            LOW_GRADE='KG', 
+                            HIGH_GRADE='12', 
+                            GRADES_SERVED='K-12', 
+                            WAEA_SCHOOL_TYPE=4, 
+                            PAIRED_SCHOOL_ID=NA, 
+                            PAIRED_SCHOOL_NAME=NA, 
+                            YEAR=sapply(school.years, school.year.to.year, USE.NAMES=FALSE)))
 
 #save(schools_other_attributes, file="data/schools-other-attributes.Rdata")
 load(file="data/schools-other-attributes.Rdata")
