@@ -271,9 +271,9 @@ grad.index.runs = list('Non-Graduate', 'Returning', '6YR', '5YR', '4YR')
 #grad.index.range = c(0, 50, 75, 75, 100)
 grad.index.range = c(0, 50, 100, 100, 100) #2012-13 PJP index
 grad.index <- calc.index(grad.index.runs, grad.index.range)
+grad.rate.precision <- 1
 
-
-hs.grad.rate.cuts.lookup.year <- list(`2013-14` = c(.8, .9))  #2012-13 PJP cuts, corrected
+hs.grad.rate.cuts.lookup.year <- list(`2013-14` = c(80, 90))  #2012-13 PJP cuts, corrected
 hs.grad.rate.cuts <- hs.grad.rate.cuts.lookup.year[[current.school.year]]
 
 
@@ -300,6 +300,9 @@ hs.equity.cuts <- hs.equity.cuts.lookup.year[[current.school.year]]
 hs.equity.precision  <- 3
 
 
+g38.indicator.labels <- c(achievement="G38_ACHIEVEMENT_ALL_PERCENT_PROFICIENT",
+                             growth="G38_GROWTH_MGP",
+                             equity="G38_EQUITY_MEAN")
 
 g38.target.level.labels <- c(achievement="G38_ACHIEVEMENT_ALL_TARGET_LEVEL",
                              growth="G38_GROWTH_TARGET_LEVEL",
@@ -308,6 +311,8 @@ g38.target.level.labels <- c(achievement="G38_ACHIEVEMENT_ALL_TARGET_LEVEL",
 g38.participation.labels <- c(achievement="G38_ACHIEVEMENT_ALL_PARTICIPATION_RATE",
                               equity="G38_EQUITY_PARTICIPATION_RATE")
 
+g38.SPL.labels <- c(unmodified="G38_SPL",
+                    accountability="G38_SPL_ACCOUNTABILITY")
 
 
 

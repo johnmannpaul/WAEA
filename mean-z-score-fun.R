@@ -32,7 +32,8 @@ calc.mean.score <- function (df, subject.labels=c(MATH="MATH", READING="READING"
   #table(act.fay.long$TESTING_STATUS_CODE)
   
   
-  df.long.testers <- df.long[df.long[[testing.status.prefix]] == 'T',]
+  df.long.testers <- df.long[df.long[[testing.status.prefix]] == 'T' &
+                               !is.na(df.long[[score.prefix]]),]
   
   #convert score column to numeric if it's not already
   df.long.testers[[score.prefix]] <- as.numeric(df.long.testers[[score.prefix]])

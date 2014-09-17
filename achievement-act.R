@@ -1,6 +1,6 @@
 load(file="data/ACT/act.achieve.Rdata")
-load(file="data/act.lookback.Rdata")
-load(file="data/paws.lookback.2yr.Rdata")
+load(file="data/ACT/act.lookback.Rdata")
+load(file="data/ACT/paws.lookback.2yr.Rdata")
 
 act.achieve <- rbind(paws.lookback.2yr, act.lookback, act.achieve)
 table(act.achieve$SCHOOL_YEAR)

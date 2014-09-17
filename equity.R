@@ -7,7 +7,7 @@ equity.g38.indicator <- compute.indicator.long(achievement.for.equity.all,
                                                indicator.label="G38_EQUITY",
                                                score.prefix="STD_SCORE",
                                                agg.fun=function (g) c(N_TESTS=length(g),                                                                           
-                                                                      MEAN=round(mean(g), 0)))
+                                                                      MEAN=round(mean(g, na.rm=TRUE), 0)))
 
 
 equity.g38.labels <- names(equity.g38.indicator$schools)[grep("^G38_EQUITY", 

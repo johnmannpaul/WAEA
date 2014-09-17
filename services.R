@@ -1,25 +1,41 @@
 library("reshape")
+library(rcom)
 #how many schools with 3-8 performance do not have an indicator
 #with(schools, table(schools[SCHOOL_YEAR=='2012-13' & WAEA_SCHOOL_TYPE != c(2),]$N_INDICATORS))
-report.adjusted.SPLs = TRUE
+report.adjusted.SPLs = FALSE
 
 update.results.nonHS <- function (school.year, adjusted=report.adjusted.SPLs, label.sum.by="SCHOOL_ID", cast.FUN.name = "length") {
 
   cast.FUN <- if(cast.FUN.name == 'sum') sum else length
   #update global state
-#   schools$SPL <<- calc.SPLs(schools, "nonHS")
-#   state.school$SPL <<- calc.SPLs(state.school, "nonHS")
-
-  schools <<- calc.SPLs(schools, "nonHS")
-  state.school <<- calc.SPLs(state.school, "nonHS")
+  #   schools$SPL <<- calc.SPLs(schools, "nonHS")
+  #   state.school$SPL <<- calc.SPLs(state.school, "nonHS")
+  
+  schools$G38_SPL <<- apply(schools[,c("WAEA_SCHOOL_TYPE", "G38_INDICATORS_N", g38.target.level.labels)],
+                           c(1),
+                           FUN=calc.SPL.nonHS )
+  
+  schools$G38_SPL_ACCOUNTABILITY <<- apply(schools[,c("G38_SPL", g38.participation.labels)],
+                                          c(1),
+                                          FUN=calc.SPL.accountability, "G38_SPL",  g38.participation.labels)
   
   
-  #need to propagate results to paired schools
-  schools <<- propagate.results.to.paired.schools(schools)
+  g38.accountability.labels <- names(schools)[grep("^G38_", names(schools))]
+  schools <<- propagate.results.to.paired.schools(schools, g38.accountability.labels)
+  
+                                          
   
   #compute impact results
   #need to have missing values inserted.  That's whey we make them factors.
-  sums.3.df = schools[schools$N_INDICATORS==3 & schools$SCHOOL_YEAR==school.year,c("EQUITY_TARGET_LEVEL", "GROWTH_TARGET_LEVEL", "ACHIEVEMENT_TARGET_LEVEL", label.sum.by )]
+  sums.3.df = schools[schools$G38_INDICATORS_N==3 & 
+                        schools$SCHOOL_YEAR==school.year &
+                        schools$SCHOOL_ID != state.school.id,
+                      c(g38.target.level.labels["equity"], 
+                        g38.target.level.labels["growth"], 
+                        g38.target.level.labels["achievement"], 
+                        label.sum.by )]
+  
+  names(sums.3.df) <- c("EQUITY_TARGET_LEVEL", "GROWTH_TARGET_LEVEL", "ACHIEVEMENT_TARGET_LEVEL", label.sum.by)
   sums.3.df$EQUITY_TARGET_LEVEL <- factor(sums.3.df$EQUITY_TARGET_LEVEL, levels=c("1","2","3"), ordered=TRUE)
   sums.3.df$GROWTH_TARGET_LEVEL <- factor(sums.3.df$GROWTH_TARGET_LEVEL, levels=c("1","2","3"), ordered=TRUE)
   sums.3.df$ACHIEVEMENT_TARGET_LEVEL <- factor(sums.3.df$ACHIEVEMENT_TARGET_LEVEL, levels=c("1","2","3"), ordered=TRUE)
@@ -27,7 +43,14 @@ update.results.nonHS <- function (school.year, adjusted=report.adjusted.SPLs, la
                  EQUITY_TARGET_LEVEL+GROWTH_TARGET_LEVEL~ACHIEVEMENT_TARGET_LEVEL, cast.FUN, add.missing=TRUE)
   
   
-  sums.2.df <- schools[schools$N_INDICATORS==2 & schools$SCHOOL_YEAR==school.year,c("GROWTH_TARGET_LEVEL", "ACHIEVEMENT_TARGET_LEVEL", label.sum.by )]
+  sums.2.df <- schools[schools$G38_INDICATORS_N==2 & 
+                         schools$SCHOOL_YEAR==school.year &
+                         schools$SCHOOL_ID != state.school.id,
+                       c(g38.target.level.labels["growth"], 
+                         g38.target.level.labels["achievement"], 
+                         label.sum.by )]
+  
+  names(sums.2.df) <- c("GROWTH_TARGET_LEVEL", "ACHIEVEMENT_TARGET_LEVEL", label.sum.by)
   sums.2.df$GROWTH_TARGET_LEVEL <- factor(sums.2.df$GROWTH_TARGET_LEVEL, levels=c("1","2","3"), ordered=TRUE)
   sums.2.df$ACHIEVEMENT_TARGET_LEVEL <- factor(sums.2.df$ACHIEVEMENT_TARGET_LEVEL, levels=c("1","2","3"), ordered=TRUE)
   sums.2 <- cast(sums.2.df, value=label.sum.by,
@@ -38,33 +61,32 @@ update.results.nonHS <- function (school.year, adjusted=report.adjusted.SPLs, la
   
   
   #compute the impact totals 
-  if (adjusted) {
-    SPL.schools <- schools[schools$WAEA_SCHOOL_TYPE %in% c(nonHS.types, paired.types) & schools$SCHOOL_YEAR==school.year,c("N_INDICATORS", "SPL_ADJUSTED",  label.sum.by )]
-    SPL.schools$N_INDICATORS <- factor(as.character(SPL.schools$N_INDICATORS), levels=c("3","2","1","0"), ordered=TRUE)
-    SPL.schools$SPL_ADJUSTED <- ifelse(!is.na(SPL.schools$SPL_ADJUSTED), SPL.schools$SPL_ADJUSTED, 0)
-    SPL.schools$SPL_ADJUSTED <- factor(as.character(SPL.schools$SPL_ADJUSTED), levels=c("1","2","3","4","0"), ordered=TRUE)
-    sums.SPL <- cast(SPL.schools, value = label.sum.by, SPL_ADJUSTED ~ N_INDICATORS, 
-                     cast.FUN, add.missing=TRUE, margins=TRUE)
-    sums.types <- t(rbind(with(schools, table(schools[WAEA_SCHOOL_TYPE==1 & HIGH_GRADE <= 6 & SCHOOL_YEAR==current.school.year,]$SPL_ADJUSTED, useNA="always")),
-                          with(schools, table(schools[((WAEA_SCHOOL_TYPE==1 & HIGH_GRADE > 6) | WAEA_SCHOOL_TYPE ==5) & 
-                                                        SCHOOL_YEAR==current.school.year,]$SPL_ADJUSTED, useNA="always")),
-                          with(schools, table(schools[(WAEA_SCHOOL_TYPE ==3 | WAEA_SCHOOL_TYPE ==4) & 
-                                                        SCHOOL_YEAR==current.school.year,]$SPL_ADJUSTED, useNA="always"))))
-    
-  } else { #use non participation  adjusted SPLS
-    SPL.schools <- schools[schools$WAEA_SCHOOL_TYPE %in% c(nonHS.types, paired.types) & schools$SCHOOL_YEAR==school.year,c("N_INDICATORS", "SPL",  label.sum.by )]
-    SPL.schools$N_INDICATORS <- factor(as.character(SPL.schools$N_INDICATORS), levels=c("3","2","1","0"), ordered=TRUE)
-    SPL.schools$SPL <- ifelse(!is.na(SPL.schools$SPL), SPL.schools$SPL, 0)
-    SPL.schools$SPL <- factor(as.character(SPL.schools$SPL), levels=c("1","2","3","4","0"), ordered=TRUE)
-    sums.SPL <- cast(SPL.schools, value = label.sum.by, SPL ~ N_INDICATORS, 
-                     cast.FUN, add.missing=TRUE, margins=TRUE)
-    sums.types <- t(rbind(with(schools, table(schools[WAEA_SCHOOL_TYPE==1 & HIGH_GRADE <= 6 & SCHOOL_YEAR==current.school.year,]$SPL, useNA="always")),
-                          with(schools, table(schools[((WAEA_SCHOOL_TYPE==1 & HIGH_GRADE > 6) | WAEA_SCHOOL_TYPE ==5) & 
-                                                        SCHOOL_YEAR==current.school.year,]$SPL, useNA="always")),
-                          with(schools, table(schools[(WAEA_SCHOOL_TYPE ==3 | WAEA_SCHOOL_TYPE ==4) & 
-                                                        SCHOOL_YEAR==current.school.year,]$SPL, useNA="always"))))
-    
-  }
+  if (adjusted) 
+    SPL.schools <- schools[schools$WAEA_SCHOOL_TYPE %in% c(nonHS.types, paired.types) & 
+                             schools$SCHOOL_YEAR==school.year &
+                             schools$SCHOOL_ID != state.school.id,
+                           c("G38_INDICATORS_N", "G38_SPL_ACCOUNTABILITY",  label.sum.by )]
+  else
+    SPL.schools <- schools[schools$WAEA_SCHOOL_TYPE %in% c(nonHS.types, paired.types) & 
+                             schools$SCHOOL_YEAR==school.year &
+                             schools$SCHOOL_ID != state.school.id,
+                           c("G38_INDICATORS_N", "G38_SPL",  label.sum.by )]
+  
+  names(SPL.schools) <- c("N_INDICATORS", "SPL", label.sum.by)
+  SPL.schools <- schools[schools$WAEA_SCHOOL_TYPE %in% c(nonHS.types, paired.types) & schools$SCHOOL_YEAR==school.year,c("G38_INDICATORS_N", "G38_SPL",  label.sum.by )]
+  names(SPL.schools) <- c("N_INDICATORS", "SPL", label.sum.by)
+  SPL.schools$N_INDICATORS <- factor(as.character(SPL.schools$N_INDICATORS), levels=c("3","2","1","0"), ordered=TRUE)
+  SPL.schools$SPL <- ifelse(!is.na(SPL.schools$SPL), SPL.schools$SPL, 0)
+  SPL.schools$SPL <- factor(as.character(SPL.schools$SPL), levels=c("1","2","3","4","0"), ordered=TRUE)
+  sums.SPL <- cast(SPL.schools, value = label.sum.by, SPL ~ N_INDICATORS, 
+                   cast.FUN, add.missing=TRUE, margins=TRUE)
+  sums.types <- t(rbind(with(schools, table(schools[WAEA_SCHOOL_TYPE==1 & HIGH_GRADE <= 6 & SCHOOL_YEAR==current.school.year,]$SPL, useNA="always")),
+                        with(schools, table(schools[((WAEA_SCHOOL_TYPE==1 & HIGH_GRADE > 6) | WAEA_SCHOOL_TYPE ==5) & 
+                                                      SCHOOL_YEAR==current.school.year,]$SPL, useNA="always")),
+                        with(schools, table(schools[(WAEA_SCHOOL_TYPE ==3 | WAEA_SCHOOL_TYPE ==4) & 
+                                                      SCHOOL_YEAR==current.school.year,]$SPL, useNA="always"))))
+  
+  
   sums.SPL <- as.matrix(sums.SPL)
   
   
@@ -236,22 +258,24 @@ put.cuts.nonHS <- function (cuts.df, school.year=current.school.year) {
   
   cuts.df <- as.matrix(cuts.df)
   
-  achievement.level.lookup <<- list(as.vector(cuts.df[1,]),
-                                    as.vector(cuts.df[2,]))
   
-  growth.level.lookup <<- as.vector(cuts.df[3,])
+  g38.achievement.cuts <<- as.vector(cuts.df[1,])
+                                    
   
-  equity.level.lookup <<- as.vector(cuts.df[4,])
+  g38.growth.cuts <<- as.vector(cuts.df[2,])
+  
+  g38.equity.cuts <<- as.vector(cuts.df[3,])
   
   #recalculate indicators
-  schools <<- calc.school.achievement(schools)
-  schools <<- calc.school.growth(schools)
-  schools <<- calc.school.equity(schools)
+  schools$G38_ACHIEVEMENT_ALL_TARGET_LEVEL <<- findInterval(schools$G38_ACHIEVEMENT_ALL_PERCENT_PROFICIENT,
+                                                           g38.achievement.cuts) + 1
   
-  #also for the state school
-  state.school <<- calc.school.achievement(state.school)
-  state.school <<- calc.school.growth(state.school)
-  state.school <<- calc.school.equity(state.school)
+  schools$G38_GROWTH_TARGET_LEVEL <<- findInterval(schools$G38_GROWTH_MGP,
+                                                  g38.growth.cuts) + 1
+  
+  schools$G38_EQUITY_TARGET_LEVEL <<- findInterval(schools$G38_EQUITY_MEAN,
+                                                  g38.equity.cuts) + 1
+  
   
   update.results.nonHS(school.year)
   
@@ -282,20 +306,23 @@ put.cuts.HS <- function (cuts.df, school.year=current.school.year) {
 
 get.state.nonHS <- function (df, school.year=current.school.year) {
   
-  state.values <- with(state.school, state.school[SCHOOL_YEAR==school.year,c("PERCENT_PROFICIENT_BAND_1", "PERCENT_PROFICIENT_BAND_2", "PERCENT_PROFICIENT", "MGP", 
-                                                               "PERCENT_MEETING_AGP")])
+  state.values <- with(schools, schools[SCHOOL_YEAR==school.year &
+                                        SCHOOL_ID==state.school.id,
+                                        g38.indicator.labels])
   
-  state.levels <- with(state.school, state.school[SCHOOL_YEAR==school.year,c("ACHIEVEMENT_TARGET_LEVEL", "GROWTH_TARGET_LEVEL", 
-                                                               "EQUITY_TARGET_LEVEL", "SPL")])
+  state.levels <- with(schools, schools[SCHOOL_YEAR==school.year&
+                                          SCHOOL_ID==state.school.id,
+                                        c(g38.target.level.labels, ifelse(report.adjusted.SPLs, g38.SPL.labels["accountability"], g38.SPL.labels["unmodified"]))])
+  
   state.levels.labeled = sapply(names(state.levels), function(n) {
-    if (n ==  "SPL")
+    if (grepl("SPL", n))
       SPL.labels[[state.levels[[n]]]]
     else
       indicator.labels[[state.levels[[n]]]]
     
   })
   
-  as.matrix(cbind(c(state.values, NA), c(NA, NA, state.levels.labeled), c(NA, NA, state.levels)))
+  as.matrix(cbind(c(state.values, NA), c(state.levels.labeled), c(state.levels)))
   
 }
 

@@ -4,12 +4,15 @@
 
 grad.rate <- read.csv(file="data/grad-rate-2013.with-small-school-lookback.csv", header=TRUE )
 
+grad.rate$GRAD_RATE_4_YR.2012.13 <- round(grad.rate$GRAD_RATE_4_YR.2012.13 * 100, grad.rate.precision)
+grad.rate$GRAD_RATE_EXTENDED <- round(grad.rate$GRAD_RATE_EXTENDED * 100, grad.rate.precision)
+grad.rate$GRAD_RATE_4_YR_2012 <- round(grad.rate$GRAD_RATE_4_YR_2012 * 100, grad.rate.precision)
 
 #assign categories based on current cuts
 grad.rate$CAT_4_YR_2013 <- findInterval(grad.rate$GRAD_RATE_4_YR.2012.13, hs.grad.rate.cuts) + 1
 grad.rate$CAT_EXTENDED_2013 <- findInterval(grad.rate$GRAD_RATE_EXTENDED , hs.grad.rate.cuts) + 1
 
-compute.grad.rate.cat <- function (school,cuts) {
+compute.grad.rate.cat <- function (school,cuts, precision) {
   extended <- school[["CAT_EXTENDED_2013"]]
   current.year.4yr.N <- school[["COHORT_4_YR_N.2011.12"]]
   prior.year.4yr.N <- school[["COHORT_4_YR_N.2012.13"]]
@@ -20,8 +23,8 @@ compute.grad.rate.cat <- function (school,cuts) {
     current.year.4yr <- school[["GRAD_RATE_4_YR.2012.13"]]
     prior.year.4yr <- school[["GRAD_RATE_4_YR_2012"]]
     if (extended == 1) {
-      improvement.target <-(((cuts[1] - prior.year.4yr)/3)+  #for meets
-                              prior.year.4yr)
+      improvement.target <-round((((cuts[1] - prior.year.4yr)/3) +  #for meets
+                              prior.year.4yr), precision)
       return(c(ifelse(improvement.target <= current.year.4yr, 2, 1),
                improvement.target, 
                NA,
@@ -29,8 +32,8 @@ compute.grad.rate.cat <- function (school,cuts) {
       
     } else { #extended==2
       
-      improvement.target <-(((cuts[2] - prior.year.4yr)/3)+  #for meets
-                              prior.year.4yr)
+      improvement.target <-round((((cuts[2] - prior.year.4yr)/3)+  #for exceeds
+                              prior.year.4yr))
       return(c(ifelse(improvement.target <= current.year.4yr, 2, 1),
                NA, 
                improvement.target,
@@ -51,7 +54,7 @@ grad.rate[c("GRAD_RATE_TYPE",
                                                       "COHORT_4_YR_N.2011.12",
                                                       "COHORT_4_YR_N.2012.13")],
                                           c(1),
-                                          compute.grad.rate.cat, hs.grad.rate.cuts))
+                                          compute.grad.rate.cat, hs.grad.rate.cuts, grad.rate.precision))
 
 # #recompute improvement categories based on last categorization
 # improve.to.meet<-grad.rate[which(grad.rate$CAT_EXTENDED_2013 == 1),]

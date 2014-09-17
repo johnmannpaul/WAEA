@@ -150,7 +150,7 @@ prop.table(table(act.2012.13[c("SUBJECT", "SCALE_SCORE")]), 1)
 
 ###inlcude PAWS 2011-12
 
-save(act.lookback, file="data/act.lookback.Rdata")
+save(act.lookback, file="data/ACT/act.lookback.Rdata")
 
 
 load(file="data/paws_11_achievement.Rdata")
@@ -208,4 +208,4 @@ paws.non.proficient.lookback.2yr <- do.call(rbind,
 
 statewide.paws.non.proficient.lookback.2yr <- paws.non.proficient.lookback.2yr[paws.non.proficient.lookback.2yr$SCHOOL_ID==state.school.id,]
 
-save(paws.lookback.2yr, file="data/paws.lookback.2yr.Rdata")
+save(paws.lookback.2yr, file="data/ACT/paws.lookback.2yr.Rdata")

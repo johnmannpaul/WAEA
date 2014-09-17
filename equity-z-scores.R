@@ -1,14 +1,10 @@
-source("participation-fun.R")
-source("mean-z-score-fun.R")
-
 load("data/g38.achieve.Rdata")
 load("data/paws.Rdata")
 load("data/g38.achieve.lookback.Rdata")
 
 g38.achieve.all.for.equity <- rbind(g38.achieve.lookback,g38.achieve)
 
-g38.achieve.all.for.equity <- g38.achieve.all.for.equity[g38.achieve.all.for.equity$SUBJECT %in% c("Math", "Reading") &
-                                                           g38.achieve.all.for.equity$TEST_TYPE %in% c("PAWS-STANDARD", "PAWS Standard"),]
+g38.achieve.all.for.equity <- g38.achieve.all.for.equity[g38.achieve.all.for.equity$SUBJECT %in% c("Math", "Reading"),]
 
 
 sample.stats <- unmatrixfy.df(aggregate(g38.achieve.all.for.equity$SCALE_SCORE,
@@ -57,7 +53,7 @@ achievement.for.equity <- merge(g38.achieve.all.for.equity[g38.achieve.all.for.e
                                 achievement.prior.year, all.x=TRUE)
 #nrow(g38.achieve)
 
-consolidated.subgroup.students <- data.frame(WISER_ID=unique(achievement.for.equity[achievement.for.equity$PRIOR_PERFORMANCE_LEVEL %in% c('1','2'), "WISER_ID"]),
+consolidated.subgroup.students <- data.frame(WISER_ID=unique(achievement.prior.year[achievement.prior.year$PRIOR_PERFORMANCE_LEVEL %in% c('1','2'), "WISER_ID"]),
                                              CONSOLIDATED_SUBGROUP='T')
                                                              
 achievement.for.equity <- merge(achievement.for.equity, consolidated.subgroup.students)
