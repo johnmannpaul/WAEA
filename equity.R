@@ -63,6 +63,7 @@ write.csv(schools[schools$SCHOOL_YEAR==current.school.year &
                   c("SCHOOL_YEAR", "NAME", "SCHOOL_ID", 
                     "GRADE_BAND_COMPOSITION", 
                     "G38_EQUITY_YEARS_BACK",
+                    "G38_EQUITY_PARTICIPATION_RATE",
                     "G38_EQUITY_N", 
                     "G38_EQUITY_MEAN"),],
           file=get.filename("g38-equity-cfds", "results/cfds"),

@@ -30,13 +30,20 @@ hathaway.eligibility$HATH_INDEX_SCORE <- sapply(as.numeric(hathaway.eligibility$
 #                                                        hathaway.eligibility.index.option2[as.numeric(cat)]
 #                                                     })
 
-hathaway.eligibility.school <- unmatrixfy.df(aggregate(data.frame(HATH_INDEX_SCORE=hathaway.eligibility$HATH_INDEX_SCORE),
+hathaway.eligibility.school <- rbind(unmatrixfy.df(aggregate(data.frame(HATH_INDEX_SCORE=hathaway.eligibility$HATH_INDEX_SCORE),
                                                      by=list(SCHOOL_YEAR=hathaway.eligibility$ACCOUNTABILITY_YEAR,
                                                              SCHOOL_ID=hathaway.eligibility$EXIT_RECORD_SCHOOL_ID),
                                                      function (v) {
                                                        c(N=length(v),
                                                          MEAN=round(mean(v), precision.readiness))
-                                                     }))
+                                                     })),
+                                     unmatrixfy.df(aggregate(data.frame(HATH_INDEX_SCORE=hathaway.eligibility$HATH_INDEX_SCORE),
+                                                             by=list(SCHOOL_YEAR=hathaway.eligibility$ACCOUNTABILITY_YEAR,
+                                                                     SCHOOL_ID=rep(state.school.id, nrow(hathaway.eligibility))),
+                                                             function (v) {
+                                                               c(N=length(v),
+                                                                 MEAN=round(mean(v), precision.readiness))
+                                                             })))
 
 
 # hathaway.eligibility.school$HATH_INDEX_SCORE_OPT1_MEAN <- unmatrixfy.df(aggregate(data.frame(HATH_INDEX_SCORE_OPT1=hathaway.eligibility$HATH_INDEX_SCORE),

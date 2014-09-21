@@ -6,14 +6,24 @@ table(grade.nine.credits$MET_CREDIT_TARGET, useNA="ifany")
 length(grade.nine.credits$WISER_ID)
 length(unique(grade.nine.credits$WISER_ID))
  
-grade.nine.credits.school <- unmatrixfy.df(aggregate(data.frame(GRADE_NINE_CREDITS=grade.nine.credits$MET_CREDIT_TARGET),
-                                       by=list(SCHOOL_YEAR=grade.nine.credits$ACCOUNTABILITY_YEAR,
-                                               SCHOOL_ID=grade.nine.credits$ACCOUNTABILITY_SCHOOL_ID),
-                                       function (v) {
-                                         c(N=length(v),
-                                           MET_N=sum(v=="MET"))
-                                       }))
 
+
+grade.nine.credits.school <- rbind(unmatrixfy.df(aggregate(data.frame(GRADE_NINE_CREDITS=grade.nine.credits$MET_CREDIT_TARGET),
+                                                           by=list(SCHOOL_YEAR=grade.nine.credits$ACCOUNTABILITY_YEAR,
+                                                                   SCHOOL_ID=grade.nine.credits$ACCOUNTABILITY_SCHOOL_ID),
+                                                           function (v) {
+                                                             c(N=length(v),
+                                                               MET_N=sum(v=="MET"))
+                                                           })),
+                                   
+                                   unmatrixfy.df(aggregate(data.frame(GRADE_NINE_CREDITS=grade.nine.credits$MET_CREDIT_TARGET),
+                                                           by=list(SCHOOL_YEAR=grade.nine.credits$ACCOUNTABILITY_YEAR,
+                                                                   SCHOOL_ID=rep(state.school.id, nrow(grade.nine.credits))),
+                                                           function (v) {
+                                                             c(N=length(v),
+                                                               MET_N=sum(v=="MET"))
+                                                           })))
+                                   
 grade.nine.credits.school$SMALL_SCHOOL_GRADE_NINE_CREDIT <- ifelse(grade.nine.credits.school$GRADE_NINE_CREDITS_N < min.N.grade.nine.credits, "T", "F") 
 
 
@@ -45,6 +55,7 @@ head(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & schools$SCHOOL_YEAR==curre
 
 write.csv(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & 
                     schools$SCHOOL_YEAR==current.school.year &
+                    !is.na(schools$GRADE_NINE_CREDITS_N) &
                     schools$GRADE_NINE_CREDITS_N >= min.N.grade.nine.credits &
                     schools$SCHOOL_ID != state.school.id,c("SCHOOL_ID", 
                                                                "SCHOOL_YEAR", 

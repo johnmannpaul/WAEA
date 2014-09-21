@@ -167,6 +167,41 @@ zero.na.rows <- function (df, col.labels, rate.labels=NULL) {
 
 
 
+compute.grad.rate.cat <- function (school,cuts, precision, labels) {
+  extended <- school[[labels["extended"]]]
+  current.year.4yr.N <- school[[labels["4yr.N"]]]
+  prior.year.4yr.N <- school[[labels["4yr.N.prior"]]]
+  sufficient.Ns <- !is.na(current.year.4yr.N) & !is.na(prior.year.4yr.N) & current.year.4yr.N >= min.N.grad & prior.year.4yr.N >= min.N.grad
+  if (extended == 3 | !sufficient.Ns)
+    return(c(1, NA, NA, NA, extended))
+  else {
+    current.year.4yr <- school[[labels["4yr"]]]
+    prior.year.4yr <- school[[labels["4yr.prior"]]]
+    if (extended == 1) {
+      improvement.target <-round((((cuts[1] - prior.year.4yr)/3) +  #for meets
+                                    prior.year.4yr), precision)
+      return(c(ifelse(improvement.target <= current.year.4yr, 2, 1),
+               improvement.target, 
+               NA,
+               improvement.target,
+               ifelse(improvement.target <= current.year.4yr, 2, 1)))
+      
+    } else { #extended==2
+      
+      improvement.target <-round((((cuts[2] - prior.year.4yr)/3)+  #for exceeds
+                                    prior.year.4yr))
+      return(c(ifelse(improvement.target <= current.year.4yr, 2, 1),
+               NA, 
+               improvement.target,
+               improvement.target,
+               ifelse(improvement.target <= current.year.4yr, 3, 2)))                                                
+      
+    }                                                                                                                                          
+  }
+  
+}
+
+
 
 calc.SPL.accountability <- function (school, SPL.label, participation.labels) {
   

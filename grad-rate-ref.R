@@ -8,53 +8,47 @@ grad.rate$GRAD_RATE_4_YR.2012.13 <- round(grad.rate$GRAD_RATE_4_YR.2012.13 * 100
 grad.rate$GRAD_RATE_EXTENDED <- round(grad.rate$GRAD_RATE_EXTENDED * 100, grad.rate.precision)
 grad.rate$GRAD_RATE_4_YR_2012 <- round(grad.rate$GRAD_RATE_4_YR_2012 * 100, grad.rate.precision)
 
+grads.state <- aggregate(grad.rate[c("COHORT_4_YR_N.2012.13", "GRADS_4_YR.2012.13", "COHORT_EXTENDED_N.2012.13", "GRADS_EXTENDED.2012.13",
+                                         "COHORT_4_YR_N.2011.12", "GRADS_4_YR.2011.12")],
+                             by=list(SCHOOL_ID=rep(state.school.id, nrow(grad.rate))),
+                             sum, na.rm=TRUE)
+
+grad.rate.state <- data.frame(grads.state["SCHOOL_ID"],
+                              DISTRICT_ID=NA,
+                              SCHOOL_NAME="State of Wyoming",
+                              ALTERNATIVE_SCHOOL="FALSE",
+                              grads.state[c("COHORT_4_YR_N.2012.13", "GRADS_4_YR.2012.13")],
+                              LOOK_BACK_YRS_4_YR=0,
+                              grads.state[c("COHORT_EXTENDED_N.2012.13", "GRADS_EXTENDED.2012.13")],
+                              EXTENDED_LOOK_BACK_YRS=0,
+                              GRAD_RATE_4_YR.2012.13=round((grads.state$GRADS_4_YR.2012.13/grads.state$COHORT_4_YR_N.2012.13)*100, grad.rate.precision),
+                              GRAD_RATE_EXTENDED=round((grads.state$GRADS_EXTENDED.2012.13/grads.state$COHORT_EXTENDED_N.2012.13)*100, grad.rate.precision),
+                              grads.state[c("COHORT_4_YR_N.2011.12", "GRADS_4_YR.2011.12")],
+                              LOOK_BACK_YRS_2012_4_YR=0,
+                              GRAD_RATE_4_YR_2012=round((grads.state$GRADS_4_YR.2011.12/grads.state$COHORT_4_YR_N.2011.12)*100, grad.rate.precision),
+                              CAT_4_YR_2013=NA,
+                              CAT_EXTENDED_2013=NA,
+                              IMPROVE_TARGET_FOR_MEETS=NA, IMPROVE_TARGET_FOR_EXCEED=NA, IMPROVE_CAT_2013=NA)
+
+grad.rate <- rbind(grad.rate, grad.rate.state)
+
 #assign categories based on current cuts
 grad.rate$CAT_4_YR_2013 <- findInterval(grad.rate$GRAD_RATE_4_YR.2012.13, hs.grad.rate.cuts) + 1
 grad.rate$CAT_EXTENDED_2013 <- findInterval(grad.rate$GRAD_RATE_EXTENDED , hs.grad.rate.cuts) + 1
 
-compute.grad.rate.cat <- function (school,cuts, precision) {
-  extended <- school[["CAT_EXTENDED_2013"]]
-  current.year.4yr.N <- school[["COHORT_4_YR_N.2011.12"]]
-  prior.year.4yr.N <- school[["COHORT_4_YR_N.2012.13"]]
-  sufficient.Ns <- !is.na(current.year.4yr.N) & !is.na(prior.year.4yr.N) & current.year.4yr.N >= min.N.grad & prior.year.4yr.N >= min.N.grad
-  if (extended == 3 | !sufficient.Ns)
-    return(c(1, NA, NA, extended))
-  else {
-    current.year.4yr <- school[["GRAD_RATE_4_YR.2012.13"]]
-    prior.year.4yr <- school[["GRAD_RATE_4_YR_2012"]]
-    if (extended == 1) {
-      improvement.target <-round((((cuts[1] - prior.year.4yr)/3) +  #for meets
-                              prior.year.4yr), precision)
-      return(c(ifelse(improvement.target <= current.year.4yr, 2, 1),
-               improvement.target, 
-               NA,
-               ifelse(improvement.target <= current.year.4yr, 2, 1)))
-      
-    } else { #extended==2
-      
-      improvement.target <-round((((cuts[2] - prior.year.4yr)/3)+  #for exceeds
-                              prior.year.4yr))
-      return(c(ifelse(improvement.target <= current.year.4yr, 2, 1),
-               NA, 
-               improvement.target,
-               ifelse(improvement.target <= current.year.4yr, 3, 2)))                                                
-      
-    }                                                                                                                                          
-  }
-  
-}
+
+
 
 grad.rate[c("GRAD_RATE_TYPE", 
             "IMPROVE_TARGET_FOR_MEETS", 
             "IMPROVE_TARGET_FOR_EXCEED", 
-            "IMPROVE_CAT_2013")] <- t(apply(grad.rate[c("CAT_EXTENDED_2013",
-                                                      "GRAD_RATE_4_YR_2012",
-                                                      "GRAD_RATE_4_YR.2012.13",
-                                                      "COHORT_EXTENDED_N.2012.13",
-                                                      "COHORT_4_YR_N.2011.12",
-                                                      "COHORT_4_YR_N.2012.13")],
+            "IMPROVEMENT_TARGET",
+            "IMPROVE_CAT_2013")] <- t(apply(grad.rate[grad.rate.labels],
                                           c(1),
-                                          compute.grad.rate.cat, hs.grad.rate.cuts, grad.rate.precision))
+                                          compute.grad.rate.cat, 
+                                          hs.grad.rate.cuts, 
+                                          grad.rate.precision, 
+                                          grad.rate.labels))
 
 # #recompute improvement categories based on last categorization
 # improve.to.meet<-grad.rate[which(grad.rate$CAT_EXTENDED_2013 == 1),]
@@ -142,10 +136,10 @@ grad.rate$SCHOOL_YEAR <- rep("2013-14", nrow(grad.rate))
 schools <- bind.indicator(schools, 
                           grad.rate[, c("SCHOOL_YEAR", "SCHOOL_ID", "LOOK_BACK_YRS_4_YR", 
                                         "EXTENDED_LOOK_BACK_YRS",
-                                        "GRAD_RATE_4_YR.2012.13", "GRAD_RATE_EXTENDED",
-                                        "COHORT_4_YR_N.2012.13", "COHORT_EXTENDED_N.2012.13",
+                                        "GRAD_RATE_4_YR_2012","GRAD_RATE_4_YR.2012.13", "GRAD_RATE_EXTENDED",
+                                        "COHORT_4_YR_N.2011.12", "COHORT_4_YR_N.2012.13", "COHORT_EXTENDED_N.2012.13",
                                         "CAT_4_YR_2013", "CAT_EXTENDED_2013",
-                                        "IMPROVE_TARGET_FOR_MEETS", "IMPROVE_TARGET_FOR_EXCEED", "IMPROVE_CAT_2013")],
+                                        "IMPROVE_TARGET_FOR_MEETS", "IMPROVE_TARGET_FOR_EXCEED", "IMPROVEMENT_TARGET", "IMPROVE_CAT_2013")],
                           indicator.labels.min.N = c(N= "COHORT_EXTENDED_N.2012.13", score="IMPROVE_CAT_2013"),
                           min.N.grad) 
 

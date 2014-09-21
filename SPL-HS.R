@@ -45,26 +45,27 @@ schools[,hs.overall.target.level.labels["achievement"]] <- apply(schools[,c("WAE
                                       c(1),
                                       FUN=hs.compose.indicators, hs.achievement.target.level.labels, SPL.lookup[["HS"]][["Achievement"]] )
 
+calc.SPL.HS <- function (school) {
+  
+  if (!(school[["WAEA_SCHOOL_TYPE"]] %in% HS.types))
+    NA
+  else {
+    
+    scores <- school[hs.overall.target.level.labels]
+    scores <- scores[!is.na(scores)]
+    
+    if (length(scores) < 2)
+      NA
+    else 
+      SPL.lookup[["HS"]][["Overall"]][scores[1],
+                                      scores[2]]
+  }
+  
+}
+
 schools$HS_SPL <- apply(schools[,c("WAEA_SCHOOL_TYPE", 
-                                   hs.overall.target.level.labels)],
-                        c(1),
-                        function (school) {
-                          
-                          if (!(school[["WAEA_SCHOOL_TYPE"]] %in% HS.types))
-                            NA
-                          else {
-                            
-                            scores <- school[hs.overall.target.level.labels]
-                            scores <- scores[!is.na(scores)]
-                            
-                            if (length(scores) < 2)
-                              NA
-                            else 
-                              SPL.lookup[["HS"]][["Overall"]][scores[1],
-                                                              scores[2]]
-                          }
-                          
-                        })
+                                   hs.overall.target.level.labels)], c(1),
+                        calc.SPL.HS)
 
 
 table(schools[c("SCHOOL_YEAR", "HS_SPL")])
@@ -114,3 +115,7 @@ schools$SPL_ACCOUNTABILITY <- apply(schools[,c("G38_SPL_ACCOUNTABILITY", "HS_SPL
 write.csv(schools[schools$SCHOOL_YEAR==current.school.year,], 
           file=get.filename(paste("schools", current.school.year, "with-indicators", sep="-"), 
                             "results"), na="", row.names=FALSE)
+
+# write.csv(schools[schools$SCHOOL_YEAR==current.school.year,original.labels], 
+#           file=get.filename(paste("schools", current.school.year, "with-indicators-orig-format", sep="-"), 
+#                             "results"), na="", row.names=FALSE)
