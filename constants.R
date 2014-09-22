@@ -199,17 +199,19 @@ calc.index <- function (domain.runs, range) {
 
 readiness.standard.test.types <- c('ACT','PLAN','EXPLORE')
 
-tested.readiness.level1.points <- 20
-tested.readiness.level2.points <- 50
-tested.readiness.level3.points <- 80
-tested.readiness.level4.points <- 100
+
+tested.readiness <- c(level1.points = 20,
+                      level2.points = 50,
+                      level3.points = 80,
+                      level4.points = 100)
+
 
 explore.index.runs <- list(1:14, 15:17, 18:20, 21:25)
 #explore.index.range <- c(0, 40, 80, 100)
-explore.index.range <- c(tested.readiness.level1.points, 
-                         tested.readiness.level2.points,
-                         tested.readiness.level3.points, 
-                         tested.readiness.level4.points)  #2012-13 PJP index
+explore.index.range <- c(tested.readiness["level1.points"], 
+                         tested.readiness["level2.points"],
+                         tested.readiness["level3.points"], 
+                         tested.readiness["level4.points"])  #2012-13 PJP index
 #explore_index <- c(rep(0,14), rep(40, 3), rep(80, 3), rep(100,5))
 #names(explore_index) <- c(1:14, 15:17, 18:20, 21:25)
 explore_index <- calc.index(explore.index.runs, explore.index.range)
@@ -217,19 +219,19 @@ explore_index <- calc.index(explore.index.runs, explore.index.range)
 
 plan.index.runs <- list(1:15, 16:18, 19:21, 22:32)
 #plan.index.range <- c(0,40,80,100)
-plan.index.range <- c(tested.readiness.level1.points,
-                      tested.readiness.level2.points,
-                      tested.readiness.level3.points,
-                      tested.readiness.level4.points)  #2012-13 PJP index
+plan.index.range <- c(tested.readiness["level1.points"],
+                      tested.readiness["level2.points"],
+                      tested.readiness["level3.points"],
+                      tested.readiness["level4.points"])  #2012-13 PJP index
 plan_index <- calc.index(plan.index.runs, plan.index.range)
 #names(plan_index) <- c(1:15, 16:18, 19:21, 22:32)
 
 act.index.runs <- list(1:16, 17:20, 21:24, 25:36)
 ##act.index.range <- c(0, 40, 80, 100)
-act.index.range <- c(tested.readiness.level1.points, 
-                     tested.readiness.level2.points, 
-                     tested.readiness.level3.points, 
-                     tested.readiness.level4.points) #2012-13 PJP index
+act.index.range <- c(tested.readiness["level1.points"], 
+                     tested.readiness["level2.points"], 
+                     tested.readiness["level3.points"], 
+                     tested.readiness["level4.points"]) #2012-13 PJP index
 
 act_index  <- calc.index(act.index.runs, act.index.range)
 
@@ -238,11 +240,9 @@ act_index  <- calc.index(act.index.runs, act.index.range)
 # names(act_index) <- c(1:16, 17:20, 21:24, 25:36)
 
 
-tested.readiness.alt.level1.points <- 20
-tested.readiness.alt.level2.points <- 50
-tested.readiness.alt.level2.5.points <- 65
-tested.readiness.alt.level3.points <- 80
-tested.readiness.alt.level4.points <- 100
+#same index is used except we add an interpolation point between .5 and .75 for .66
+tested.readiness.alt <- tested.readiness
+
 
 #The only possible percentages are 0, .25, .33, .5,  .66, .75, and 1
 #     1         2        2.5       3         4
@@ -250,11 +250,11 @@ tested.readiness.alt.level4.points <- 100
 alt.index.intervals <- c(.25, .5, .66, .8)
 alt.index.runs = as.list(0:4)
 
-alt.index.range = c(tested.readiness.alt.level1.points,
-                    tested.readiness.alt.level2.points, 
-                    tested.readiness.alt.level2.5.points,
-                    tested.readiness.alt.level3.points,
-                    tested.readiness.alt.level4.points) 
+alt.index.range = c(tested.readiness.alt[["level1.points"]],
+                    tested.readiness.alt[["level2.points"]], 
+                    (tested.readiness.alt[["level2.points"]] + tested.readiness.alt[["level3.points"]])/2,
+                    tested.readiness.alt[["level3.points"]],
+                    tested.readiness.alt[["level4.points"]]) 
 
 alt_index <- calc.index(alt.index.runs, alt.index.range)
 # alt_index <- c(0,40, 80, 100)

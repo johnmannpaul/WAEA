@@ -116,6 +116,10 @@ write.csv(schools[schools$SCHOOL_YEAR==current.school.year,],
           file=get.filename(paste("schools", current.school.year, "with-indicators", sep="-"), 
                             "results"), na="", row.names=FALSE)
 
+# write.csv(schools[schools$SCHOOL_YEAR==current.school.year,], 
+#           file=get.filename(paste("schools", current.school.year, "with-indicators-cuts2", sep="-"), 
+#                             "results"), na="", row.names=FALSE)
+
 # write.csv(schools[schools$SCHOOL_YEAR==current.school.year,original.labels], 
 #           file=get.filename(paste("schools", current.school.year, "with-indicators-orig-format", sep="-"), 
 #                             "results"), na="", row.names=FALSE)

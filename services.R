@@ -324,15 +324,15 @@ put.cuts.HS <- function (cuts.df, school.year=current.school.year) {
   schools$CAT_EXTENDED_2013 <<- findInterval(schools$GRAD_RATE_EXTENDED , hs.grad.rate.cuts) + 1
   
   
-  schools[c("GRAD_RATE_TYPE", 
-              "IMPROVE_TARGET_FOR_MEETS", 
-              "IMPROVE_TARGET_FOR_EXCEED", 
-              "IMPROVE_CAT_2013")] <<- t(apply(schools[grad.rate.labels],
+  schools[c("IMPROVE_TARGET_FOR_MEETS", 
+            "IMPROVE_TARGET_FOR_EXCEED", 
+            "IMPROVEMENT_TARGET",
+            "IMPROVE_CAT_2013")] <<- t(apply(schools[grad.rate.labels],
                                               c(1),
                                               compute.grad.rate.cat, 
                                               hs.grad.rate.cuts, 
                                               grad.rate.precision, 
-                                              grad.rate.labels))
+                                              grad.rate.labels))[,2:5]
   
   
   schools$HS_ADD_READINESS_CAT_TYPE1 <<- findInterval(schools$HS_ADD_READINESS_SCORE_TYPE1, 
@@ -407,58 +407,85 @@ get.state.HS <- function (df, school.year=current.school.year) {
 
 
 
-put.indeces.HS <- function(df, school.year=current.school.year) {
-  
-  #set the indexes
-  explore.index.range <<- as.vector(as.matrix(df[1,1:length(explore.index.range)]))
-  explore_index <<- calc.index(explore.index.runs, explore.index.range)
-  
-  plan.index.range <<- as.vector(as.matrix(df[2,1:length(plan.index.range)]))
-  plan_index <<- calc.index(plan.index.runs, plan.index.range)
-  
-  act.index.range <<- as.vector(as.matrix(df[3,1:length(act.index.range)]))
-  act_index  <<- calc.index(act.index.runs, act.index.range)
-  
-  alt.index.range <<- as.vector(as.matrix(df[4,1:length(alt.index.range)]))
-  alt_index <<- calc.index(alt.index.runs, alt.index.range)
-  
-  grad.index.range <<- as.vector(as.matrix(df[5,1:length(grad.index.range)]))
-  grad.index <<- calc.index(grad.index.runs, grad.index.range)
-  
-  #put the schools and state temporarily together for the duration of this calculation
-  schools.and.state <- rbind(schools, state.school)
-  
-  #recompute tested readiness indexes
-  tested.readiness.df <<- calc.indexed.readiness(schools.and.state[schools.and.state$WAEA_SCHOOL_TYPE %in% c(2,4,5),c("SCHOOL_YEAR","SCHOOL_ID")], 
-                                                readiness.tested.students.df, 
-                                                readiness.participation.schools[,c("SCHOOL_YEAR", "SCHOOL_ID", "N_TESTED", "PARTICIPATION_RATE")])
+put.indeces.HS <- function(indeces, cuts, school.year=current.school.year) {
   
   
-  #recompute tested readiness targets
-  schools.and.state <- calc.school.tested.readiness.hs(schools.and.state)
+  indeces <- as.matrix(indeces)
   
-  #recompute grad indexes
-  grads.average.index <<- calc.indexed.grads(schools.and.state, grads.df)
+  #set readiness weights
+  weight.names <- names(additional.readiness.weights)
+  additional.readiness.weights <<- indeces[3,1:3]
+  names(additional.readiness.weights) <<- weight.names
   
-  #reompute grad target
-  schools.and.state <- calc.school.grad.index(schools.and.state)
+  #redefine the hathaway point system and compute hathaway index
+  hathaway.eligibility.index.old <- hathaway.eligibility.index
+  hathaway.eligibility.index <<-indeces[2,]
+
+  #define map from old point system to new point system
+  hathaway.eligibility.index.new <- hathaway.eligibility.index
+  names(hathaway.eligibility.index.new) <- hathaway.eligibility.index.old
   
-  #finally recompute total readiness for all schools and state
-  schools.and.state$TOTAL_READINESS_HS <- apply(schools.and.state[,names(hs.readiness.weights)], c(1),
-                                    FUN=function (readiness.scores) {
-                                      if (sum(is.na(readiness.scores)) == 0)
-                                        round(hs.readiness.weights %*% as.numeric(readiness.scores), precision)
-                                      else
-                                        NA
-                                    })
+
+  #update the student frame
+  hathaway.student$HATH_INDEX_SCORE <<- sapply(hathaway.student$HATH_INDEX_SCORE,
+                                                   function (s) hathaway.eligibility.index.new[as.character(s)]) 
+  
+  #recompute the mean
+  hath.subindicator <- compute.indicator.school(schools[c("SCHOOL_YEAR", "SCHOOL_ID")],
+                                                hathaway.student,
+                                        "STATUS_CODE",
+                                        "HATH_INDEX_SCORE",                                      
+                                        "_",
+                                        function (g) c(N_SCORES=length(!is.na(g)),
+                                                       MEAN=round(mean(g),0)),
+                                        "HATH_INDEX_SCORE",
+                                        school.key=c("SCHOOL_YEAR", "SCHOOL_ID"))
+  
+  #assign to schools data frame
+  schools$HATH_INDEX_SCORE_MEAN <<- ifelse(hath.subindicator$HATH_INDEX_SCORE_N >= min.N.hath.eligibility,
+                                           hath.subindicator$HATH_INDEX_SCORE_MEAN,
+                                           NA)
   
   
-  schools.and.state <- calc.school.readiness.hs(schools.and.state)
   
-  #assign schools and state to their respective global variables
-  schools <<- schools.and.state[schools.and.state$SCHOOL_ID != state.school.id,]
-  state.school <<- schools.and.state[schools.and.state$SCHOOL_ID == state.school.id,]
+  #recode tested readiness point system and recompute tested readiness
+  tested.readiness.names <- names(tested.readiness)
+  tested.readiness <<-  indeces[1,1:4]
+  names(tested.readiness) <<- tested.readiness.names
+  
+  tested.readiness.points.new <- c(tested.readiness[1:2], 
+                                   (tested.readiness[2] + tested.readiness[3])/2,
+                                   tested.readiness[3:4])
+  
+  #create a mapping from the old point system to the new point system  
+  tested.readiness.points.old <- alt.index.range   #alt.index.range has the interpolated point
+  alt.index.range <<- tested.readiness.points.new
+  names(tested.readiness.points.new) <- tested.readiness.points.old
+    
+  #map the old points to the new points
+  tested.readiness.indicator$students.fay$TESTED_READINESS_INDEX_SCORE <<- ifelse(is.na(tested.readiness.indicator$students.fay$TESTED_READINESS_INDEX_SCORE), 
+                                                                   NA, 
+                                                                   tested.readiness.points.new[as.character(tested.readiness.indicator$students.fay$TESTED_READINESS_INDEX_SCORE)])
+  #recompute the readiness indicator
+  tested.readiness.school <- compute.indicator.school(schools[c("SCHOOL_YEAR", "SCHOOL_ID")],
+                                                      tested.readiness.indicator$students.fay,
+                                                      "TESTING_STATUS_CODE",
+                                                      "TESTED_READINESS_INDEX_SCORE",                                      
+                                                      "_",
+                                                      function (g) {
+                                                        c(N_sCORES=length(which(!is.na(as.numeric(g)))), 
+                                                          MEAN=round(mean(as.numeric(g), na.rm=TRUE), precision.readiness))
+                                                      },
+                                                      "HS_TESTED_READINESS",
+                                                      school.key=c("SCHOOL_YEAR", "SCHOOL_ID"))
+  
+  schools$HS_TESTED_READINESS_MEAN <<- ifelse(tested.readiness.school$HS_TESTED_READINESS_N >= min.N.tested.readiness,
+                                             tested.readiness.school$HS_TESTED_READINESS_MEAN,
+                                             NA)
   
   
-  update.results.HS(school.year)
+  
+  #recompute target levels
+  put.cuts.HS(cuts, school.year)
+
 }
