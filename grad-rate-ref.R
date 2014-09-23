@@ -8,10 +8,15 @@ grad.rate$GRAD_RATE_4_YR.2012.13 <- round(grad.rate$GRAD_RATE_4_YR.2012.13 * 100
 grad.rate$GRAD_RATE_EXTENDED <- round(grad.rate$GRAD_RATE_EXTENDED * 100, grad.rate.precision)
 grad.rate$GRAD_RATE_4_YR_2012 <- round(grad.rate$GRAD_RATE_4_YR_2012 * 100, grad.rate.precision)
 
-grads.state <- aggregate(grad.rate[c("COHORT_4_YR_N.2012.13", "GRADS_4_YR.2012.13", "COHORT_EXTENDED_N.2012.13", "GRADS_EXTENDED.2012.13",
+#We need to compute state totals, and to do this we 
+#have to go back to the source data because the other dataset already has lookback numbers
+load(file="data/grads-and-cohorts.Rdata")
+grads.state <- aggregate(grads.and.cohorts[c("COHORT_4_YR_N.2012.13", "GRADS_4_YR.2012.13", "COHORT_EXTENDED_N.2012.13", "GRADS_EXTENDED.2012.13",
                                          "COHORT_4_YR_N.2011.12", "GRADS_4_YR.2011.12")],
-                             by=list(SCHOOL_ID=rep(state.school.id, nrow(grad.rate))),
+                             by=list(SCHOOL_ID=rep(state.school.id, nrow(grads.and.cohorts))),
                              sum, na.rm=TRUE)
+
+
 
 grad.rate.state <- data.frame(grads.state["SCHOOL_ID"],
                               DISTRICT_ID=NA,

@@ -51,14 +51,19 @@ calc.mean.score <- function (df, subject.labels=c(MATH="MATH", READING="READING"
   
   mean.scores <- merge(mean.score.df, N.df)
   
-  #compute state value
-  mean.score.df.state <- aggregate(data.frame(MEAN_SCORE=df.long.testers[score.prefix]),
-                                    by=list(SCHOOL_YEAR=df.long.testers$SCHOOL_YEAR),
-                                   agg.function)
+  #compute state value (don't include any test records introduced by lookbacks)
+  mean.score.df.state <- with(df.long.testers,
+                              aggregate(data.frame(MEAN_SCORE=df.long.testers[SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL,][score.prefix]),
+                                    by=list(SCHOOL_YEAR=df.long.testers[SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL,
+                                                                        "SCHOOL_YEAR"]),
+                                   agg.function))
   
-  N.df.state <- aggregate(data.frame(N=df.long.testers$WISER_ID),
-                                      by=list(SCHOOL_YEAR=df.long.testers$SCHOOL_YEAR),
-                                      function(rows) length(unique(rows)))
+  N.df.state <- with(df.long.testers,
+                     aggregate(data.frame(N=df.long.testers[SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL,
+                                                            "WISER_ID"]),
+                                      by=list(SCHOOL_YEAR=df.long.testers[SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL,
+                                                                          "SCHOOL_YEAR"]),
+                                      function(rows) length(unique(rows))))
   
   mean.scores.state <- merge(mean.score.df.state, N.df.state)
   

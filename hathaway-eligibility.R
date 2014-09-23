@@ -22,9 +22,10 @@ hathaway.eligibility$HATH_INDEX_SCORE <- sapply(as.numeric(hathaway.eligibility$
                                                 })
 
 hathaway.student <- cbind(hathaway.eligibility[c("ACCOUNTABILITY_YEAR", "EXIT_RECORD_SCHOOL_ID", "WISER_ID", "HATH_INDEX_SCORE")],
-                          STATUS_CODE="T")
+                          STATUS_CODE="T",
+                          SCHOOL_YEAR_ORIGINAL=hathaway.eligibility[c("ACCOUNTABILITY_YEAR")])
 
-names(hathaway.student) <- c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID", "HATH_INDEX_SCORE", "STATUS_CODE")
+names(hathaway.student) <- c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID", "HATH_INDEX_SCORE", "STATUS_CODE", "SCHOOL_YEAR_ORIGINAL")
 # hathaway.eligibility.index.option2 <- c(20, 40, 60, 80, 100)
 # 
 # hathaway.eligibility$HATH_INDEX_SCORE_OPT2 <- sapply(hathaway.eligibility$HATH_CAT,
