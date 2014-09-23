@@ -106,7 +106,11 @@ table(schools[c("SCHOOL_YEAR", "HS_SPL_ACCOUNTABILITY")])
 schools[!is.na(schools$HS_SPL) & schools$HS_SPL !=  schools$HS_SPL_ACCOUNTABILITY,]
 
 
-schools$SPL_ACCOUNTABILITY <- apply(schools[,c("G38_SPL_ACCOUNTABILITY", "HS_SPL_ACCOUNTABILITY")],
+schools$ALL_SPL <- apply(schools[,c("G38_SPL", "HS_SPL")],
+                                    c(1),
+                                    function (scores) scores[order(scores)][1])
+
+schools$ALL_SPL_ACCOUNTABILITY <- apply(schools[,c("G38_SPL_ACCOUNTABILITY", "HS_SPL_ACCOUNTABILITY")],
                                     c(1),
                                     function (scores) scores[order(scores)][1])
 
