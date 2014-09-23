@@ -109,6 +109,10 @@ type.1.additional.readiness <- data.frame(t(apply(schools[schools$SCHOOL_YEAR==c
                                                   compute.add.readiness, additional.readiness.weights,
                                                   precision.add.readiness, 
                                                   result.labels=c("HS_ADD_READINESS_SCORE_TYPE1", "HS_ADD_READINESS_N_TYPE1"))))
+
+
+
+
                                           
 table(type.1.additional.readiness$HS_ADD_READINESS_SCORE_TYPE1)
 schools <- bind.indicator(schools, 
@@ -121,8 +125,6 @@ quantile(schools[schools$SCHOOL_YEAR==current.school.year &
                    schools$SCHOOL_ID != state.school.id &
                    schools$HS_ADD_READINESS_TYPE_LABEL=='all',"HS_ADD_READINESS_SCORE_TYPE1"],
          probs=c(.30, .70))
-
-
 
 
 type.1.additional.readiness$HS_ADD_READINESS_CAT_TYPE1 <- findInterval(type.1.additional.readiness$HS_ADD_READINESS_SCORE_TYPE1, 
@@ -155,10 +157,37 @@ type.1.percentages <- cumsum(round(prop.table(table(type.1.additional.readiness$
 
 #we'll use these percentages to set the cuts for types 2,3, and 4
 compute.add.readiness.cuts <- function (scores, percentages) {
-  
+
+  if (length(percentages) == 1) { #all categories but one are unpopulated
+    
+    cat <- as.numeric(names(percentages))
+    return(switch(cat, 
+           c(max(scores) + 1, max(scores) + 1), #everyone is in the not meeting category
+           c(min(scores), max(scores) + 1), #everyone is in the meeting category
+           c(min(scores)-1, min(scores)))) #everyone is in the exceedning category
+    
+  }
+   
+  #at least two cateogries are populated
+  lowest.cat <- as.numeric(names(percentages[1]))
+  highest.cat <- as.numeric(names(percentages[2]))
   cuts <- round(percentages * length(scores), 0) + 1
   ordered.scores <- scores[order(scores)]
-  ordered.scores[cuts]
+  
+  if (lowest.cat == 2) { #category 1 is not populated
+    c(min(ordered.scores), ordered.scores[cuts[1]])
+  }
+  else { #category 1 is populated
+    
+    if (highest.cat == 3)  #category 2 is unpopulated
+      c(ordered.scores[cuts[1]], ordered.scores[cuts[1]])
+    else {
+      if (cuts[2] > length(scores)) #category 3 is unpopulated
+        c(ordered.scores[cuts[1]], max(ordered.scores) + 1)
+      else  #all categories are populated
+        ordered.scores[cuts]
+    }
+  }
   
 }
 
@@ -168,13 +197,13 @@ compute.add.readiness.cuts <- function (scores, percentages) {
 
 compute.add.readiness.cat.and.cuts <- function (schools, type.label, type.suffix, score.label,  type1.cuts) {
 
-  
+  percentages <- cumsum(round(prop.table(table(schools$HS_ADD_READINESS_CAT_TYPE1)),2))
   typed.additional.readiness.cuts <- compute.add.readiness.cuts(schools[schools$SCHOOL_YEAR==current.school.year &
                                                                           schools$WAEA_SCHOOL_TYPE %in% HS.types &
                                                                           schools$SCHOOL_ID != state.school.id &
                                                                           schools$HS_ADD_READINESS_TYPE_LABEL %in% c('all',type.label),
                                                                         score.label],
-                                                                cumsum(round(prop.table(table(schools$HS_ADD_READINESS_CAT_TYPE1)),2))[1:2])
+                                                                if (length(percentages) == 1) percentages else percentages[1:2])
     
  
   cat.label <- paste("HS_ADD_READINESS_CAT", type.suffix, sep="_")

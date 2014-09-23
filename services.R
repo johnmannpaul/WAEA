@@ -93,11 +93,11 @@ update.results.nonHS <- function (school.year, adjusted=report.adjusted.SPLs, la
   SPL.schools$SPL <- factor(as.character(SPL.schools$SPL), levels=c("1","2","3","4","0"), ordered=TRUE)
   sums.SPL <- cast(SPL.schools, value = label.sum.by, SPL ~ N_INDICATORS, 
                    cast.FUN, add.missing=TRUE, margins=TRUE)
-  sums.types <- t(rbind(with(schools, table(schools[WAEA_SCHOOL_TYPE==1 & HIGH_GRADE <= 6 & SCHOOL_YEAR==current.school.year,]$SPL, useNA="always")),
+  sums.types <- t(rbind(with(schools, table(schools[WAEA_SCHOOL_TYPE==1 & HIGH_GRADE <= 6 & SCHOOL_YEAR==current.school.year,]$G38_SPL, useNA="always")),
                         with(schools, table(schools[((WAEA_SCHOOL_TYPE==1 & HIGH_GRADE > 6) | WAEA_SCHOOL_TYPE ==5) & 
-                                                      SCHOOL_YEAR==current.school.year,]$SPL, useNA="always")),
+                                                      SCHOOL_YEAR==current.school.year,]$G38_SPL, useNA="always")),
                         with(schools, table(schools[(WAEA_SCHOOL_TYPE ==3 | WAEA_SCHOOL_TYPE ==4) & 
-                                                      SCHOOL_YEAR==current.school.year,]$SPL, useNA="always"))))
+                                                      SCHOOL_YEAR==current.school.year,]$G38_SPL, useNA="always"))))
   
   
   sums.SPL <- as.matrix(sums.SPL)
@@ -417,6 +417,51 @@ put.indeces.HS <- function(indeces, cuts, school.year=current.school.year) {
   additional.readiness.weights <<- indeces[3,1:3]
   names(additional.readiness.weights) <<- weight.names
   
+  #recompute all the additional readiness types
+  
+  add.readiness.map <- c("HS_TESTED_READINESS_MEAN",
+                         "PERCENT_GD_9_CREDIT_MET",
+                         "HATH_INDEX_SCORE_MEAN")
+  names(add.readiness.map) <- names(additional.readiness.weights)
+  
+  add.readiness.types <- list(names(additional.readiness.weights)[c(1,2,3)],
+                              names(additional.readiness.weights)[c(1)],
+                              names(additional.readiness.weights)[c(1,2)],
+                              names(additional.readiness.weights)[c(1,3)])
+  
+  
+  compute.add.readiness.helper <- function (school, i, weights, precision) {
+    school <- as.numeric(school)
+    type <- school[[1]]
+    if (is.na(type) | (type != 1 & type != i))
+      NA
+    else
+      round(sum(weights[add.readiness.types[[i]]] * school[2:length(school)]), 
+            precision)
+  }
+
+  schools[c("HS_ADD_READINESS_SCORE_TYPE1",
+            "HS_ADD_READINESS_SCORE_TYPE2",
+            "HS_ADD_READINESS_SCORE_TYPE3",
+            "HS_ADD_READINESS_SCORE_TYPE4")] <<- do.call(cbind, 
+                                                         lapply(c(1:4),
+                                                                function (i) {                                                                  
+                                                                  apply(schools[c("HS_ADD_READINESS_TYPE",
+                                                                                  add.readiness.map[add.readiness.types[[i]]])],
+                                                                        c(1),
+                                                                        compute.add.readiness.helper, i, round(prop.table(additional.readiness.weights[add.readiness.types[[i]]]),2), precision.add.readiness)
+                                                                  
+                                                                }))
+#   schools$HS_ADD_READINESS_SCORE_TYPE1 <<- apply(schools[c("HS_TESTED_READINESS_MEAN",
+#                                                           "PERCENT_GD_9_CREDIT_MET",
+#                                                           "HATH_INDEX_SCORE_MEAN")],
+#                                                 c(1),
+#                                                 function (scores, weights, precision) {
+#                                                   round(sum(weights * scores), precision)
+#                                                 }, additional.readiness.weights, precision.add.readiness)
+#   
+  
+
   #redefine the hathaway point system and compute hathaway index
   hathaway.eligibility.index.old <- hathaway.eligibility.index
   hathaway.eligibility.index <<-indeces[2,]

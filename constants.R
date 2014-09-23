@@ -168,26 +168,26 @@ SPL.lookup <- list( nonHS = list( `3` = cast(read.csv(file="const/AGE.csv"), ACH
 
 
 
-#default values based on the above percentiles
+#PJP determines
 g38.achievement.cuts.lookup.year <- list(`2013-14` = c(52, 61))
 g38.achievement.cuts <- g38.achievement.cuts.lookup.year[[current.school.year]]
 
-
+#PJP determines
 g38.growth.cuts.lookup.year <- list(`2011-12` = c(47,55),                                                        
                                  `2012-13` = c(45, 60), #2012-13 PJP cuts
                                  `2013-14` = c(45, 60))  
 g38.growth.cuts <- g38.growth.cuts.lookup.year[[current.school.year]]
 
-
+#PJP determines
 g38.equity.cuts.lookup.year <- list(`2011-12` = c(49,58),                                                        
                                  `2012-13` = c(40, 55), #2012-13 PJP cuts
                                  `2013-14` = c(82, 85)) 
 g38.equity.cuts<- g38.equity.cuts.lookup.year[[current.school.year]]
 
-
+#PJP determines
 hs.achievement.cuts.lookup.year <- list(`2013-14` = c(28, 38))
 hs.achievement.cuts <- hs.achievement.cuts.lookup.year[[current.school.year]]
-
+#hs.achievement.cuts <- c(30, 40)
 
 #act readiness
 calc.index <- function (domain.runs, range) {
@@ -199,11 +199,15 @@ calc.index <- function (domain.runs, range) {
 
 readiness.standard.test.types <- c('ACT','PLAN','EXPLORE')
 
-
+#PJP determines
 tested.readiness <- c(level1.points = 20,
                       level2.points = 50,
                       level3.points = 80,
                       level4.points = 100)
+# tested.readiness <- c(level1.points = 0,
+#                       level2.points = 40,
+#                       level3.points = 80,
+#                       level4.points = 100)
 
 
 explore.index.runs <- list(1:14, 15:17, 18:20, 21:25)
@@ -283,30 +287,43 @@ grad.rate.labels <- c(extended="CAT_EXTENDED_2013",
 
 grad.rate.cats <- c(`4yr`="CAT_4_YR_2013", extended="CAT_EXTENDED_2013", improve="IMPROVE_CAT_2013")
 
+#PJP determines
 hs.grad.rate.cuts.lookup.year <- list(`2013-14` = c(80, 90))  
 hs.grad.rate.cuts <- hs.grad.rate.cuts.lookup.year[[current.school.year]]
+#hs.grad.rate.cuts <- c(78, 92)
+  
+##PJP determines
+hathaway.eligibility.index <- c(20, 40, 60, 80, 100)  
+#hathaway.eligibility.index <- c(0, 30, 50, 80, 100)  
 
-
-hathaway.eligibility.index <- c(20, 40, 60, 80, 100)  #PJP 2014 will define
-
+##PJP determines
 additional.readiness.weights <- c(tested=.35,
                                   grade.nine=.15,
                                   hathaway=.50)
+# additional.readiness.weights <- c(tested=.45,
+#                                   grade.nine=.15,
+#                                   hathaway=.40)
+
+
 additional.readiness.types <- c("all", "tested only","tested and gd9 only", "tested and Hath only")
 
 
-
+#PJP determines
 type.1.additional.readiness.cuts.lookup.year <- list(`2013-14` = c(58, 66))  #2012-13 PJP cuts, corrected
 type.1.additional.readiness.cuts <- type.1.additional.readiness.cuts.lookup.year[[current.school.year]]
-
+#type.1.additional.readiness.cuts <- c(56, 68)
 
 #not set by PJP
 subgroup.hs.math.cut <- 17  
 subgroup.hs.reading.cut <- 16
 
 subgroup.labels.hs <- c("SUBGROUP_MATH_HS", "SUBGROUP_READING_HS", "SUBGROUP_CONSOLIDATED_HS")
+
+#PJP determines
 hs.equity.cuts.lookup.year <- list(`2013-14` = c(121, 126))
 hs.equity.cuts <- hs.equity.cuts.lookup.year[[current.school.year]]
+#hs.equity.cuts <- c(123, 128)
+  
 hs.equity.precision  <- 3
 
 
