@@ -227,3 +227,4 @@ reporting/insert*.sql
 junk/
 const/private/
 MF/
+output/

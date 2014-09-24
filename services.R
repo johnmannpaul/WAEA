@@ -1,10 +1,12 @@
 library("reshape")
 library(rcom)
+library(compare)
+
 #how many schools with 3-8 performance do not have an indicator
 #with(schools, table(schools[SCHOOL_YEAR=='2012-13' & WAEA_SCHOOL_TYPE != c(2),]$N_INDICATORS))
 report.adjusted.SPLs = FALSE
 
-
+schools.pilot <- read.csv(file="data/2012-13-Pilot.csv", header=TRUE, colClasses=c(SCHOOL_ID="character"))
 calc.sums.2 <- function (sums.2.df, cast.FUN) {
   
   axes <- names(sums.2.df)[1:2]
@@ -301,8 +303,8 @@ get.results.all <- function (label.sum.by="SCHOOL_ID",
                         function (SPL.schools) {
                           SPL.schools$SPL <- ifelse(!is.na(SPL.schools$SPL), SPL.schools$SPL, 0)
                           SPL.schools$SPL <- factor(as.character(SPL.schools$SPL), levels=c("1","2","3","4","0"), ordered=TRUE)
-                          sums.SPL <- cast(SPL.schools, value = label.sum.by, SPL ~ , 
-                                           cast.FUN, add.missing=TRUE, margins=TRUE)
+                          sums.SPL <- cast(SPL.schools, value = label.sum.by, SPL ~ ., 
+                                           cast.FUN, add.missing=TRUE, margins=TRUE)[,2]
                         }))
   #as.matrix(sums.SPL)
   
@@ -386,8 +388,8 @@ put.cuts.HS <- function (cuts.df, school.year=current.school.year) {
   }))
   
   schools[names(add.readiness.other.types)] <<- add.readiness.other.types
-  schools$HS_ADD_READINESS_CAT <<- compute.add.readiness.overall(schools)
-  
+
+  schools[c("HS_ADD_READINESS_SCORE", "HS_ADD_READINESS_CAT")] <<- t(compute.add.readiness.overall(schools))
   
   update.results.HS(school.year)
   
@@ -560,14 +562,6 @@ put.indeces.HS <- function(indeces, cuts, school.year=current.school.year) {
                                                                         compute.add.readiness.helper, i, round(prop.table(additional.readiness.weights[add.readiness.types[[i]]]),2), precision.add.readiness)
                                                                   
                                                                 }))
-  #   schools$HS_ADD_READINESS_SCORE_TYPE1 <<- apply(schools[c("HS_TESTED_READINESS_MEAN",
-  #                                                           "PERCENT_GD_9_CREDIT_MET",
-  #                                                           "HATH_INDEX_SCORE_MEAN")],
-  #                                                 c(1),
-  #                                                 function (scores, weights, precision) {
-  #                                                   round(sum(weights * scores), precision)
-  #                                                 }, additional.readiness.weights, precision.add.readiness)
-  #   
   
   
   #recompute target levels

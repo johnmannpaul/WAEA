@@ -313,16 +313,19 @@ compute.add.readiness.overall <- function (schools) {
         function (school) {
           type <- school[["HS_ADD_READINESS_TYPE"]]
           if (is.na(type) | type==0)
-            NA
+            c(NA, NA)
           else
-            schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
+            c(schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
+                        schools$SCHOOL_ID == school[["SCHOOL_ID"]],
+                      paste("HS_ADD_READINESS_SCORE_TYPE", type, sep="")],
+              schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
                       schools$SCHOOL_ID == school[["SCHOOL_ID"]],
-                    paste("HS_ADD_READINESS_CAT_TYPE", type, sep="")]
+                    paste("HS_ADD_READINESS_CAT_TYPE", type, sep="")])
           
         })
 }
 
-schools$HS_ADD_READINESS_CAT <- compute.add.readiness.overall(schools)
+schools[c("HS_ADD_READINESS_SCORE", "HS_ADD_READINESS_CAT")] <- t(compute.add.readiness.overall(schools))
 
 
 
@@ -413,3 +416,23 @@ write.csv(file=get.filename("additional-readiness-cfds", "results/cfds"),
 #           table(schools.of.interest[,c("ALTERNATIVE_SCHOOL","HS_ADD_READINESS_CAT")]),
 #           na="")
 #checks
+
+source("plot-funs.R")
+add.readiness.plot.data <- with(schools,
+                         schools[SCHOOL_YEAR==current.school.year & 
+                                   SCHOOL_ID != state.school.id &
+                                   !is.na(HS_ADD_READINESS_SCORE), "HS_ADD_READINESS_SCORE"])
+plot.hist(add.readiness.plot.data, 20)
+
+
+# tested.readiness.plot.data <- with(schools,
+#                                 schools[SCHOOL_YEAR==current.school.year & 
+#                                           SCHOOL_ID != state.school.id &
+#                                           !is.na(HS_TESTED_READINESS_MEAN), "HS_TESTED_READINESS_MEAN"])
+# plot.hist(tested.readiness.plot.data, 20)
+
+add.readiness.1.plot.data <- with(schools,
+                                schools[SCHOOL_YEAR==current.school.year & 
+                                          SCHOOL_ID != state.school.id &
+                                          !is.na(HS_ADD_READINESS_SCORE_TYPE1), "HS_ADD_READINESS_SCORE_TYPE1"])
+plot.hist(add.readiness.1.plot.data, 20)
