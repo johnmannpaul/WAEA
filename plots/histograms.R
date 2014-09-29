@@ -190,7 +190,7 @@ if(curve2==T){lines(xfit2, yfit2, col=rgb(0,1,0,.75), lwd=2)}
 Add_Read_hist=function(curve1){
 
 x=add$HS_ADD_READINESS_SCORE_TYPE1
-h=hist(x,col=rgb(0,1,0,.75),xlab="Additional Readiness Score",main="Distribution Of Additional Readiness Score \n Alternative Schools vs. Non-Alternative Schools",breaks=30,ylab="Number of Schools")
+h=hist(x,col=rgb(0,1,0,.75),xlab="Additional Readiness Score",main="Distribution Of Additional Readiness Score \n Alternative Schools vs. Non-Alternative Schools",breaks=25,ylab="Number of Schools")
 rect(c(add_alt$HS_ADD_READINESS_SCORE_TYPE1-1),0,c(add_alt$HS_ADD_READINESS_SCORE_TYPE1+1),1,col=rgb(1,0,0,.75))
 xfit2<-seq(min(x),max(x),length=100) 
 yfit2<-dnorm(xfit2,mean=mean(round(x,1)),sd=sd(round(x,1))) 

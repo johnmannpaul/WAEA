@@ -2,11 +2,25 @@ library("reshape")
 library(rcom)
 library(compare)
 
+
+
 #how many schools with 3-8 performance do not have an indicator
 #with(schools, table(schools[SCHOOL_YEAR=='2012-13' & WAEA_SCHOOL_TYPE != c(2),]$N_INDICATORS))
 report.adjusted.SPLs = FALSE
 
 schools.pilot <- read.csv(file="data/2012-13-Pilot.csv", header=TRUE, colClasses=c(SCHOOL_ID="character"))
+schools.prior <- schools.pilot[schools.pilot$SCHOOL_YEAR==prior.school.year &
+                                 schools.pilot$SCHOOL_ID!=state.school.id,
+                               c("SCHOOL_YEAR", "SCHOOL_ID", "WAEA_SCHOOL_TYPE", "SPL", "SPL_ADJUSTED",
+                                 "SPL_HS", "SPL_ADJUSTED_HS",
+                                 "ACCOUNTABILITY_SPL")]
+
+schools.prior$ALL_SPL <- apply(schools.prior[,c("SPL", "SPL_HS")],
+                               c(1),
+                               function (scores) scores[order(scores)][1])
+SPL.prior <- schools.prior[,c(1:7,9,8)]
+names(SPL.prior) <- c("SCHOOL_YEAR", "SCHOOL_ID", "WAEA_SCHOOL_TYPE", SPL.types)
+
 calc.sums.2 <- function (sums.2.df, cast.FUN) {
   
   axes <- names(sums.2.df)[1:2]
@@ -22,10 +36,8 @@ calc.sums.2 <- function (sums.2.df, cast.FUN) {
 update.results.nonHS <- function (school.year, adjusted=report.adjusted.SPLs, label.sum.by="SCHOOL_ID", cast.FUN.name = "length") {
 
   cast.FUN <- if(cast.FUN.name == 'sum') sum else length
-  #update global state
-  #   schools$SPL <<- calc.SPLs(schools, "nonHS")
-  #   state.school$SPL <<- calc.SPLs(state.school, "nonHS")
-  
+
+  #recompute G38 SPLs
   schools$G38_SPL <<- apply(schools[,c("WAEA_SCHOOL_TYPE", "G38_INDICATORS_N", g38.target.level.labels)],
                            c(1),
                            FUN=calc.SPL.nonHS )
@@ -34,11 +46,20 @@ update.results.nonHS <- function (school.year, adjusted=report.adjusted.SPLs, la
                                           c(1),
                                           FUN=calc.SPL.accountability, "G38_SPL",  g38.participation.labels)
   
-  
+  #propagate G38 values to paired schools (none of these schools are paired with schools serving 12th grade)
   g38.accountability.labels <- names(schools)[grep("^G38_", names(schools))]
-  schools <<- propagate.results.to.paired.schools(schools, g38.accountability.labels)
+  schools <<- propagate.results.to.paired.schools(schools, 
+                                                  g38.accountability.labels)
   
-                                          
+  #The 'all' SPL depends on G38 SPLs so recompute it.
+  schools$ALL_SPL <<- apply(schools[,c("G38_SPL", "HS_SPL")],
+                            c(1),
+                            function (scores) scores[order(scores)][1])
+  
+  schools$ALL_SPL_ACCOUNTABILITY <<- apply(schools[,c("G38_SPL_ACCOUNTABILITY", "HS_SPL_ACCOUNTABILITY")],
+                                           c(1),
+                                           function (scores) scores[order(scores)][1])
+                                            
   
   #compute impact results
   #need to have missing values inserted.  That's whey we make them factors.
@@ -145,6 +166,15 @@ update.results.HS <- function (school.year, adjusted=report.adjusted.SPLs, label
   
   
 
+  #The'all' SPLs depend on HS SPLs.  So recompute those now.
+  schools$ALL_SPL <<- apply(schools[,c("G38_SPL", "HS_SPL")],
+                           c(1),
+                           function (scores) scores[order(scores)][1])
+  
+  schools$ALL_SPL_ACCOUNTABILITY <<- apply(schools[,c("G38_SPL_ACCOUNTABILITY", "HS_SPL_ACCOUNTABILITY")],
+                                          c(1),
+                                          function (scores) scores[order(scores)][1])
+  
   #compute impact results
   
   overall.readiness.sum <- calc.sums.2(schools[schools$SCHOOL_YEAR==school.year &
@@ -275,38 +305,63 @@ get.results.all <- function (label.sum.by="SCHOOL_ID",
   
   
   cast.FUN <- if(cast.FUN.name == 'sum') sum else length
+
+  SPL.schools <- rbind(schools[schools$SCHOOL_YEAR==school.year &
+                                 schools$SCHOOL_ID != state.school.id,c("SCHOOL_YEAR", "SCHOOL_ID", "WAEA_SCHOOL_TYPE",
+                                  SPL.types)],
+                       SPL.prior)
   
+  G38.SPL.schools <- SPL.schools[SPL.schools$WAEA_SCHOOL_TYPE %in% c(nonHS.types, paired.types),
+                             c(if (adjusted)  "G38_SPL_ACCOUNTABILITY" else "G38_SPL",  "SCHOOL_YEAR", label.sum.by )]
   
-  G38.SPL.schools <- schools[schools$WAEA_SCHOOL_TYPE %in% c(nonHS.types, paired.types) & 
-                               schools$SCHOOL_YEAR==school.year &
-                               schools$SCHOOL_ID != state.school.id,
-                             c(if (adjusted)  "G38_SPL_ACCOUNTABILITY" else "G38_SPL",  label.sum.by )]
+  names(G38.SPL.schools)[1] <- "SPL"
   
-  names(G38.SPL.schools) <- c("SPL", label.sum.by)
+  HS.SPL.schools <- SPL.schools[SPL.schools$WAEA_SCHOOL_TYPE %in% HS.types,
+                            c(if (adjusted) "HS_SPL_ACCOUNTABILITY" else "HS_SPL", "SCHOOL_YEAR", label.sum.by )]
   
-  HS.SPL.schools <- schools[schools$WAEA_SCHOOL_TYPE %in% HS.types & 
-                              schools$SCHOOL_YEAR==school.year &
-                              schools$SCHOOL_ID != state.school.id,
-                            c(if (adjusted) "HS_SPL_ACCOUNTABILITY" else "HS_SPL", label.sum.by )]
+  names(HS.SPL.schools)[1] <- "SPL"
   
-  names(HS.SPL.schools) <- c("SPL", label.sum.by)
+  All.SPL.schools <- SPL.schools[,
+                             c(if (adjusted) "ALL_SPL_ACCOUNTABILITY" else "ALL_SPL", "SCHOOL_YEAR", label.sum.by )]
   
-  All.SPL.schools <- schools[schools$SCHOOL_YEAR==school.year &
-                               schools$SCHOOL_ID != state.school.id,
-                             c(if (adjusted) "ALL_SPL_ACCOUNTABILITY" else "ALL_SPL", label.sum.by )]
+  names(All.SPL.schools)[1] <- "SPL"
   
-  names(All.SPL.schools) <- c("SPL", label.sum.by)
-  
-  do.call(cbind, lapply(list(G38.SPL.schools,
-                             HS.SPL.schools,
-                             All.SPL.schools),
+  cats.sums <- do.call(cbind, lapply(list(G38.SPL.schools[G38.SPL.schools$SCHOOL_YEAR==school.year,c("SPL", "SCHOOL_ID")],
+                             HS.SPL.schools[HS.SPL.schools$SCHOOL_YEAR==school.year,c("SPL", "SCHOOL_ID")],
+                             All.SPL.schools[All.SPL.schools$SCHOOL_YEAR==school.year,c("SPL", "SCHOOL_ID")]),
                         function (SPL.schools) {
                           SPL.schools$SPL <- ifelse(!is.na(SPL.schools$SPL), SPL.schools$SPL, 0)
                           SPL.schools$SPL <- factor(as.character(SPL.schools$SPL), levels=c("1","2","3","4","0"), ordered=TRUE)
                           sums.SPL <- cast(SPL.schools, value = label.sum.by, SPL ~ ., 
                                            cast.FUN, add.missing=TRUE, margins=TRUE)[,2]
                         }))
-  #as.matrix(sums.SPL)
+  
+  cats.compare <- do.call(rbind, lapply(list(G38.SPL.schools,
+                             HS.SPL.schools,
+                             All.SPL.schools),
+                        function (schools) {
+                          schools.wide <- reshape(schools, timevar="SCHOOL_YEAR", idvar="SCHOOL_ID", v.names="SPL", direction="wide")
+                          names(schools.wide) <- c("SCHOOL_ID", "SPL.current", "SPL.prior")
+                          schools.wide$SPL.current <- factor(schools.wide$SPL.current, levels=c("1","2","3", "4", NA), exclude=c(), ordered=TRUE)
+                          schools.wide$SPL.prior <- factor(schools.wide$SPL.prior, levels=c("1","2","3", "4", NA), exclude=c(), ordered=TRUE)
+                          cast(schools.wide, SPL.prior ~ SPL.current, add.missing=TRUE, value="SCHOOL_ID", fun.aggregate=length)
+                          #as.matrix(sums.SPL)                                                    
+                        })) 
+  
+  matches <- do.call(rbind, 
+         lapply(0:2, 
+         function (i) {
+           offset <- (i*5) + 1
+           m <- as.matrix(cats.compare[offset:(offset+3),2:5])
+           c(round(((m[1,1] + m[2,2] + m[3,3] + m[4,4])/sum(m))*100,2),
+             round(((m[1,1] + m[1,2] + 
+                       m[2,1] + m[2,2] + m[2,3] + 
+                       m[3,2] + m[3,3] + m[3,4] + 
+                       m[4,3] + m[4,4])/sum(m))*100,2))
+         }))
+  rbind(cbind(cats.sums, NA, NA),
+        as.matrix(cats.compare[2:6]),
+        cbind(matches, NA,NA,NA))
   
 }
 

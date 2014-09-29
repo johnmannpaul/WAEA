@@ -169,7 +169,7 @@ SPL.lookup <- list( nonHS = list( `3` = cast(read.csv(file="const/AGE.csv"), ACH
 
 
 #PJP determines
-g38.achievement.cuts.lookup.year <- list(`2013-14` = c(52, 61))
+g38.achievement.cuts.lookup.year <- list(`2013-14` = c(53, 70))
 g38.achievement.cuts <- g38.achievement.cuts.lookup.year[[current.school.year]]
 
 #PJP determines
@@ -181,11 +181,11 @@ g38.growth.cuts <- g38.growth.cuts.lookup.year[[current.school.year]]
 #PJP determines
 g38.equity.cuts.lookup.year <- list(`2011-12` = c(49,58),                                                        
                                  `2012-13` = c(40, 55), #2012-13 PJP cuts
-                                 `2013-14` = c(82, 85)) 
+                                 `2013-14` = c(80, 85)) 
 g38.equity.cuts<- g38.equity.cuts.lookup.year[[current.school.year]]
 
 #PJP determines
-hs.achievement.cuts.lookup.year <- list(`2013-14` = c(28, 38))
+hs.achievement.cuts.lookup.year <- list(`2013-14` = c(32, 45))
 hs.achievement.cuts <- hs.achievement.cuts.lookup.year[[current.school.year]]
 #hs.achievement.cuts <- c(30, 40)
 
@@ -293,13 +293,13 @@ hs.grad.rate.cuts <- hs.grad.rate.cuts.lookup.year[[current.school.year]]
 #hs.grad.rate.cuts <- c(78, 92)
   
 ##PJP determines
-hathaway.eligibility.index <- c(20, 40, 60, 80, 100)  
+hathaway.eligibility.index <- c(40, 70, 80, 90, 100)  
 #hathaway.eligibility.index <- c(0, 30, 50, 80, 100)  
 
 ##PJP determines
-additional.readiness.weights <- c(tested=.35,
-                                  grade.nine=.15,
-                                  hathaway=.50)
+additional.readiness.weights <- c(tested=.30,
+                                  grade.nine=.30,
+                                  hathaway=.40)
 # additional.readiness.weights <- c(tested=.45,
 #                                   grade.nine=.15,
 #                                   hathaway=.40)
@@ -309,7 +309,7 @@ additional.readiness.types <- c("all", "tested only","tested and gd9 only", "tes
 
 
 #PJP determines
-type.1.additional.readiness.cuts.lookup.year <- list(`2013-14` = c(58, 66))  #2012-13 PJP cuts, corrected
+type.1.additional.readiness.cuts.lookup.year <- list(`2013-14` = c(70, 80))  #2012-13 PJP cuts, corrected
 type.1.additional.readiness.cuts <- type.1.additional.readiness.cuts.lookup.year[[current.school.year]]
 #type.1.additional.readiness.cuts <- c(56, 68)
 
@@ -320,7 +320,7 @@ subgroup.hs.reading.cut <- 16
 subgroup.labels.hs <- c("SUBGROUP_MATH_HS", "SUBGROUP_READING_HS", "SUBGROUP_CONSOLIDATED_HS")
 
 #PJP determines
-hs.equity.cuts.lookup.year <- list(`2013-14` = c(121, 126))
+hs.equity.cuts.lookup.year <- list(`2013-14` = c(120, 127))
 hs.equity.cuts <- hs.equity.cuts.lookup.year[[current.school.year]]
 #hs.equity.cuts <- c(123, 128)
   
@@ -374,3 +374,6 @@ hs.SPL.labels <- c(unmodified="HS_SPL",
 
 
 original.labels <- c("SCHOOL_ID","SCHOOL_YEAR","DISTRICT_ID","DISTRICT_NAME","NAME","SHORT_NAME","CATEGORY","LOW_GRADE","HIGH_GRADE","GRADES_SERVED","WAEA_SCHOOL_TYPE","PAIRED_SCHOOL_ID","PAIRED_SCHOOL_NAME","YEAR","TITLE_1_SCHOOL","ALTERNATIVE_SCHOOL","ENROLLMENT","GRADE_BAND_COMPOSITION","G38_ACHIEVEMENT_ALL_SMALL_SCHOOL","G38_ACHIEVEMENT_ALL_YEARS_BACK","G38_ACHIEVEMENT_ALL_N_TESTS","G38_ACHIEVEMENT_ALL_N_PROFICIENT_TESTS","G38_ACHIEVEMENT_ALL_PERCENT_PROFICIENT","G38_ACHIEVEMENT_ALL_N","G38_ACHIEVEMENT_ALL_TESTS_ACTUAL_COUNT","G38_ACHIEVEMENT_ALL_TESTS_EXPECTED_COUNT","G38_ACHIEVEMENT_ALL_PARTICIPATION_RATE","G38_ACHIEVEMENT_ALL_TARGET_LEVEL","G38_GROWTH_SMALL_SCHOOL","G38_GROWTH_YEARS_BACK","G38_GROWTH_N_TESTS","G38_GROWTH_MGP","G38_GROWTH_N","G38_GROWTH_TESTS_ACTUAL_COUNT","G38_GROWTH_TESTS_EXPECTED_COUNT","G38_GROWTH_PARTICIPATION_RATE","G38_GROWTH_TARGET_LEVEL","G38_EQUITY_SMALL_SCHOOL","G38_EQUITY_YEARS_BACK","G38_EQUITY_N_TESTS","G38_EQUITY_MEAN","G38_EQUITY_N","G38_EQUITY_TESTS_ACTUAL_COUNT","G38_EQUITY_TESTS_EXPECTED_COUNT","G38_EQUITY_PARTICIPATION_RATE","G38_EQUITY_TARGET_LEVEL","G38_INDICATORS_N","G38_SPL","G38_SPL_ACCOUNTABILITY","HS_ACHIEVEMENT_SMALL_SCHOOL","HS_ACHIEVEMENT_YEARS_BACK","HS_ACHIEVEMENT_N_TESTS","HS_ACHIEVEMENT_N_PROFICIENT_TESTS","HS_ACHIEVEMENT_PERCENT_PROFICIENT","HS_ACHIEVEMENT_N","HS_ACHIEVEMENT_TESTS_ACTUAL_COUNT","HS_ACHIEVEMENT_TESTS_EXPECTED_COUNT","HS_ACHIEVEMENT_PARTICIPATION_RATE","HS_ACHIEVEMENT_TARGET_LEVEL","HS_EQUITY_SMALL_SCHOOL","HS_EQUITY_YEARS_BACK","HS_EQUITY_N_SCORES","HS_EQUITY_MEAN","HS_EQUITY_N","HS_EQUITY_TESTS_ACTUAL_COUNT","HS_EQUITY_TESTS_EXPECTED_COUNT","HS_EQUITY_PARTICIPATION_RATE","HS_EQUITY_TARGET_LEVEL","HS_TESTED_READINESS_SMALL_SCHOOL","HS_TESTED_READINESS_YEARS_BACK","HS_TESTED_READINESS_N_sCORES","HS_TESTED_READINESS_MEAN","HS_TESTED_READINESS_N","HS_TESTED_READINESS_TESTS_ACTUAL_COUNT","HS_TESTED_READINESS_TESTS_EXPECTED_COUNT","HS_TESTED_READINESS_PARTICIPATION_RATE","GRADE_NINE_CREDITS_N","GRADE_NINE_CREDITS_MET_N","SMALL_SCHOOL_GRADE_NINE_CREDIT","PERCENT_GD_9_CREDIT_MET","HATH_INDEX_SCORE_N","HATH_INDEX_SCORE_MEAN","SMALL_SCHOOL_HATH_ELIGIBILITY","HATH_CAT_N","HATH_CAT_MEAN","LOOK_BACK_YRS_4_YR","EXTENDED_LOOK_BACK_YRS","GRAD_RATE_4_YR.2012.13","GRAD_RATE_EXTENDED","COHORT_4_YR_N.2012.13","COHORT_EXTENDED_N.2012.13","CAT_4_YR_2013","CAT_EXTENDED_2013","IMPROVE_TARGET_FOR_MEETS","IMPROVE_TARGET_FOR_EXCEED","IMPROVE_CAT_2013","HS_ADD_READINESS_TYPE","HS_ADD_READINESS_TYPE_LABEL","HS_ADD_READINESS_SCORE_TYPE1","HS_ADD_READINESS_N_TYPE1","HS_ADD_READINESS_CAT_TYPE1","HS_ADD_READINESS_SCORE_TYPE2","HS_ADD_READINESS_CAT_TYPE2","HS_ADD_READINESS_N_TYPE2","HS_ADD_READINESS_CUT1_TYPE2","HS_ADD_READINESS_CUT2_TYPE2","HS_ADD_READINESS_SCORE_TYPE3","HS_ADD_READINESS_CAT_TYPE3","HS_ADD_READINESS_N_TYPE3","HS_ADD_READINESS_CUT1_TYPE3","HS_ADD_READINESS_CUT2_TYPE3","HS_ADD_READINESS_SCORE_TYPE4","HS_ADD_READINESS_CAT_TYPE4","HS_ADD_READINESS_N_TYPE4","HS_ADD_READINESS_CUT1_TYPE4","HS_ADD_READINESS_CUT2_TYPE4","HS_ADD_READINESS_CAT","HS_ACHIEVEMENT_INDICATORS_N","HS_READINESS_INDICATORS_N","HS_INDICATORS_N","HS_OVERALL_READINESS","HS_OVERALL_ACHIEVEMENT","HS_SPL","HS_PARTICIPATION_RATE_CAT","HS_SPL_ACCOUNTABILITY","ALL_SPL_ACCOUNTABILITY")
+
+
+SPL.types <- c(g38.SPL.labels, hs.SPL.labels, "ALL_SPL", "ALL_SPL_ACCOUNTABILITY")
