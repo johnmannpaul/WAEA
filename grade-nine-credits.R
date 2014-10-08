@@ -24,6 +24,14 @@ grade.nine.credits.school <- rbind(unmatrixfy.df(aggregate(data.frame(GRADE_NINE
                                                                MET_N=sum(v=="MET"))
                                                            })))
                                    
+grade.nine.credits.school <- merge(grade.nine.credits.school, 
+                                    unique(grade.nine.credits[c("ACCOUNTABILITY_YEAR", 
+                                                                "ACCOUNTABILITY_SCHOOL_ID", 
+                                                                "REQUIRED_GRAD_CREDITS")]),
+                                    all.x=TRUE,
+                                    by.x=c("SCHOOL_YEAR", "SCHOOL_ID"),
+                                    by.y=c("ACCOUNTABILITY_YEAR", "ACCOUNTABILITY_SCHOOL_ID"))
+
 grade.nine.credits.school$SMALL_SCHOOL_GRADE_NINE_CREDIT <- ifelse(grade.nine.credits.school$GRADE_NINE_CREDITS_N < min.N.grade.nine.credits, "T", "F") 
 
 

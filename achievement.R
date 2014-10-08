@@ -15,10 +15,10 @@ achievement.g38.indicator <- compute.indicator.long(g38.achieve.all,
                                                                            N_PROFICIENT_TESTS=sum(ifelse(g %in% c('3','4'), 1, 0)),
                                                                            PERCENT_PROFICIENT=round((sum(ifelse(g %in% c('3','4'), 1, 0))/length(g))*100, 0)))
 
-achievement.labels <- names(achievement.g38.indicator$schools)[grep("^G38_ACHIEVEMENT_ALL", 
+achievement.g38.labels <- names(achievement.g38.indicator$schools)[grep("^G38_ACHIEVEMENT_ALL", 
                                                                     names(achievement.g38.indicator$schools))]
 
-schools[,achievement.labels] <- achievement.g38.indicator$schools[,achievement.labels]
+schools[,achievement.g38.labels] <- achievement.g38.indicator$schools[,achievement.g38.labels]
 
 table(schools[c("SCHOOL_YEAR", "G38_ACHIEVEMENT_ALL_SMALL_SCHOOL")])
 

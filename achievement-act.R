@@ -13,9 +13,9 @@ achievement.hs.indicator <- compute.indicator.long(act.achieve,
                                                                           N_PROFICIENT_TESTS=sum(ifelse(g %in% c('3','4'), 1, 0)),
                                                                           PERCENT_PROFICIENT=round((sum(ifelse(g %in% c('3','4'), 1, 0))/length(g))*100, 0)))
 
-achievement.labels <- names(achievement.hs.indicator$schools)[grep("^HS_ACHIEVEMENT", 
+achievement.hs.labels <- names(achievement.hs.indicator$schools)[grep("^HS_ACHIEVEMENT", 
                                                                    names(achievement.hs.indicator$schools))]
-schools[,achievement.labels] <- achievement.hs.indicator$schools[,achievement.labels]
+schools[,achievement.hs.labels] <- achievement.hs.indicator$schools[,achievement.hs.labels]
 
 table(schools[c("SCHOOL_YEAR", "HS_ACHIEVEMENT_SMALL_SCHOOL")])
 

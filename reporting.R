@@ -1,14 +1,29 @@
 #presumes you've run process.R
 source("reporting-defs.R")
-
+report.precision <- 0
 
 ##achievement
-paws.aggregates <- produce.aggregates.scoped(paws.df)
 
-paws.N <- produce.aggregates.scoped(paws.df,
-                             obs="WISER_ID",
-                             value.label="N_TESTERS",
-                             aggregator=function (x) c(N_TESTERS=length(unique(x)))
+paws.aggregates <- produce.aggregates.scoped(achievement.g38.indicator$students.fay,
+                                             orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "WR"),                                                 
+                                                              GRADE_ENROLLED = c("ALL", "03", "04", "05", "06", "07", "08")),
+                                             col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "WR")),
+                                             value.label = "PERCENT_PROFICIENT",
+                                             aggregator=function (x) {
+                                               PERCENT_PROFICIENT =round((sum(ifelse(x %in% c('3','4'), 1, 0))/length(x)) * 100, report.precision)
+                                             }
+                                             obs="PERFORMANCE_LEVEL",
+                                             filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL))
+
+
+paws.N <- produce.aggregates.scoped(achievement.g38.indicator$students.fay,
+                                    orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "WR"),                                                 
+                                                     GRADE_ENROLLED = c("ALL", "03", "04", "05", "06", "07", "08")),
+                                    col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "WR")),
+                                    obs="WISER_ID",
+                                    value.label="N_TESTERS",
+                                    aggregator=function (x) c(N_TESTERS=length(unique(x))),
+                                    filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
 )
 
 
@@ -23,32 +38,43 @@ names(paws.tab.N)[ncol(paws.tab.N)] <- 'N'
 
 
 #must aggree
-head(paws.tab.N[paws.tab.N$SCHOOL_YEAR =='2012-13' & 
+head(paws.tab.N[paws.tab.N$SCHOOL_YEAR ==current.school.year & 
                   paws.tab.N$GRADE_ENROLLED == 'ALL' & paws.tab.N$STATISTIC=='PERCENT_PROFICIENT',],12)
-head(achievement[achievement$SCHOOL_YEAR=='2012-13',],12)
 
-paws.tab.N[paws.tab.N$SCHOOL_YEAR=='2012-13' & paws.tab.N$SCHOOL_ID=='0101001' & paws.tab.N$STATISTIC=='PERCENT_PROFICIENT',]
+head(with(achievement.g38.indicator$schools, 
+          achievement.g38.indicator$schools[WAEA_SCHOOL_TYPE %in% nonHS.types & SCHOOL_YEAR==current.school.year,c("SCHOOL_ID", achievement.g38.labels)]),12)
+
+
 ##end validation
 
 
      
 #propagate results to paired schools
 paws.tab.N <- rbind(paws.tab.N, propagate.to.paired.schools(paws.tab.N))
-write.csv(paws.tab.N,file="reporting/grade-level-statistics.csv", na="", row.names=FALSE, quote=FALSE)
+write.csv(paws.tab.N[paws.tab.N$SCHOOL_YEAR==current.school.year & paws.tab.N$STATISTIC=='PERCENT_PROFICIENT', ],file="reporting/grade-level-statistics.csv", na="", row.names=FALSE, quote=FALSE)
 
 
 
 ##MGP
-growth.aggregates <- produce.aggregates.scoped(growth.df,
-                                        obs="SGP",
-                                        aggregator=function (x) 
-                                          c(MGP=median(x),
-                                            N_SGP=length(x)))
+growth.aggregates <- produce.aggregates.scoped(growth.g38.indicator$students.fay,
+                                               orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "WR"),                                                 
+                                                                GRADE_ENROLLED = c("ALL", "03", "04", "05", "06", "07", "08")),
+                                               col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "WR")),
+                                               obs="SGP",
+                                               aggregator=function (x) 
+                                                 c(MGP=median(x),
+                                                   N_SGP=length(x)),
+                                               filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                               )
 
-growth.N <- produce.aggregates.scoped(growth.df,
-                               obs="WISER_ID",
-                               value.label="N_TESTERS",
-                               aggregator=function (x) c(N_TESTERS=length(unique(x)))
+growth.N <- produce.aggregates.scoped(growth.g38.indicator$students.fay,
+                                      orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "WR"),                                                 
+                                                       GRADE_ENROLLED = c("ALL", "03", "04", "05", "06", "07", "08")),
+                                      col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "WR")),       
+                                      obs="WISER_ID",
+                                      value.label="N_TESTERS",
+                                      aggregator=function (x) c(N_TESTERS=length(unique(x))),
+                                      filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
 )
 
 
@@ -58,173 +84,237 @@ growth.tab.N <- merge(growth.aggregates$tab, growth.N$norm[as.character(growth.N
 names(growth.tab.N)[length(growth.tab.N)] <- "N"
 
 
-head(growth.tab.N[growth.tab.N$SCHOOL_YEAR =='2012-13' & 
+head(growth.tab.N[growth.tab.N$SCHOOL_YEAR ==current.school.year & 
                     growth.tab.N$GRADE_ENROLLED == 'ALL' &
                     growth.tab.N$STATISTIC == 'MGP',],12)
-head(growth[growth$SCHOOL_YEAR=='2012-13',],12)
+head(with(growth.g38.indicator$schools, 
+          growth.g38.indicator$schools[WAEA_SCHOOL_TYPE %in% nonHS.types & SCHOOL_YEAR==current.school.year,c("SCHOOL_ID", growth.labels)]),12)
 
-growth.tab.N[growth.tab.N$SCHOOL_YEAR==current.school.year & growth.tab.N$SCHOOL_ID=='0101001' & growth.tab.N$STATISTIC == 'MGP',]
 
 ##end validation
 
 
 
 growth.tab.N <- rbind(growth.tab.N, propagate.to.paired.schools(growth.tab.N))
-write.csv(growth.tab.N,file="reporting/grade-level-statistics-growth.csv", na="", row.names=FALSE, quote=FALSE)     
+write.csv(growth.tab.N[growth.tab.N$SCHOOL_YEAR==current.school.year & growth.tab.N$STATISTIC=='MGP',],file="reporting/grade-level-statistics-growth.csv", na="", row.names=FALSE, quote=FALSE)     
 
 
 ##equity     
-growth.aggregates <- produce.aggregates.scoped(consolidated.subgroup.df,
-                                        obs="MET_AGP",
-                                        aggregator=function (x) {
-                                          c(PERCENT_MET_AGP =round((sum(ifelse(x == 'T', 1, 0))/length(x)) * 100, 1),
-                                            N_AGP=length(x),
-                                            N_MET_AGP=sum(ifelse(x %in% c('3','4'), 1, 0)))
-                                          },
-                                               filter=bquote(!EXCLUDE_FROM_STATE_AVERAGE)
+equity.aggregates <- produce.aggregates.scoped(equity.g38.indicator$students.fay,
+                                               orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "WR"),                                                 
+                                                                GRADE_ENROLLED = c("ALL", "03", "04", "05", "06", "07", "08")),
+                                               col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "WR")),
+                                               obs="STD_SCORE",
+                                               value.label="MEAN_STD_SCORE",
+                                               aggregator=function (x) c(MEAN_STD_SCORE=round(mean(x), 1)),
+                                               filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
                                                
 )
 
-growth.N <- produce.aggregates.scoped(consolidated.subgroup.df,
-                               obs="WISER_ID",
-                               value.label="N_TESTERS",
-                               aggregator=function (x) {
-                                 c(N_TESTERS=length(unique(x)))
-                               },
-                                      filter=bquote(!EXCLUDE_FROM_STATE_AVERAGE)
+equity.N <- produce.aggregates.scoped(equity.g38.indicator$students.fay,
+                                      orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "WR"),                                                 
+                                                       GRADE_ENROLLED = c("ALL", "03", "04", "05", "06", "07", "08")),
+                                      col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "WR")),
+                                      obs="WISER_ID",
+                                      value.label="N_TESTERS",
+                                      aggregator=function (x) {
+                                        c(N_TESTERS=length(unique(x)))
+                                      },
+                                      filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
 )
 
 
-growth.tab.N <- merge(growth.aggregates$tab, growth.N$norm[as.character(growth.N$norm$SUBJECT_CODE)=='ALL',c("SCOPE", "SCHOOL_YEAR", "GRADE_ENROLLED", "SCHOOL_ID", "VALUE")])
+equity.tab.N <- merge(equity.aggregates$tab, equity.N$norm[as.character(equity.N$norm$SUBJECT_CODE)=='ALL',c("SCOPE", "SCHOOL_YEAR", "GRADE_ENROLLED", "SCHOOL_ID", "VALUE")])
 
 
-names(growth.tab.N)[length(growth.tab.N)] <- "N"
+names(equity.tab.N)[length(equity.tab.N)] <- "N"
 
 
-head(growth.tab.N[growth.tab.N$SCHOOL_YEAR =='2012-13' & 
-                    growth.tab.N$GRADE_ENROLLED == 'ALL' &
-                    growth.tab.N$STATISTIC == 'PERCENT_MET_AGP',],12)
-head(equity[equity$SCHOOL_YEAR=='2012-13',],12)
+head(equity.tab.N[equity.tab.N$SCHOOL_YEAR ==current.school.year & 
+                    equity.tab.N$GRADE_ENROLLED == 'ALL' &
+                    equity.tab.N$STATISTIC == 'MEAN_STD_SCORE',],12)
+head(with(equity.g38.indicator$schools, 
+          equity.g38.indicator$schools[WAEA_SCHOOL_TYPE %in% nonHS.types & SCHOOL_YEAR==current.school.year,c("SCHOOL_ID", equity.g38.labels)]),12)
 
 
-growth.tab.N[growth.tab.N$SCHOOL_YEAR==current.school.year & growth.tab.N$SCHOOL_ID=='0101001' & growth.tab.N$STATISTIC == 'PERCENT_MET_AGP',]
+equity.tab.N[equity.tab.N$SCHOOL_YEAR==current.school.year & equity.tab.N$SCHOOL_ID=='0101001' & equity.tab.N$STATISTIC == 'MEAN_STD_SCORE',]
 
 ##end validation
 
 
-growth.tab.N <- rbind(growth.tab.N, propagate.to.paired.schools(growth.tab.N))
-write.csv(growth.tab.N,file="reporting/grade-level-statistics-equity.csv", na="", row.names=FALSE, quote=FALSE)
+equity.tab.N <- rbind(equity.tab.N, propagate.to.paired.schools(equity.tab.N))
+write.csv(equity.tab.N[equity.tab.N$SCHOOL_YEAR==current.school.year & equity.tab.N$STATISTIC=='MEAN_STD_SCORE',],file="reporting/grade-level-statistics-equity.csv", na="", row.names=FALSE, quote=FALSE)
 
      
 #write schools file
-write.csv(cbind(schools[,c("SCHOOL_YEAR", "DISTRICT_ID", "DISTRICT_NAME", "SCHOOL_ID", "NAME",
+write.csv(cbind(schools[schools$SCHOOL_YEAR==current.school.year,c("SCHOOL_YEAR", "DISTRICT_ID", "DISTRICT_NAME", "SCHOOL_ID", "NAME",
                      "SHORT_NAME", "LOW_GRADE",
                      "HIGH_GRADE", "GRADES_SERVED", "WAEA_SCHOOL_TYPE", "PAIRED_SCHOOL_ID", "PAIRED_SCHOOL_NAME")],
-                ACCOUNTABILITY_SPL = ifelse(is.na(schools$ACCOUNTABILITY_SPL),
+                ACCOUNTABILITY_SPL = ifelse(is.na(schools[, "ALL_SPL_ACCOUNTABILITY"]),
                                             NA,
-                                            SPL.labels[schools[,"ACCOUNTABILITY_SPL"]])),file="reporting/schools.csv", 
+                                            SPL.labels[schools[, "ALL_SPL_ACCOUNTABILITY"]])),file="reporting/schools.csv", 
                 na="", row.names=FALSE, quote=FALSE)               
 
 #write school indicators file
-with(schools, write.csv(cbind(schools[,c("SCHOOL_YEAR", "SCHOOL_ID", "SMALL_SCHOOL")], 
-                              ifelse(is.na(schools[,"YEARS_BACK"]),
-                                     NA,
-                                     ifelse(schools[,"YEARS_BACK"] < Inf,
-                                            schools[,"YEARS_BACK"],
-                                            NA)),
-                              schools[,"YEARS_BACK_SUBGROUP"],
-                              schools[,c("ACHIEVEMENT_CUT_1", "ACHIEVEMENT_CUT_2", "PERCENT_PROFICIENT", "N_ACHIEVEMENT")],
-                              ACHIEVEMENT_TARGET_LEVEL = ifelse(is.na(schools[,c("ACHIEVEMENT_TARGET_LEVEL")]), 
-                                                                NA, 
-                                                                indicator.labels[schools[,c("ACHIEVEMENT_TARGET_LEVEL")]]),
-                              schools[,c("GROWTH_CUT_1", "GROWTH_CUT_2",  "MGP", "N_GROWTH")],
-                              GROWTH_TARGET_LEVEL = ifelse(is.na(schools[,c("GROWTH_TARGET_LEVEL")]), 
-                                                           NA, 
-                                                           indicator.labels[schools[,c("GROWTH_TARGET_LEVEL")]]),
-                              schools[,c("EQUITY_CUT_1", "EQUITY_CUT_2",  "PERCENT_MEETING_AGP", "N_SUBGROUP")],
-                              EQUITY_TARGET_LEVEL = ifelse(is.na(schools[,c("EQUITY_TARGET_LEVEL")]), 
-                                                           NA, 
-                                                           indicator.labels[schools[,c("EQUITY_TARGET_LEVEL")]]),
-                              schools[,c("PARTICIPATION_RATE")], 
-                              ifelse(is.na(schools[, "PARTICIPATION_RATE_LEVEL"]), 
-                                     NA,
-                                     participation.labels[schools[, "PARTICIPATION_RATE_LEVEL"]]),
-                              schools[,"N_INDICATORS"],
-                              SPL = ifelse(is.na(schools[,c("SPL")]), 
-                                           NA, 
-                                           SPL.labels[schools[,c("SPL")]]),
-                              SPL_ADJUSTED = ifelse(is.na(schools[,c("SPL_ADJUSTED")]), 
-                                                    NA, 
-                                                    SPL.labels[schools[,c("SPL_ADJUSTED")]])),
-                        file="reporting/school-indicators-nonHS.csv", na="", row.names=FALSE, quote=FALSE))
+g38.schools <- schools[schools$SCHOOL_YEAR==current.school.year & schools$WAEA_SCHOOL_TYPE %in% c(nonHS.types, paired.types),]
 
-with(schools, write.csv(cbind(schools[,c("SCHOOL_YEAR", "SCHOOL_ID", "SMALL_SCHOOL_HS")], 
-                              ifelse(is.na(schools[,"YEARS_BACK_HS"]),
-                                     NA,
-                                     ifelse(schools[,"YEARS_BACK_HS"] < Inf,
-                                            schools[,"YEARS_BACK_HS"],
-                                            NA)),
-                              schools[,c("ACHIEVEMENT_CUT_1_HS", "ACHIEVEMENT_CUT_2_HS",  "PERCENT_PROFICIENT_HS", "N_ACHIEVEMENT_HS")],
-                              ACHIEVEMENT_TARGET_LEVEL = ifelse(is.na(schools[,c("ACHIEVEMENT_TARGET_LEVEL_HS")]), 
-                                                                NA, 
-                                                                indicator.labels[schools[,c("ACHIEVEMENT_TARGET_LEVEL_HS")]]),
-                              schools[,c("READINESS_CUT_1", "READINESS_CUT_2",  "TOTAL_READINESS_HS", 
-                                         "N_TESTED_READINESS", "N_GRADUATION", "N_TOTAL_READINESS_HS")],
-                              GROWTH_TARGET_LEVEL = ifelse(is.na(schools[,c("READINESS_TARGET_LEVEL")]), 
-                                                           NA, 
-                                                           indicator.labels[schools[,c("READINESS_TARGET_LEVEL")]]),
-                              schools[,c("IMPROVEMENT_CUT_LOW_REVERSED", "IMPROVEMENT_CUT_HIGH_REVERSED",  "IMPROVEMENT_SCORE", "N_ACHIEVEMENT_HS")],
-                              EQUITY_TARGET_LEVEL = ifelse(is.na(schools[,c("EQUITY_TARGET_LEVEL_HS")]), 
-                                                           NA, 
-                                                           indicator.labels[schools[,c("EQUITY_TARGET_LEVEL_HS")]]),
-                              schools[,c("PARTICIPATION_RATE_ACHIEVEMENT_HS", "PARTICIPATION_RATE_TESTED_READINESS", "PARTICIPATION_RATE_HS")], 
-                              ifelse(is.na(schools[, "PARTICIPATION_RATE_LEVEL_HS"]), 
-                                     NA,
-                                     participation.labels[schools[, "PARTICIPATION_RATE_LEVEL_HS"]]),
-                              schools[,"N_INDICATORS_HS"],
-                              SPL = ifelse(is.na(schools[,c("SPL_HS")]), 
-                                           NA, 
-                                           SPL.labels[schools[,c("SPL_HS")]]),
-                              SPL_ADJUSTED = ifelse(is.na(schools[,c("SPL_ADJUSTED_HS")]), 
-                                                    NA, 
-                                                    SPL.labels[schools[,c("SPL_ADJUSTED_HS")]])),
-                        file="reporting/school-indicators-HS.csv", na="", row.names=FALSE, quote=FALSE))
+g38.school.indicators <- with(g38.schools, cbind(g38.schools[,c("SCHOOL_YEAR", "SCHOOL_ID", "G38_ACHIEVEMENT_ALL_SMALL_SCHOOL")], 
+                                                           G38_ACHIEVEMENT_ALL_YEARS_BACK = ifelse(is.na(g38.schools[,"G38_ACHIEVEMENT_ALL_YEARS_BACK"]),
+                                                                                                   NA,
+                                                                                                   ifelse(g38.schools[,"G38_ACHIEVEMENT_ALL_YEARS_BACK"] < Inf,
+                                                                                                          g38.schools[,"G38_ACHIEVEMENT_ALL_YEARS_BACK"],
+                                                                                                          NA)),
+                                                           ACHIEVEMENT_CUT_1 = g38.achievement.cuts[1],
+                                                           ACHIEVEMENT_CUT_2 = g38.achievement.cuts[2],
+                                                           g38.schools[,c("G38_ACHIEVEMENT_ALL_N_TESTS", "G38_ACHIEVEMENT_ALL_N_PROFICIENT_TESTS", "G38_ACHIEVEMENT_ALL_PERCENT_PROFICIENT", "G38_ACHIEVEMENT_ALL_N",
+                                                                          "G38_ACHIEVEMENT_ALL_TESTS_ACTUAL_COUNT", "G38_ACHIEVEMENT_ALL_TESTS_EXPECTED_COUNT", "G38_ACHIEVEMENT_ALL_PARTICIPATION_RATE")],
+                                                           
+                                                           
+                                                           ACHIEVEMENT_TARGET_LEVEL = ifelse(is.na(g38.schools[,c("G38_ACHIEVEMENT_ALL_TARGET_LEVEL")]), 
+                                                                                             NA, 
+                                                                                             indicator.labels[g38.schools[,c("G38_ACHIEVEMENT_ALL_TARGET_LEVEL")]]),
+                                                           
+                                                           g38.schools[,"G38_GROWTH_SMALL_SCHOOL"],
+                                                           G38_GROWTH_YEARS_BACK = ifelse(is.na(g38.schools[,"G38_GROWTH_YEARS_BACK"]),
+                                                                                          NA,
+                                                                                          ifelse(g38.schools[,"G38_GROWTH_YEARS_BACK"] < Inf,
+                                                                                                 g38.schools[,"G38_GROWTH_YEARS_BACK"],
+                                                                                                 NA)),
+                                                           GROWTH_CUT_1 = g38.growth.cuts[1],
+                                                           GROWTH_CUT_2 = g38.growth.cuts[2],
+                                                           
+                                                           g38.schools[,c("G38_GROWTH_MGP", "G38_GROWTH_N")],
+                                                           
+                                                           GROWTH_TARGET_LEVEL = ifelse(is.na(g38.schools[,c("G38_GROWTH_TARGET_LEVEL")]), 
+                                                                                        NA, 
+                                                                                        indicator.labels[g38.schools[,c("G38_GROWTH_TARGET_LEVEL")]]),
+                                                           
+                                                           g38.schools[,"G38_EQUITY_SMALL_SCHOOL"],
+                                                           G38_EQUITY_YEARS_BACK = ifelse(is.na(g38.schools[,"G38_EQUITY_YEARS_BACK"]),
+                                                                                          NA,
+                                                                                          ifelse(g38.schools[,"G38_EQUITY_YEARS_BACK"] < Inf,
+                                                                                                 g38.schools[,"G38_EQUITY_YEARS_BACK"],
+                                                                                                 NA)),
+                                                           EQUITY_CUT_1 = g38.equity.cuts[1],
+                                                           EQUITY_CUT_2 = g38.equity.cuts[2],
+                                                           
+                                                           g38.schools[,c("G38_EQUITY_MEAN", "G38_EQUITY_N", 
+                                                                          "G38_EQUITY_TESTS_ACTUAL_COUNT", "G38_EQUITY_TESTS_EXPECTED_COUNT", "G38_EQUITY_PARTICIPATION_RATE")],
+                                                           
+                                                           EQUITY_TARGET_LEVEL = ifelse(is.na(g38.schools[,c("G38_EQUITY_TARGET_LEVEL")]), 
+                                                                                        NA, 
+                                                                                        indicator.labels[g38.schools[,c("G38_EQUITY_TARGET_LEVEL")]]),
+                                                           
+                                                           g38.schools[,c("G38_INDICATORS_N", "G38_PARTICIPATION_RATE")],
+                                                           G38_PARTICIPATION_RATE_CAT = ifelse(is.na(g38.schools[, "G38_PARTICIPATION_RATE_CAT"]), 
+                                                                                               NA,
+                                                                                               participation.labels[g38.schools[, "G38_PARTICIPATION_RATE_CAT"]]),
+                                                           SPL = ifelse(is.na(g38.schools[,c("G38_SPL")]), 
+                                                                        NA, 
+                                                                        SPL.labels[g38.schools[,c("G38_SPL")]]),
+                                                           SPL_ACCOUNTABILITY = ifelse(is.na(g38.schools[,c("G38_SPL_ACCOUNTABILITY")]), 
+                                                                                       NA, 
+                                                                                       SPL.labels[g38.schools[,c("G38_SPL_ACCOUNTABILITY")]])))
+
+write.csv(g38.school.indicators, file="reporting/school-indicators-nonHS.csv", na="", row.names=FALSE, quote=FALSE)
+
+high.schools <- schools[schools$SCHOOL_YEAR==current.school.year & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
+high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR", "SCHOOL_ID", "HS_ACHIEVEMENT_SMALL_SCHOOL")], 
+                                                   HS_ACHIEVEMENT_YEARS_BACK = ifelse(is.na(high.schools[,"HS_ACHIEVEMENT_YEARS_BACK"]),
+                                                                                      NA,
+                                                                                      ifelse(high.schools[,"HS_ACHIEVEMENT_YEARS_BACK"] < Inf,
+                                                                                             high.schools[,"HS_ACHIEVEMENT_YEARS_BACK"],
+                                                                                             NA)),
+                                                   HS_ACHIEVEMENT_CUT_1_HS = hs.achievement.cuts[1],
+                                                   HS_ACHIEVEMENT_CUT_2_HS = hs.achievement.cuts[2],
+                                                   high.schools[,c("HS_ACHIEVEMENT_N_TESTS", "HS_ACHIEVEMENT_N_PROFICIENT_TESTS", "HS_ACHIEVEMENT_PERCENT_PROFICIENT", "HS_ACHIEVEMENT_N",
+                                                                   "HS_ACHIEVEMENT_TESTS_ACTUAL_COUNT", "HS_ACHIEVEMENT_TESTS_EXPECTED_COUNT", "HS_ACHIEVEMENT_PARTICIPATION_RATE")],
+                                                   ACHIEVEMENT_TARGET_LEVEL = ifelse(is.na(high.schools[,c("HS_ACHIEVEMENT_TARGET_LEVEL")]), 
+                                                                                     NA, 
+                                                                                     indicator.labels[high.schools[,c("HS_ACHIEVEMENT_TARGET_LEVEL")]]),
+                                                   high.schools["HS_EQUITY_SMALL_SCHOOL"],
+                                                   HS_EQUITY_YEARS_BACK = ifelse(is.na(high.schools[,"HS_EQUITY_YEARS_BACK"]),
+                                                                                      NA,
+                                                                                      ifelse(high.schools[,"HS_EQUITY_YEARS_BACK"] < Inf,
+                                                                                             high.schools[,"HS_EQUITY_YEARS_BACK"],
+                                                                                             NA)),
+                                                   HS_EQUITY_CUT_1_HS = hs.equity.cuts[1],
+                                                   HS_EQUITY_CUT_2_HS = hs.equity.cuts[2],
+                                                   high.schools[,c("HS_EQUITY_MEAN", "HS_EQUITY_N", 
+                                                                   "HS_EQUITY_TESTS_ACTUAL_COUNT", "HS_EQUITY_TESTS_EXPECTED_COUNT", "HS_EQUITY_PARTICIPATION_RATE")],
+                                                   EQUITY_TARGET_LEVEL = ifelse(is.na(high.schools[,c("HS_EQUITY_TARGET_LEVEL")]), 
+                                                                                     NA, 
+                                                                                     indicator.labels[high.schools[,c("HS_EQUITY_TARGET_LEVEL")]]),
+                                                   
+                                                   high.schools[c("GRAD_RATE_4_YR.2012.13", "COHORT_4_YR_N.2012.13", "GRAD_RATE_EXTENDED", "COHORT_EXTENDED_N.2012.13", "IMPROVEMENT_TARGET")],
+                                                   GRAD_RATE_TARGET_LEVEL = ifelse(is.na(high.schools[,c("IMPROVE_CAT_2013")]), 
+                                                                                   NA, 
+                                                                                   indicator.labels[high.schools[,c("IMPROVE_CAT_2013")]]),
+                                                   high.schools[c("SMALL_SCHOOL_GRADE_NINE_CREDIT", "GRADE_NINE_CREDITS_N", "GRADE_NINE_CREDITS_MET_N", "PERCENT_GD_9_CREDIT_MET", "REQUIRED_GRAD_CREDITS")],
+                                                   PERCENT_GD_9_CREDIT_MET_WEIGHTED = round(additional.readiness.weights["grade.nine"] * high.schools[["PERCENT_GD_9_CREDIT_MET"]],1),
+                                                   high.schools[c("SMALL_SCHOOL_HATH_ELIGIBILITY", "HATH_INDEX_SCORE_N", "HATH_INDEX_SCORE_MEAN")],
+                                                   HATH_INDEX_SCORE_MEAN_WEIGHTED = round(additional.readiness.weights["hathaway"] * high.schools[["HATH_INDEX_SCORE_MEAN"]],1),
+                                                   high.schools[c("HS_TESTED_READINESS_SMALL_SCHOOL" )],
+                                                   HS_TESTED_READINESS_YEARS_BACK = ifelse(is.na(high.schools[,"HS_TESTED_READINESS_YEARS_BACK"]),
+                                                                                           NA,
+                                                                                           ifelse(high.schools[,"HS_TESTED_READINESS_YEARS_BACK"] < Inf,
+                                                                                                  high.schools[,"HS_TESTED_READINESS_YEARS_BACK"],
+                                                                                                  NA)),
+                                                   high.schools[c("HS_TESTED_READINESS_MEAN", "HS_TESTED_READINESS_N",
+                                                                  "HS_TESTED_READINESS_TESTS_ACTUAL_COUNT", "HS_TESTED_READINESS_TESTS_EXPECTED_COUNT",
+                                                                  "HS_TESTED_READINESS_PARTICIPATION_RATE")],
+                                                   HS_TESTED_READINESS_WEIGHTED = round(additional.readiness.weights["tested"] * high.schools[["HS_TESTED_READINESS_MEAN"]],1),
+                                                   high.schools[c("HS_ADD_READINESS_TYPE_LABEL", "HS_ADD_READINESS_CUT1", "HS_ADD_READINESS_CUT2",
+                                                                  "HS_ADD_READINESS_SCORE")],
+                                                   HS_ADD_READINESS_CAT = ifelse(is.na(high.schools[,c("HS_ADD_READINESS_CAT")]), 
+                                                                                 NA, 
+                                                                                 indicator.labels[high.schools[,c("HS_ADD_READINESS_CAT")]]),
+                                                   high.schools[c("HS_ACHIEVEMENT_INDICATORS_N", "HS_READINESS_INDICATORS_N", "HS_INDICATORS_N")],
+                                                   HS_OVERALL_READINESS = ifelse(is.na(high.schools[,c("HS_OVERALL_READINESS")]), 
+                                                                                 NA, 
+                                                                                 indicator.labels[high.schools[,c("HS_OVERALL_READINESS")]]),
+                                                   HS_OVERALL_ACHIEVEMENT = ifelse(is.na(high.schools[,c("HS_OVERALL_ACHIEVEMENT")]), 
+                                                                                   NA, 
+                                                                                   indicator.labels[high.schools[,c("HS_OVERALL_ACHIEVEMENT")]]),
+                                                   high.schools["HS_PARTICIPATION_RATE"],
+                                                   HS_PARTICIPATION_RATE_CAT = ifelse(is.na(high.schools[, "HS_PARTICIPATION_RATE_CAT"]), 
+                                                                                      NA,
+                                                                                      participation.labels[high.schools[,"HS_PARTICIPATION_RATE_CAT"]]),
+                                                   HS_SPL = ifelse(is.na(high.schools[,c("HS_SPL")]), 
+                                                                   NA, 
+                                                                   SPL.labels[high.schools[,c("HS_SPL")]]),
+                                                   HS_SPL_ACCOUNTABILITY = ifelse(is.na(high.schools[,c("HS_SPL_ACCOUNTABILITY")]), 
+                                                                                  NA, 
+                                                                                  SPL.labels[high.schools[,c("HS_SPL_ACCOUNTABILITY")]])))
+
+write.csv(high.school.indicators, file="reporting/school-indicators-HS.csv", na="", row.names=FALSE, quote=FALSE)
 
 
 ##act
+achievement.act.students <- achievement.hs.indicator$students.fay
 
-act.report <- rbind(data.frame(act.df[,c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID")], 
-                               GRADE_ENROLLED = rep("11", nrow(act.df)), 
-                               SUBJECT_CODE = rep('MA', nrow(act.df)),
-                               TESTING_STATUS_CODE = act.df[,"TESTING_STATUS_CODE_MATH"],
-                               ACCOUNTABILITY_PERF_LEVEL = act.df[,"WDE_PERFORMANCE_LEVEL_MATH"]),
-                    data.frame(act.df[,c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID")], 
-                               GRADE_ENROLLED = rep("11", nrow(act.df)), 
-                               SUBJECT_CODE = rep('RE', nrow(act.df)),
-                               TESTING_STATUS_CODE = act.df[,"TESTING_STATUS_CODE_READING"],
-                               ACCOUNTABILITY_PERF_LEVEL = act.df[,"WDE_PERFORMANCE_LEVEL_READING"]),
-                    data.frame(act.df[,c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID")], 
-                               GRADE_ENROLLED = rep("11", nrow(act.df)), 
-                               SUBJECT_CODE = rep('SC', nrow(act.df)),
-                               TESTING_STATUS_CODE = act.df[,"TESTING_STATUS_CODE_SCIENCE"],
-                               ACCOUNTABILITY_PERF_LEVEL = act.df[,"WDE_PERFORMANCE_LEVEL_SCIENCE"]))
+table(achievement.act.students$SUBJECT_CODE, useNA="ifany")
 
-nrow(act.report)     
-act.report <- with(act.report, act.report[TESTING_STATUS_CODE=='T',])
+#encode wr as engwri for purposes of totals
+achievement.act.students$SUBJECT_CODE <- ifelse(achievement.act.students$SUBJECT_CODE == 'WR', 'ENGWRI', achievement.act.students$SUBJECT_CODE)
 
-nrow(act.report)          
+table(achievement.act.students$SUBJECT_CODE, useNA="ifany")
+act.aggregates <- produce.aggregates.scoped(achievement.act.students,
+                                             orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
+                                                              GRADE_ENROLLED = c("ALL", "11")),
+                                             col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
+                                             obs="PERFORMANCE_LEVEL",
+                                            filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL))
 
 
-act.aggregates <- produce.aggregates.scoped(act.report, 
-                                     orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC"),                                                 
-                                                      GRADE_ENROLLED = c("ALL", "11")))
 
-act.N <- produce.aggregates.scoped(act.report,
-                                   orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC"),                                                 
+act.N <- produce.aggregates.scoped(achievement.act.students,
+                                   orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
                                                     GRADE_ENROLLED = c("ALL", "11")),
+                                   col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
                                    obs="WISER_ID",
-                                   value.label="N_TESTERS",
-                                   aggregator=function (x) c(N_TESTERS=length(unique(x)))
+                                   aggregator=function (x) c(N_TESTERS=length(unique(x))),
+                                   filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
 )
 
 
@@ -233,349 +323,294 @@ act.tab.N <- merge(act.aggregates$tab, act.N$norm[as.character(act.N$norm$SUBJEC
 
 names(act.tab.N)[length(act.tab.N)] <- "N"
 
-#kludge to get the participation rate in there
-act.participation.agg <- act.participation[act.participation$SCHOOL_ID != state.school.id,c("SCHOOL_YEAR", "SCHOOL_ID", "PARTICIPATION_RATE_ACHIEVEMENT")]
 
-names(act.participation.agg) <- c("SCHOOL_YEAR", "SCHOOL_ID", "PARTICIPATION_RATE")
-act.participation.agg$SCOPE <- rep("SCHOOL", nrow(act.participation.agg))
-
-act.participation.agg.state <- merge(act.participation.agg[,c("SCHOOL_YEAR", "SCHOOL_ID")],
-                                     act.participation[act.participation$SCHOOL_ID == state.school.id,c("SCHOOL_YEAR", "PARTICIPATION_RATE_ACHIEVEMENT")])
-
-names(act.participation.agg.state) <- c("SCHOOL_YEAR", "SCHOOL_ID", "PARTICIPATION_RATE")
-act.participation.agg.state$SCOPE <- rep("STATE", nrow(act.participation.agg.state))
-
-act.participation.agg <- rbind(act.participation.agg,act.participation.agg.state)
-
-act.tab.N <- merge(act.tab.N, act.participation.agg)
-
-
-head(act.tab.N[act.tab.N$SCHOOL_YEAR =='2012-13' & 
+head(act.tab.N[act.tab.N$SCHOOL_YEAR ==current.school.year & 
                  act.tab.N$GRADE_ENROLLED == 'ALL' & act.tab.N$STATISTIC=="PERCENT_PROFICIENT",],12)
-head(act.tab.N[act.tab.N$SCHOOL_YEAR =='2012-13' & 
+head(act.tab.N[act.tab.N$SCHOOL_YEAR ==current.school.year & 
                  act.tab.N$GRADE_ENROLLED == '11' & act.tab.N$STATISTIC=="PERCENT_PROFICIENT",],12)
-head(act.achievement[act.achievement$SCHOOL_YEAR=='2012-13',],12)
+head(with(achievement.hs.indicator$schools,
+          achievement.hs.indicator$schools[WAEA_SCHOOL_TYPE %in% HS.types & SCHOOL_YEAR==current.school.year,
+                                           c("SCHOOL_ID", achievement.hs.labels)]),12)
 
 
 
-with(act.tab.N, act.tab.N[SCHOOL_ID %in% c('1101055') & STATISTIC=='PERCENT_PROFICIENT' & GRADE_ENROLLED=='11',])
 
-
-write.csv(act.tab.N,file="reporting/grade-level-high-school-achievement.csv", na="", row.names=FALSE, quote=FALSE)
-
-
-##hs equity
-
-# equity.hs.report <- rbind(with(schools, schools[!is.na(EQUITY_TARGET_LEVEL_HS), 
-#                                                 c("SCHOOL_YEAR", "SCHOOL_ID", "PERCENT_NONPROFICIENT_PRIOR", 
-#                                                   "PERCENT_NONPROFICIENT", "IMPROVEMENT_SCORE", "N_EQUITY_HS", "N_ACHIEVEMENT_HS_PRIOR", "IMPROVEMENT_CATEGORY",
-#                                                   "PERCENT_NONPROFICIENT_CATEGORY")]),
-#                           with(state.school, state.school[!is.na(EQUITY_TARGET_LEVEL_HS), 
-#                                                           c("SCHOOL_YEAR", "SCHOOL_ID", "PERCENT_NONPROFICIENT_PRIOR", 
-#                                                             "PERCENT_NONPROFICIENT", "IMPROVEMENT_SCORE", "N_EQUITY_HS", "N_ACHIEVEMENT_HS_PRIOR", "IMPROVEMENT_CATEGORY",
-#                                                             "PERCENT_NONPROFICIENT_CATEGORY")]))
-# 
-# equity.hs.report$IMPROVEMENT_CATEGORY <- ifelse(!is.na(equity.hs.report$IMPROVEMENT_CATEGORY), hs.equity.improve.labels[equity.hs.report$IMPROVEMENT_CATEGORY],
-#                                                 na)
-# 
-# equity.hs.report$PERCENT_NONPROFICIENT_CATEGORY <- ifelse(!is.na(equity.hs.report$PERCENT_NONPROFICIENT_CATEGORY), 
-#                                                           hs.equity.np.labels[equity.hs.report$PERCENT_NONPROFICIENT_CATEGORY],
-#                                                 na)
-# 
-# equity.hs.report$GRADE_ENROLLED <- rep("11", nrow(equity.hs.report))
-# 
-# equity.hs.report$ORDER <- seq(1:nrow(equity.hs.report))
-#                                
-# with(equity.hs.report, equity.hs.report[SCHOOL_ID %in% c('1101055','7700000'), ])
-# 
-# write.csv(equity.hs.report[,c("SCHOOL_YEAR", "SCHOOL_ID", "GRADE_ENROLLED", "PERCENT_NONPROFICIENT_PRIOR", 
-#                             "PERCENT_NONPROFICIENT", "IMPROVEMENT_SCORE",  "IMPROVEMENT_CATEGORY",
-#                               "PERCENT_NONPROFICIENT_CATEGORY", "N_EQUITY_HS", "N_ACHIEVEMENT_HS_PRIOR","ORDER")], 
-#           file="reporting/high-school-equity.csv", na="", row.names=FALSE, quote=FALSE)
+write.csv(act.tab.N[act.tab.N$SCHOOL_YEAR==current.school.year & act.tab.N$GRADE_ENROLLED=='ALL' &
+                      act.tab.N$STATISTIC=='PERCENT_PROFICIENT', !(names(act.tab.N) %in% "GRADE_ENROLLED")],file="reporting/grade-level-high-school-achievement.csv", na="", row.names=FALSE, quote=FALSE)
 
 
 
-equity.act.report <- act.report[act.report$SUBJECT_CODE %in% c('RE', 'MA'),]
-equity.aggregates.np <- produce.aggregates.scoped(equity.act.report, 
-                                        orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC"),                                                 
-                                                      GRADE_ENROLLED = c("ALL", "11")),
-                                        aggregator=function (x) 
-                                          c(PERCENT_NONPROFICIENT =round((sum(ifelse(x %in% c('1','2'), 1, 0))/length(x)) * 100, 1),
-                                            N_TESTS=length(x),
-                                            N_NONPROFICIENT=sum(ifelse(x %in% c('1','2'), 1, 0))))
+hs.equity.students <- equity.hs.indicator$students.fay
+hs.equity.students$SUBJECT_CODE <- ifelse(hs.equity.students$SUBJECT == 'Math', 'MA', 'RE')
+hs.equity.students$GRADE_ENROLLED <- '11'
+hs.equity.students$WY_ACT_SCALE_SCORE <- as.numeric(hs.equity.students$WY_ACT_SCALE_SCORE)
 
-equity.act.N <- produce.aggregates.scoped(equity.act.report,
-                                          orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC"),                                                 
-                                                           GRADE_ENROLLED = c("ALL", "11")),
-                                          obs="WISER_ID",
-                                          value.label="N_TESTERS",
-                                          aggregator=function (x) c(N_TESTERS=length(unique(x)))
+hs.equity.aggregates <- produce.aggregates.scoped(hs.equity.students,
+                                                  orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
+                                                                   GRADE_ENROLLED = c("ALL", "11")),
+                                                  col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
+                                                  obs="WY_ACT_SCALE_SCORE",
+                                                  value.label="MEAN_WY_ACT_SCORE",
+                                                  aggregator=function (x) c(MEAN_WY_ACT_SCORE=round(mean(x), 1)),
+                                                  filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                               
 )
 
-
-equity.act.tab.N <- merge(equity.aggregates.np$tab, equity.act.N$norm[as.character(equity.act.N$norm$SUBJECT_CODE)=='ALL',c("SCOPE", "SCHOOL_YEAR", "GRADE_ENROLLED", "SCHOOL_ID", "VALUE")])
-
-
-names(equity.act.tab.N)[length(equity.act.tab.N)] <- "N"
-
-equity.aggregates.np.prior <- produce.aggregates.scoped(paws_11.df, 
-                                                 orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC"),                                                 
-                                                                  GRADE_ENROLLED = c("ALL", "11")),
-                                                 aggregator=function (x) 
-                                                   c(PERCENT_NONPROFICIENT_PRIOR =round((sum(ifelse(x %in% c('1','2'), 1, 0))/length(x)) * 100, 1),
-                                                     N_TESTS_PRIOR=length(x),
-                                                     N_NONPROFICIENT_PRIOR=sum(ifelse(x %in% c('1','2'), 1, 0))))
-
-equity.act.N.prior <- produce.aggregates.scoped(paws_11.df,
-                                         orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC"),                                                 
+hs.equity.N <- produce.aggregates.scoped(hs.equity.students,
+                                         orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
                                                           GRADE_ENROLLED = c("ALL", "11")),
-                                         obs="WISER_ID",
-                                         value.label="N_TESTERS",
-                                         aggregator=function (x) c(N_TESTERS=length(unique(x)))
+                                         col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
+                                      obs="WISER_ID",
+                                      value.label="N_TESTERS",
+                                      aggregator=function (x) {
+                                        c(N_TESTERS=length(unique(x)))
+                                      },
+                                      filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
 )
 
-equity.act.tab.N.prior <- merge(equity.aggregates.np.prior$tab, equity.act.N.prior$norm[as.character(equity.act.N.prior$norm$SUBJECT_CODE)=='ALL',c("SCOPE", "SCHOOL_YEAR", "GRADE_ENROLLED", "SCHOOL_ID", "VALUE")])
+
+hs.equity.tab.N <- merge(hs.equity.aggregates$tab, 
+                         hs.equity.N$norm[as.character(hs.equity.N$norm$SUBJECT_CODE)=='ALL',
+                                          c("SCOPE", "SCHOOL_YEAR", "GRADE_ENROLLED", "SCHOOL_ID", "VALUE")])
 
 
-names(equity.act.tab.N.prior)[length(equity.act.tab.N.prior)] <- "N"
 
-equity.act.tab.N.prior$SCHOOL_YEAR <- sapply(equity.act.tab.N.prior$SCHOOL_YEAR, increment.school.year)
+names(hs.equity.tab.N)[length(hs.equity.tab.N)] <- "N"
 
-head(equity.act.tab.N[equity.act.tab.N$SCHOOL_YEAR =='2012-13' & 
-                        equity.act.tab.N$GRADE_ENROLLED == 'ALL' & 
-                        equity.act.tab.N$STATISTIC == 'PERCENT_NONPROFICIENT',],12)
-head(equity.act.tab.N[equity.act.tab.N$SCHOOL_YEAR =='2012-13' & 
-                        equity.act.tab.N$GRADE_ENROLLED == '11' & 
-                        equity.act.tab.N$STATISTIC == 'PERCENT_NONPROFICIENT',],12)
-head(hs.equity.df[hs.equity.df$SCHOOL_YEAR=='2012-13',c("SCHOOL_ID", 
-                                                        "PERCENT_NONPROFICIENT", 
-                                                        "N_ACHIEVEMENT", "PERCENT_PROFICIENT")],12)
 
-head(equity.act.tab.N.prior[equity.act.tab.N.prior$SCHOOL_YEAR =='2012-13' & 
-                              equity.act.tab.N.prior$GRADE_ENROLLED == '11' & 
-                              equity.act.tab.N.prior$STATISTIC == 'PERCENT_NONPROFICIENT_PRIOR',],12)
-head(hs.equity.df[hs.equity.df$SCHOOL_YEAR=='2012-13',c("SCHOOL_ID", 
-                                                        "PERCENT_NONPROFICIENT_PRIOR", 
-                                                        "N_ACHIEVEMENT_PRIOR")],12)
 
-equity.act.tab.delta <- merge(with(equity.act.tab.N, 
-                                   equity.act.tab.N[STATISTIC=='PERCENT_NONPROFICIENT',c("SCOPE","SCHOOL_YEAR",
-                                                                                          "GRADE_ENROLLED",
-                                                                                         "SCHOOL_ID",
-                                                                                         "ALL",
-                                                                                         "RE",
-                                                                                         "MA",
-                                                                                         "SC",
-                                                                                         "ORDER")]),
-                              with(equity.act.tab.N.prior, 
-                                   equity.act.tab.N.prior[STATISTIC=='PERCENT_NONPROFICIENT_PRIOR',c("SCOPE", "SCHOOL_YEAR",
-                                                                                                     "GRADE_ENROLLED",
-                                                                                                     "SCHOOL_ID",
-                                                                                                     "ALL",
-                                                                                                     "RE",
-                                                                                                     "MA",
-                                                                                                     "SC",
-                                                                                                     "ORDER")]),
-                              by=c("SCOPE", "SCHOOL_YEAR", "GRADE_ENROLLED", "SCHOOL_ID"),
-                              all.x=TRUE)
+head(hs.equity.tab.N[hs.equity.tab.N$SCHOOL_YEAR ==current.school.year & 
+                       hs.equity.tab.N$GRADE_ENROLLED == 'ALL' & hs.equity.tab.N$STATISTIC=="MEAN_WY_ACT_SCORE",],12)
+head(hs.equity.tab.N[hs.equity.tab.N$SCHOOL_YEAR ==current.school.year & 
+                       hs.equity.tab.N$GRADE_ENROLLED == '11' & hs.equity.tab.N$STATISTIC=="MEAN_WY_ACT_SCORE",],12)
 
-equity.act.tab.delta <- cbind(equity.act.tab.delta, 
-                              data.frame(t(apply(equity.act.tab.delta[, c("ALL.x", "RE.x", "MA.x", "SC.x",
-                                                                          "ALL.y", "RE.y", "MA.y", "SC.y")],
-                                                 c(1),
-                                                 function (school) {
-                                                   all <- ifelse(!is.na(school[["ALL.y"]]),
-                                                                 school[["ALL.x"]] - school[["ALL.y"]],
-                                                                 NA)
-                                                   re <- ifelse(!is.na(school[["RE.y"]]),
-                                                                school[["RE.x"]] - school[["RE.y"]],
-                                                                NA)
-                                                   ma <- ifelse(!is.na(school[["MA.y"]]),
-                                                          school[["MA.x"]] - school[["MA.y"]],
-                                                          NA)
-                                                   sc <- ifelse(!is.na(school[["SC.y"]]),
-                                                                school[["SC.x"]] - school[["SC.y"]],
-                                                                NA)
-                                                   c(ALL=all, RE=re, MA=ma, SC=sc)
-                                                 }))))
+head(with(equity.hs.indicator$schools,
+          equity.hs.indicator$schools[WAEA_SCHOOL_TYPE %in% HS.types & SCHOOL_YEAR==current.school.year,
+                                           c("SCHOOL_ID", equity.hs.labels)]),12)
 
-equity.act.tab.delta$STATISTIC <- rep("DELTA_NONPROFICIENT", nrow(equity.act.tab.delta))
-equity.act.tab.delta$N <-  rep(NA, nrow(equity.act.tab.delta))
-equity.act.tab.delta$ORDER <- equity.act.tab.delta$ORDER.x  
-equity.act.tab.delta <- equity.act.tab.delta[,c("SCOPE", "SCHOOL_YEAR", 
-                                                "GRADE_ENROLLED",
-                                                "SCHOOL_ID",
-                                                "STATISTIC",
-                                                "ALL",
-                                                "RE",
-                                                "MA",
-                                                "SC",
-                                                "ORDER",   
-                                                "N")]
 
-equity.stats <- rbind(equity.act.tab.N,
-                      equity.act.tab.N.prior,
-                      equity.act.tab.delta)
 
-write.csv(equity.stats, 
-          file="reporting/high-school-equity.csv", na="", row.names=FALSE, quote=FALSE)
+
+write.csv(hs.equity.tab.N[hs.equity.tab.N$SCHOOL_YEAR==current.school.year & hs.equity.tab.N$GRADE_ENROLLED=='ALL' &
+                            STATISTIC=='MEAN_WY_ACT_SCORE', !(names(hs.equity.tab.N) %in% "GRADE_ENROLLED")],file="reporting/grade-level-high-school-equity.csv", na="", row.names=FALSE, quote=FALSE)
+
 #hs readiness
 
 
-readiness.hs.report <- rbind(with(schools, schools[!is.na(TOTAL_READINESS_HS), 
-                                                   c("SCHOOL_YEAR", "SCHOOL_ID", "TESTED_READINESS", 
-                                                     "N_TESTED_READINESS", "SCHOOL_GRADUATION_INDEX", "N_GRADUATION")]),
-                             with(state.school, state.school[!is.na(TOTAL_READINESS_HS), 
-                                                             c("SCHOOL_YEAR", "SCHOOL_ID", "TESTED_READINESS", 
-                                                               "N_TESTED_READINESS", "SCHOOL_GRADUATION_INDEX", "N_GRADUATION")]))
 
-
-readiness.hs.report <- cbind(readiness.hs.report, data.frame(TESTED_READINESS_WEIGHT=rep(hs.readiness.weights["TESTED_READINESS"], nrow(readiness.hs.report)),
-                                                             GRADUATION_INDEX_WEIGHT=rep(hs.readiness.weights["SCHOOL_GRADUATION_INDEX"], nrow(readiness.hs.report))))
-
-
-readiness.hs.report$TESTED_READINESS_WEIGHTED <- readiness.hs.report$TESTED_READINESS * readiness.hs.report$TESTED_READINESS_WEIGHT
-readiness.hs.report$SCHOOL_GRADUATION_INDEX_WEIGHTED <- readiness.hs.report$SCHOOL_GRADUATION_INDEX * readiness.hs.report$GRADUATION_INDEX_WEIGHT
-
-readiness.hs.report$ORDER <- seq(1:nrow(readiness.hs.report))
-
-write.csv(readiness.hs.report,
-          file="reporting/high-school-readiness.csv", na="", row.names=FALSE, quote=FALSE)
-
-
-##tested readiness reports
-
-readiness.tested.students.df.agg <- readiness.tested.students.df
-readiness.tested.students.df.agg$TEST_DATA <- paste(readiness.tested.students.df.agg$TEST_TYPE, 
-                                                    readiness.tested.students.df.agg$RAW_SCORE,
-                                                sep="-")
-
-readiness.tested.students.df.agg$GRADE_ENROLLED <- ifelse(readiness.tested.students.df.agg$TEST_TYPE == 'EXPLORE',
-                                                          '09',
-                                                          ifelse(readiness.tested.students.df.agg$TEST_TYPE == 'PLAN',
-                                                                 '10',
-                                                                 '11'))
-
-tested.readiness.agg <- produce.aggregates.scoped(readiness.tested.students.df.agg[,c("SCHOOL_YEAR", "SCHOOL_ID", "GRADE_ENROLLED", "TEST_TYPE", "TEST_DATA")], 
-                                                  ids.fixed= list(SCHOOL = c("SCHOOL_YEAR", "SCHOOL_ID"),
-                                                                 STATE = c("SCHOOL_YEAR")),
+hs.tested.aggregates <- produce.aggregates.scoped(tested.readiness.indicator$students.fay,
                                                   id.choices = c(GRADE_ENROLLED="ALL", TEST_TYPE="ALL"),
-                                                  orderings = list(TEST_TYPE = c("ALL", "EXPLORE","PLAN","ACT","PAWS Alternate"),
+                                                  orderings = list(TEST_TYPE = c("ALL", "EXPLORE","PLAN","ACT", "ALT"),                                                 
                                                                    GRADE_ENROLLED = c("ALL", "09", "10", "11")),
-                                                  col.vars = list(TEST_TYPE=c("EXPLORE","PLAN","ACT","PAWS Alternate")),
-                                                  obs="TEST_DATA",
-                                                  value.label = NA,
-                                                  aggregator=function (x) {
-                                                    index.by.test.type = list(ACT=act_index,
-                                                                              EXPLORE=explore_index,
-                                                                              `PAWS Alternate`=alt_index,
-                                                                              PLAN=plan_index)
-                                                    
-                                                    eval.test <- function (test) {
-                                                      test.type <- strsplit(test,'-')[[1]][1]
-                                                      test.score <- strsplit(test,'-')[[1]][2]                                                      
-                                                      index <- index.by.test.type[[test.type]]
-                                                      if (is.null(index))
-                                                        NA
-                                                      else {
-                                                        
-                                                        index[test.score]
-                                                      }
-                                                      
-                                                    }
-                                                    
-                                                    
-                                                    indexed.scores = sapply(x, eval.test)
-                                                    c(AVERAGE_INDEX=round(mean(indexed.scores, na.rm=TRUE),1),
-                                                      N_TESTS=length(which(!is.na(indexed.scores))))
-                                                    
-                                                  })
-
-
-tested.readiness.agg.N <- produce.aggregates.scoped(readiness.tested.students.df.agg[,c("SCHOOL_YEAR", "SCHOOL_ID", "GRADE_ENROLLED", "TEST_TYPE", "TEST_DATA")], 
-                                                    ids.fixed= list(SCHOOL = c("SCHOOL_YEAR", "SCHOOL_ID"),
-                                                                    STATE = c("SCHOOL_YEAR")),
-                                                    id.choices = c(GRADE_ENROLLED="ALL", TEST_TYPE="ALL"),
-                                                    orderings = list(TEST_TYPE = c("ALL", "EXPLORE","PLAN","ACT","PAWS Alternate"),
-                                                                     GRADE_ENROLLED = c("ALL", "09", "10", "11")),
-                                                    col.vars = list(TEST_TYPE=c("EXPLORE","PLAN","ACT","PAWS Alternate")),
-                                                    obs="TEST_DATA",
-                                                    value.label="N_TESTERS",
-                                                    aggregator=function (x) c(N_TESTERS=length(x))
+                                                  col.vars = list(TEST_TYPE=c("EXPLORE","PLAN","ACT", "ALT")),
+                                                  obs="TESTED_READINESS_INDEX_SCORE",
+                                                  value.label="TESTED_READINESS_MEAN_INDEX_SCORE",
+                                                  aggregator=function (x) c(MEAN_INDEX_SCORE=round(mean(x), 1)),
+                                                  filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                                  
 )
 
 
-tested.readiness.tab.N <- merge(tested.readiness.agg$tab, tested.readiness.agg.N$norm[as.character(tested.readiness.agg.N$norm$TEST_TYPE)=='ALL',c("SCOPE", "SCHOOL_YEAR", "SCHOOL_ID", "GRADE_ENROLLED", "VALUE")])
+hs.tested.N <- produce.aggregates.scoped(tested.readiness.indicator$students.fay,
+                                         id.choices = c(GRADE_ENROLLED="ALL", TEST_TYPE="ALL"),
+                                         orderings = list(TEST_TYPE = c("ALL", "EXPLORE","PLAN","ACT", "ALT"),                                                 
+                                                          GRADE_ENROLLED = c("ALL", "09", "10", "11")),
+                                         col.vars = list(TEST_TYPE=c("EXPLORE","PLAN","ACT", "ALT")),
+                                         obs="WISER_ID",
+                                         value.label="N_TESTERS",
+                                         aggregator=function (x) {
+                                           c(N_TESTERS=length(unique(x)))
+                                         },
+                                         filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+)
 
 
-names(tested.readiness.tab.N)[length(tested.readiness.tab.N)] <- "N"
 
-#validation
-head(with(tested.readiness.tab.N, tested.readiness.tab.N[GRADE_ENROLLED=='ALL' & STATISTIC=='AVERAGE_INDEX',]))
+hs.tested.tab.N <- merge(hs.tested.aggregates$tab, 
+                         hs.tested.N$norm[as.character(hs.tested.N$norm$TEST_TYPE)=='ALL',
+                                          c("SCOPE", "SCHOOL_YEAR", "GRADE_ENROLLED", "SCHOOL_ID", "VALUE")])
 
-with(tested.readiness.tab.N, tested.readiness.tab.N[GRADE_ENROLLED=='ALL' & STATISTIC=='AVERAGE_INDEX' & SCHOOL_ID=='1301057',])
-#end validation
 
-readiness.participation.df.agg <- readiness.participation.df
-readiness.participation.df.agg$GRADE_ENROLLED <- ifelse(readiness.participation.df.agg$TEST_TYPE == 'EXPLORE',
-                                                       '09',
-                                                       ifelse(readiness.participation.df.agg$TEST_TYPE == 'PLAN',
-                                                              '10',
-                                                              '11'))
 
-tested.readiness.part.agg <- produce.aggregates.scoped(readiness.participation.df.agg[,c("SCHOOL_YEAR", "SCHOOL_ID", "GRADE_ENROLLED", "TEST_TYPE", "TESTING_STATUS_CODE")], 
-                                                  ids.fixed= list(SCHOOL = c("SCHOOL_YEAR", "SCHOOL_ID"),
-                                                                  STATE = c("SCHOOL_YEAR")),
+names(hs.tested.tab.N)[length(hs.tested.tab.N)] <- "N"
+
+
+
+head(hs.tested.tab.N[hs.tested.tab.N$SCHOOL_YEAR ==current.school.year & 
+                       hs.tested.tab.N$GRADE_ENROLLED == 'ALL' & hs.tested.tab.N$STATISTIC=="TESTED_READINESS_MEAN_INDEX_SCORE",],12)
+head(hs.tested.tab.N[hs.tested.tab.N$SCHOOL_YEAR ==current.school.year & hs.tested.tab.N$STATISTIC=="TESTED_READINESS_MEAN_INDEX_SCORE",],12)
+
+head(with(tested.readiness.indicator$schools,
+          tested.readiness.indicator$schools[WAEA_SCHOOL_TYPE %in% HS.types & SCHOOL_YEAR==current.school.year,
+                                      c("SCHOOL_ID", tested.readiness.labels)]),12)
+
+
+write.csv(hs.tested.tab.N[hs.tested.tab.N$SCHOOL_YEAR==current.school.year & hs.tested.tab.N$GRADE_ENROLLED=='ALL', !(names(hs.tested.tab.N) %in% "GRADE_ENROLLED")],
+          file="reporting/grade-level-high-school-tested-readiness.csv", na="", row.names=FALSE, quote=FALSE)
+
+
+
+#high school tested readiness participation
+
+tested.readiness.students <- readiness.all.df
+tested.readiness.students$TEST_TYPE <- ifelse(grepl("Alternate$", tested.readiness.students$TEST_TYPE),
+                                              "ALT",
+                                              tested.readiness.students$TEST_TYPE)
+
+hs.tested.part.aggregates <- produce.aggregates.scoped(tested.readiness.students,
                                                   id.choices = c(GRADE_ENROLLED="ALL", TEST_TYPE="ALL"),
-                                                  orderings = list(TEST_TYPE = c("ALL", "EXPLORE","PLAN","ACT","PAWS Alternate"),
+                                                  orderings = list(TEST_TYPE = c("ALL", "EXPLORE","PLAN","ACT", "ALT"),                                                 
                                                                    GRADE_ENROLLED = c("ALL", "09", "10", "11")),
-                                                  col.vars = list(TEST_TYPE=c("EXPLORE","PLAN","ACT","PAWS Alternate")),
+                                                  col.vars = list(TEST_TYPE=c("EXPLORE","PLAN","ACT", "ALT")),
                                                   obs="TESTING_STATUS_CODE",
-                                                  value.label = "PARTICIPATION_RATE",
-                                                  aggregator=function (x) {
-                                                    
-                                                    round((length(x[which(x=='T')])/length(x))*100, 1)
-                                                    
-                                                  })
-
-
-tested.readiness.part.agg.N <- produce.aggregates.scoped(readiness.participation.df.agg[,c("SCHOOL_YEAR", "SCHOOL_ID", "GRADE_ENROLLED", "TEST_TYPE", "TESTING_STATUS_CODE")], 
-                                                    ids.fixed= list(SCHOOL = c("SCHOOL_YEAR", "SCHOOL_ID"),
-                                                                    STATE = c("SCHOOL_YEAR")),
-                                                    id.choices = c(GRADE_ENROLLED="ALL", TEST_TYPE="ALL"),
-                                                    orderings = list(TEST_TYPE = c("ALL", "EXPLORE","PLAN","ACT","PAWS Alternate"),
-                                                                     GRADE_ENROLLED = c("ALL", "09", "10", "11")),
-                                                    col.vars = list(TEST_TYPE=c("EXPLORE","PLAN","ACT","PAWS Alternate")),
-                                                    obs="TESTING_STATUS_CODE",
-                                                    value.label="N_TESTERS",
-                                                    aggregator=function (x) c(N_TESTERS=length(x))
+                                                  value.label="TESTED_READINESS_PARTICIPATION",
+                                                  aggregator=function (x) c(TESTED_READINESS_PARTICIPATION=round(100*(length(which(x=='T'))/
+                                                                                                     length(which(x %in% c('T','N')))), 1))
+                                                  
 )
 
+hs.tested.part.N <- produce.aggregates.scoped(tested.readiness.students[tested.readiness.students$TESTING_STATUS_CODE != 'X',],
+                                              id.choices = c(GRADE_ENROLLED="ALL", TEST_TYPE="ALL"),
+                                              orderings = list(TEST_TYPE = c("ALL", "EXPLORE","PLAN","ACT", "ALT"),                                                 
+                                                               GRADE_ENROLLED = c("ALL", "09", "10", "11")),
+                                              col.vars = list(TEST_TYPE=c("EXPLORE","PLAN","ACT", "ALT")),
+                                              obs="WISER_ID",
+                                              value.label="N_TESTERS",
+                                              aggregator=function (x) {
+                                                c(N_TESTERS=length(unique(x)))
+                                              }
+)
 
-tested.readiness.part.tab.N <- merge(tested.readiness.part.agg$tab, tested.readiness.part.agg.N$norm[as.character(tested.readiness.part.agg.N$norm$TEST_TYPE)=='ALL',c("SCOPE", "SCHOOL_YEAR", "SCHOOL_ID", "GRADE_ENROLLED", "VALUE")])
-
-
-names(tested.readiness.part.tab.N)[length(tested.readiness.part.tab.N)] <- "N"
-
-#validation
-head(with(tested.readiness.part.tab.N, tested.readiness.part.tab.N[GRADE_ENROLLED=='ALL' & STATISTIC=='PARTICIPATION_RATE',]))
-
-with(tested.readiness.part.tab.N, tested.readiness.part.tab.N[GRADE_ENROLLED=='ALL' & STATISTIC=='PARTICIPATION_RATE' & SCHOOL_ID=='1301057',])
-
-
-tested.readiness.tab.all <- rbind(with(tested.readiness.tab.N, tested.readiness.tab.N[GRADE_ENROLLED=='ALL' & STATISTIC=='AVERAGE_INDEX',]),
-                                  with(tested.readiness.part.tab.N, tested.readiness.part.tab.N[GRADE_ENROLLED=='ALL' & STATISTIC=='PARTICIPATION_RATE',]))
-
-with(tested.readiness.tab.all, tested.readiness.tab.all[GRADE_ENROLLED=='ALL' & SCHOOL_ID=='1301057',])
-
-write.csv(with(tested.readiness.tab.all, tested.readiness.tab.all[GRADE_ENROLLED=='ALL',c(setdiff(names(tested.readiness.tab.all), "GRADE_ENROLLED"))]),
-          file="reporting/high-school-act.csv", na="", row.names=FALSE, quote=FALSE)
+hs.tested.part.tab.N <- merge(hs.tested.part.aggregates$tab, 
+                              hs.tested.part.N$norm[as.character(hs.tested.part.N$norm$TEST_TYPE)=='ALL',
+                                          c("SCOPE", "SCHOOL_YEAR", "GRADE_ENROLLED", "SCHOOL_ID", "VALUE")])
 
 
+
+names(hs.tested.part.tab.N)[length(hs.tested.part.tab.N)] <- "N"
 
 
 
 
+head(hs.tested.part.tab.N[hs.tested.part.tab.N$SCHOOL_YEAR ==current.school.year & 
+                            hs.tested.part.tab.N$GRADE_ENROLLED == 'ALL' & hs.tested.part.tab.N$STATISTIC=="TESTED_READINESS_PARTICIPATION",],12)
+
+head(with(tested.readiness.indicator$schools,
+          tested.readiness.indicator$schools[WAEA_SCHOOL_TYPE %in% HS.types & SCHOOL_YEAR==current.school.year,
+                                             c("SCHOOL_ID", tested.readiness.labels)]),12)
+
+with(hs.tested.part.tab.N, hs.tested.part.tab.N[SCHOOL_ID %in% c('1101055') & STATISTIC=='TESTED_READINESS_PARTICIPATION' & GRADE_ENROLLED=='ALL',])
+
+with(hs.tested.part.tab.N, hs.tested.part.tab.N[SCHOOL_ID %in% c('0101055') & STATISTIC=='TESTED_READINESS_PARTICIPATION' & GRADE_ENROLLED=='ALL',])
+
+write.csv(hs.tested.part.tab.N[hs.tested.part.tab.N$SCHOOL_YEAR==current.school.year & hs.tested.part.tab.N$GRADE_ENROLLED=='ALL', !(names(hs.tested.part.tab.N) %in% "GRADE_ENROLLED")],
+          file="reporting/high-school-tested-readiness-participation.csv", na="", row.names=FALSE, quote=FALSE)
 
 
 
+
+
+
+#participation rates for the consolidated subgroup
+
+
+act.current.year.subgroup.part <- act.current.year.subgroup
+act.current.year.subgroup.part$GRADE_ENROLLED <- "11"
+act.current.year.subgroup.part$SUBJECT_CODE <- ifelse(act.current.year.subgroup.part$SUBJECT == 'Reading', 'RE', 'MA')
+hs.subgroup.part.aggregates <- produce.aggregates.scoped(act.current.year.subgroup.part,
+                                                         orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
+                                                                          GRADE_ENROLLED = c("ALL", "11")),
+                                                         col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
+                                                         obs="TESTING_STATUS_CODE",
+                                                         value.label="HS_SUBGROUP_PARTICIPATION",
+                                                         aggregator=function (x) c(HS_SUBGROUP_PARTICIPATION=round(100*(length(which(x=='T'))/
+                                                                                                                             length(which(x %in% c('T','N')))), 1))
+                                                       
+)
+
+hs.subgroup.part.N <- produce.aggregates.scoped(act.current.year.subgroup.part[act.current.year.subgroup.part$TESTING_STATUS_CODE != 'X',],
+                                              orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
+                                                               GRADE_ENROLLED = c("ALL", "11")),
+                                              col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
+                                              obs="WISER_ID",
+                                              value.label="N_TESTERS",
+                                              aggregator=function (x) {
+                                                c(N_TESTERS=length(unique(x)))
+                                              }
+)
+
+hs.subgroup.part.tab.N <- merge(hs.subgroup.part.aggregates$tab, 
+                                hs.subgroup.part.N$norm[as.character(hs.subgroup.part.N$norm$SUBJECT_CODE)=='ALL',
+                                                    c("SCOPE", "SCHOOL_YEAR", "GRADE_ENROLLED", "SCHOOL_ID", "VALUE")])
+
+
+
+names(hs.subgroup.part.tab.N)[length(hs.subgroup.part.tab.N)] <- "N"
+
+
+head(hs.subgroup.part.tab.N[hs.subgroup.part.tab.N$SCHOOL_YEAR ==current.school.year & 
+                              hs.subgroup.part.tab.N$GRADE_ENROLLED == 'ALL' & hs.subgroup.part.tab.N$STATISTIC=="HS_SUBGROUP_PARTICIPATION",],12)
+
+head(with(equity.hs.indicator$schools,
+          equity.hs.indicator$schools[WAEA_SCHOOL_TYPE %in% HS.types & SCHOOL_YEAR==current.school.year,
+                                             c("SCHOOL_ID", equity.hs.labels)]),12)
+
+
+write.csv(hs.subgroup.part.tab.N[hs.subgroup.part.tab.N$SCHOOL_YEAR==current.school.year & 
+                                   hs.subgroup.part.tab.N$GRADE_ENROLLED=='ALL', !(names(hs.subgroup.part.tab.N) %in% "GRADE_ENROLLED")],
+          file="reporting/high-school-subgroup-participation.csv", na="", row.names=FALSE, quote=FALSE)
+
+
+#high school act participation
+
+achievement.act.students.part <- act.achieve
+
+table(achievement.act.students.part$SUBJECT_CODE, useNA="ifany")
+
+#encode wr as engwri for purposes of totals
+achievement.act.students.part$SUBJECT_CODE <- ifelse(achievement.act.students.part$SUBJECT_CODE == 'WR', 
+                                                     'ENGWRI', achievement.act.students.part$SUBJECT_CODE)
+
+table(achievement.act.students.part$SUBJECT_CODE, useNA="ifany")
+
+hs.act.part.aggregates <- produce.aggregates.scoped(achievement.act.students.part,
+                                                         orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
+                                                                          GRADE_ENROLLED = c("ALL", "11")),
+                                                         col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
+                                                         obs="TESTING_STATUS_CODE",
+                                                         value.label="HS_ACT_PARTICIPATION",
+                                                         aggregator=function (x) c(HS_ACT_PARTICIPATION=round(100*(length(which(x=='T'))/
+                                                                                                                          length(which(x %in% c('T','N')))), 1))
+                                                         
+)
+
+hs.act.part.N <- produce.aggregates.scoped(achievement.act.students[achievement.act.students.part$TESTING_STATUS_CODE != 'X',],
+                                                orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
+                                                                 GRADE_ENROLLED = c("ALL", "11")),
+                                                col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
+                                                obs="WISER_ID",
+                                                value.label="N_TESTERS",
+                                                aggregator=function (x) {
+                                                  c(N_TESTERS=length(unique(x)))
+                                                }
+)
+
+hs.act.part.tab.N <- merge(hs.act.part.aggregates$tab, 
+                                hs.act.part.N$norm[as.character(hs.act.part.N$norm$SUBJECT_CODE)=='ALL',
+                                                        c("SCOPE", "SCHOOL_YEAR", "GRADE_ENROLLED", "SCHOOL_ID", "VALUE")])
+
+
+
+names(hs.act.part.tab.N)[length(hs.act.part.tab.N)] <- "N"
+
+
+head(hs.act.part.tab.N[hs.act.part.tab.N$SCHOOL_YEAR ==current.school.year & 
+                         hs.act.part.tab.N$GRADE_ENROLLED == 'ALL' & hs.act.part.tab.N$STATISTIC=="HS_ACT_PARTICIPATION",],12)
+
+head(with(achievement.hs.indicator$schools,
+          achievement.hs.indicator$schools[WAEA_SCHOOL_TYPE %in% HS.types & SCHOOL_YEAR==current.school.year,
+                                      c("SCHOOL_ID", achievement.hs.labels)]),12)
+
+write.csv(hs.act.part.tab.N[hs.act.part.tab.N$SCHOOL_YEAR==current.school.year & 
+                              hs.act.part.tab.N$GRADE_ENROLLED=='ALL', !(names(hs.act.part.tab.N) %in% "GRADE_ENROLLED")],
+          file="reporting/high-school-act-participation.csv", na="", row.names=FALSE, quote=FALSE)

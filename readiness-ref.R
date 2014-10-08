@@ -17,12 +17,13 @@ nrow(readiness.all.df)
 readiness.raw.scores <- readiness.all.df[readiness.all.df$TEST_TYPE %in% readiness.standard.test.types &
                                            readiness.all.df$SCHOOL_FULL_ACADEMIC_YEAR == 'T',
                                          c("SCHOOL_YEAR", 
-                                            "SCHOOL_ID", 
-                                            "WISER_ID",
-                                            "SCHOOL_FULL_ACADEMIC_YEAR",
-                                            "TESTING_STATUS_CODE",
-                                            "TEST_TYPE",
-                                            "SCALE_SCORE")]
+                                           "SCHOOL_ID", 
+                                           "WISER_ID",
+                                           "GRADE_ENROLLED",
+                                           "SCHOOL_FULL_ACADEMIC_YEAR",
+                                           "TESTING_STATUS_CODE",
+                                           "TEST_TYPE",
+                                           "SCALE_SCORE")]
 
 names(readiness.raw.scores)[ncol(readiness.raw.scores)] <- "TESTED_READINESS_RAW_SCORE"
 
@@ -33,15 +34,17 @@ readiness.raw.scores.alt <- aggregate(data.frame(TESTED_READINESS_ALTERNATE_PROF
                      TESTED_READINESS_ALTERNATE_TESTS_TAKEN = ifelse(readiness.all.df.alt$TESTING_STATUS_CODE == 'T', 1, 0)),
           by=list(SCHOOL_YEAR = readiness.all.df.alt$SCHOOL_YEAR,
                   SCHOOL_ID = readiness.all.df.alt$SCHOOL_ID,
-                  WISER_ID =  readiness.all.df.alt$WISER_ID),
+                  WISER_ID =  readiness.all.df.alt$WISER_ID,
+                  GRADE_ENROLLED = readiness.all.df.alt$GRADE_ENROLLED),
           sum)
 
 table(readiness.raw.scores.alt$TESTED_READINESS_ALTERNATE_PROFICIENCIES/
         readiness.raw.scores.alt$TESTED_READINESS_ALTERNATE_TESTS_TAKEN)
 
-readiness.raw.scores.alt <- data.frame(readiness.raw.scores.alt[c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID")],
+readiness.raw.scores.alt <- data.frame(readiness.raw.scores.alt[c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID", "GRADE_ENROLLED")],
                                        SCHOOL_FULL_ACADEMIC_YEAR='T',                                       
                                        TESTING_STATUS_CODE = ifelse(readiness.raw.scores.alt$TESTED_READINESS_ALTERNATE_TESTS_TAKEN > 0, 'T', 'N'),
+                                       
                                        TEST_TYPE='ALT',
                                        TESTED_READINESS_RAW_SCORE = findInterval(readiness.raw.scores.alt$TESTED_READINESS_ALTERNATE_PROFICIENCIES/
                                                                                    readiness.raw.scores.alt$TESTED_READINESS_ALTERNATE_TESTS_TAKEN,

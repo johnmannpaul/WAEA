@@ -307,25 +307,46 @@ schools[schools$SCHOOL_YEAR==current.school.year &
 
 
 #assign an overall category
-compute.add.readiness.overall <- function (schools) {
+compute.add.readiness.overall <- function (schools, type1.cuts) {
   apply(schools[,c("SCHOOL_YEAR", "SCHOOL_ID","HS_ADD_READINESS_TYPE")],
         c(1),
         function (school) {
           type <- school[["HS_ADD_READINESS_TYPE"]]
           if (is.na(type) | type==0)
-            c(NA, NA)
-          else
-            c(schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
-                        schools$SCHOOL_ID == school[["SCHOOL_ID"]],
-                      paste("HS_ADD_READINESS_SCORE_TYPE", type, sep="")],
-              schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
-                      schools$SCHOOL_ID == school[["SCHOOL_ID"]],
-                    paste("HS_ADD_READINESS_CAT_TYPE", type, sep="")])
+            c(NA, NA, NA, NA)
+          else {
+            if (type ==1) 
+              c(type1.cuts[1],
+                type1.cuts[2],
+                schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
+                          schools$SCHOOL_ID == school[["SCHOOL_ID"]],
+                        paste("HS_ADD_READINESS_SCORE_TYPE", type, sep="")],
+                schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
+                          schools$SCHOOL_ID == school[["SCHOOL_ID"]],
+                        paste("HS_ADD_READINESS_CAT_TYPE", type, sep="")])
+              
+              else
+                
+                c(schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
+                            schools$SCHOOL_ID == school[["SCHOOL_ID"]],
+                          paste("HS_ADD_READINESS_CUT1_TYPE", type, sep="")],
+                  schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
+                            schools$SCHOOL_ID == school[["SCHOOL_ID"]],
+                          paste("HS_ADD_READINESS_CUT2_TYPE", type, sep="")],
+                  schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
+                            schools$SCHOOL_ID == school[["SCHOOL_ID"]],
+                          paste("HS_ADD_READINESS_SCORE_TYPE", type, sep="")],
+                  schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
+                            schools$SCHOOL_ID == school[["SCHOOL_ID"]],
+                          paste("HS_ADD_READINESS_CAT_TYPE", type, sep="")])
+            
+          }
           
         })
 }
 
-schools[c("HS_ADD_READINESS_SCORE", "HS_ADD_READINESS_CAT")] <- t(compute.add.readiness.overall(schools))
+schools[c("HS_ADD_READINESS_CUT1", "HS_ADD_READINESS_CUT2", 
+          "HS_ADD_READINESS_SCORE", "HS_ADD_READINESS_CAT")] <- t(compute.add.readiness.overall(schools, type.1.additional.readiness.cuts))
 
 
 

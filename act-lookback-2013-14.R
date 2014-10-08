@@ -124,6 +124,8 @@ equipercentile.lookback <- function(current.df, prior.df, perf.level.prefix="PER
   lookback.df
 }
 
+act.2013.14$SCHOOL_YEAR_ORIGINAL <- act.2013.14$SCHOOL_YEAR
+act.2012.13$SCHOOL_YEAR_ORIGINAL <- act.2012.13$SCHOOL_YEAR
 
 act.lookback <- equipercentile.lookback(act.2013.14, act.2012.13)
 
@@ -149,7 +151,11 @@ statewide.act.non.proficient.lookback <- act.non.proficient.lookback[act.non.pro
 prop.table(table(act.2012.13[c("SUBJECT", "SCALE_SCORE")]), 1)
 
 ###inlcude PAWS 2011-12
+act.lookback$SUBJECT_CODE <- sapply(act.lookback$SUBJECT,
+                                    function (s) 
+                                      switch(s, Math="MA",Reading="RE",Science="SC",NA), USE.NAMES=FALSE)
 
+act.lookback <- act.lookback[,!(names(act.lookback) %in% c("SCHOOL_YEAR_ORIGINAL"))]
 save(act.lookback, file="data/ACT/act.lookback.Rdata")
 
 
@@ -187,9 +193,11 @@ paws.2011.12 <- paws.11.long[paws.11.long$TEST_TYPE=="PAWS-STANDARD" &
                               paws.11.long$SUBJECT %in% c("Math", "Reading", "Science"),]
 
 
+paws.2011.12$SCHOOL_YEAR_ORIGINAL <- paws.2011.12$SCHOOL_YEAR
 paws.lookback.2yr <- equipercentile.lookback(act.2013.14[act.2013.14$SUBJECT %in% c("Math", 
                                                                                    "Reading", 
                                                                                    "Science"),], paws.2011.12)
+paws.lookback.2yr$SCHOOL_YEAR_ORIGINAL <- paws.lookback.2yr$SCHOOL_YEAR
 combos <- unique(paws.lookback.2yr[c("SUBJECT","GRADE_ENROLLED")])
 paws.non.proficient.lookback.2yr <- do.call(rbind,
                                        lapply(1:nrow(combos),
@@ -207,5 +215,8 @@ paws.non.proficient.lookback.2yr <- do.call(rbind,
                                               }))
 
 statewide.paws.non.proficient.lookback.2yr <- paws.non.proficient.lookback.2yr[paws.non.proficient.lookback.2yr$SCHOOL_ID==state.school.id,]
-
+paws.lookback.2yr$SUBJECT_CODE <- sapply(paws.lookback.2yr$SUBJECT,
+                                         function (s) 
+                                           switch(s, Math="MA",Reading="RE",Science="SC",NA), USE.NAMES=FALSE)
+paws.lookback.2yr <- paws.lookback.2yr[,!(names(paws.lookback.2yr) %in% c("SCHOOL_YEAR_ORIGINAL"))]
 save(paws.lookback.2yr, file="data/ACT/paws.lookback.2yr.Rdata")

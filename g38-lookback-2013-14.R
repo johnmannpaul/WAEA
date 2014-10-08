@@ -12,6 +12,8 @@ table(g38.paws[c("SUBJECT","GRADE_ENROLLED")])
 
 combos <- unique(g38.paws[c("SUBJECT","GRADE_ENROLLED")])
 
+g38.paws$SCHOOL_YEAR_ORIGINAL <- g38.paws$SCHOOL_YEAR
+
 percent.non.proficient <- do.call(rbind,
         lapply(1:nrow(combos),
                function (i) {
@@ -53,7 +55,7 @@ paws.2012.13 <- paws[paws$SCHOOL_YEAR=='2012-13' &
 table(paws.2012.13$SUBJECT_CODE)
 paws.2012.13$SUBJECT <- sapply(paws.2012.13$SUBJECT_CODE, function (c) switch(c, MA="Math", RE="Reading", SC="Science", NA))
 table(paws.2012.13$SUBJECT)
-
+paws.2012.13$SCHOOL_YEAR_ORIGINAL <- paws.2012.13$SCHOOL_YEAR
 
 statewide.percents.proficient <- percent.non.proficient[percent.non.proficient$SCHOOL_ID==state.school.id,]
 do.cuts <- function (i) {
@@ -113,7 +115,7 @@ paws.lookback.perf.level <- apply(paws.lookback[,c("SUBJECT", "GRADE_ENROLLED", 
 
 g38.achieve.lookback <- data.frame(paws.lookback[c("SCHOOL_YEAR","SCHOOL_ID","WISER_ID")],
                                    SNAPSHOT=NA,
-                                   SUBJECT_CODE=NA,
+                                   SUBJECT_CODE=paws.lookback$SUBJECT_CODE,
                                    paws.lookback[c("SUBJECT","SCHOOL_FULL_ACADEMIC_YEAR",
                                                  "GRADE_ENROLLED","TEST_TYPE", "TESTING_STATUS_CODE")],
                                    PERFORMANCE_LEVEL=paws.lookback.perf.level,

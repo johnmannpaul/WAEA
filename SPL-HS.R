@@ -71,6 +71,16 @@ schools$HS_SPL <- apply(schools[,c("WAEA_SCHOOL_TYPE",
 table(schools[c("SCHOOL_YEAR", "HS_SPL")])
 
 
+schools$HS_PARTICIPATION_RATE <- apply(schools[, c("WAEA_SCHOOL_TYPE", hs.participation.labels)],
+                                        c(1),
+                                        function (school) {
+                                          
+                                          if (!(school[["WAEA_SCHOOL_TYPE"]] %in% HS.types))
+                                            NA
+                                          else
+                                            min(school[hs.participation.labels], na.rm=TRUE)
+                                        })
+
 schools$HS_PARTICIPATION_RATE_CAT <- apply(schools[, c("WAEA_SCHOOL_TYPE", hs.participation.labels)],
                                       c(1),
                                       function (school) {

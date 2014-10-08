@@ -444,7 +444,9 @@ put.cuts.HS <- function (cuts.df, school.year=current.school.year) {
   
   schools[names(add.readiness.other.types)] <<- add.readiness.other.types
 
-  schools[c("HS_ADD_READINESS_SCORE", "HS_ADD_READINESS_CAT")] <<- t(compute.add.readiness.overall(schools))
+  schools[c("HS_ADD_READINESS_CUT1", "HS_ADD_READINESS_CUT2", 
+            "HS_ADD_READINESS_SCORE", "HS_ADD_READINESS_CAT")] <<- t(compute.add.readiness.overall(schools, type.1.additional.readiness.cuts))
+  
   
   update.results.HS(school.year)
   

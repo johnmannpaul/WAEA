@@ -29,7 +29,7 @@ paws.lookback.for.growth$SUBJECT <- sapply(paws.lookback.for.growth$SUBJECT_CODE
 
 growth.lookback <- data.frame(paws.lookback.for.growth[c("SCHOOL_YEAR","SCHOOL_ID","WISER_ID")],
                               SNAPSHOT=NA,
-                              SUBJECT_CODE=NA,
+                              SUBJECT_CODE=paws.lookback.for.growth$SUBJECT_CODE,
                               paws.lookback.for.growth[c("SUBJECT","SCHOOL_FULL_ACADEMIC_YEAR",
                                                 "GRADE_ENROLLED","TEST_TYPE", "TESTING_STATUS_CODE")],
                               PERFORMANCE_LEVEL=paws.lookback.for.growth$STANDARD_PAWS_PERF_LEVEL,

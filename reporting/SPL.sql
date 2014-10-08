@@ -1,8 +1,9 @@
 
 
-drop table acct.GradeLevelAchievement;
+drop table acct.G38GradeLevelStats;
+GO
 
-CREATE TABLE acct.GradeLevelAchievement (
+CREATE TABLE acct.G38GradeLevelStats (
 
    [Scope] varchar(50) not null,
    SchoolYear varchar(7) not null,
@@ -13,59 +14,34 @@ CREATE TABLE acct.GradeLevelAchievement (
    Reading decimal(10,1) null,
    Mathematics decimal(10,1) null,
    Science decimal(10,1) null,
+   Writing decimal(10,1) null,
    [Order] bigint not null,
    N int not null,
-   CONSTRAINT acct_GradeLevelStats_PK PRIMARY KEY ([Scope], SchoolYear, SchoolId, Grade, Statistic)
+   CONSTRAINT acct_G38GradeLevelStats_PK PRIMARY KEY ([Scope], SchoolYear, SchoolId, Grade, Statistic)
 )
 GO
 
 
 
+CREATE NONCLUSTERED INDEX acct_G38GradeLevelStats_idx1
+ON acct.G38GradeLevelStats (SchoolYear, SchoolId, Statistic)
+GO
 
+CREATE NONCLUSTERED INDEX acct_G38GradeLevelStats_idx2
+ON acct.G38GradeLevelStats ([Order])
+GO
 
-CREATE NONCLUSTERED INDEX acct_GradeLevelAchievement_idx1
-ON acct.GradeLevelAchievement (SchoolYear, SchoolId, Statistic)
+drop table acct.HSSchoolIndicators
+GO
 
-CREATE NONCLUSTERED INDEX acct_GradeLevelAchievement_idx2
-ON acct.GradeLevelAchievement ([Order])
+DROP TABLE acct.G38SchoolIndicators
+GO
 
-
-
-drop table acct.GradeLevelGrowth;
-
-CREATE TABLE acct.GradeLevelGrowth(
-
-   [Scope] varchar(50) not null,   
-   SchoolYear varchar(7) not null,
-   SchoolId varchar(7) not null,
-   Grade varchar(3) not null,
-   Statistic varchar(100) not null,
-   [All] decimal(10,1) null,
-   Reading decimal(10,1) null,
-   Mathematics decimal(10,1) null,
-   Science decimal(10,1) null,
-   [Order] bigint not null,
-   N int not null,
-   CONSTRAINT acct_GradeLevelGrowth_PK PRIMARY KEY ([Scope], SchoolYear, SchoolId, Grade, Statistic)
-)
+Drop Table acct.SPLSchool
 GO
 
 
-
-
-CREATE NONCLUSTERED INDEX acct_GradeLevelGrowth_idx1
-ON acct.GradeLevelGrowth (SchoolYear, SchoolId, Statistic)
-
-CREATE NONCLUSTERED INDEX acct_GradeLevelGrowth_idx2
-ON acct.GradeLevelGrowth (Statistic, [Order])
-
-
-
-DROP TABLE acct.SchoolIndictorsNonHS
-DROP TABLE acct.SchoolIndictorsHS
-Drop Table acct.School
-
-Create table acct.School (
+Create table acct.SPLSchool (
 SchoolYear varchar(7) not null, 
 DistrictId varchar(7) not null, 
 DistrictName varchar(250) not null,
@@ -82,156 +58,178 @@ SPLAccountability varchar(100),
 CONSTRAINT acct_School_PK Primary Key (SchoolYear, SchoolId)
 )
 
-CREATE Unique Nonclustered Index acct_School_Type_Idx 
-ON acct.School (SchoolYear, SchoolId, WAEASchoolType)
+GO
 
+CREATE Unique Nonclustered Index acct_SPLSchool_Type_Idx 
+ON acct.SPLSchool (SchoolYear, SchoolId)
 
+GO
 
-CREATE TABLE acct.SchoolIndictorsNonHS
+CREATE TABLE acct.G38SchoolIndicators
 (
 
 SchoolYear varchar(7) not null,
 SchoolId varchar(7) not null,
-SmallSchool varchar(1) not null,
-YearsBack tinyint null,
-YearsBackSubgroup tinyint null,
-AchievementLowCut decimal(3,1) null,
-AchievmentHighCut decimal(3,1) null,
-PercentProficient decimal (4,1) null,
+SmallSchoolAchievement varchar(1) not null,
+YearsBackAchievement tinyint null,
+AchievementLowCut tinyint null,
+AchievmentHighCut tinyint null,
+AchievementTests int null,
+AchievementTestsProficient int null,
+PercentProficient tinyint null,
 NAchievement int null,
+AchievementTestsActual int null,
+AchievementTestsExpected int null,
+AchievementParticipationRate decimal(4,1) null,
 AchievementTargetLevel varchar(100) null,
-GrowthLowCut decimal(3,1) null,
-GrowthHighCut decimal(3,1) null,
+SmallSchoolGrowth varchar(1) not null,
+YearsBackGrowth tinyint null,
+GrowthLowCut tinyint null,
+GrowthHighCut tinyint null,
 MGP decimal(3,1) null,
 NGrowth int null,
 GrowthTargetLevel varchar(100) null,
-EquityLowCut decimal(3,1) null,
-EquityHighCut decimal(3,1) null,
-PercentMeetingAGP decimal(4,1) null,
+SmallSchoolEquity varchar(1) not null,
+YearsBackEquity tinyint null,
+EquityLowCut tinyint null,
+EquityHighCut tinyint null,
+EquityScore tinyint null,
 NSubgroup int null,
+EquityTestsActual int null,
+EquityTestsExpected int null,
+EqityParticipationRate decimal(4,1) null,
 EquityTargetLevel varchar(100) null,
+NIndicators tinyint not null,
 ParticipationRate decimal(4,1) null,
 ParticipationRateLevel varchar(100) null,
-NIndicators tinyint not null,
 SPL varchar(100),
-SPLAdjusted varchar(100),
-CONSTRAINT acct_SchoolIndictorsNonHS_PK PRIMARY KEY (SchoolYear, SchoolId),
-CONSTRAINT acct_SchoolIndictorsNonHS_FK FOREIGN KEY (SchoolYear, SchoolId) REFERENCES acct.School(SchoolYear, SchoolId)
+SPLAccountability varchar(100),
+CONSTRAINT acct_G38SchoolIndictors_PK PRIMARY KEY (SchoolYear, SchoolId),
+CONSTRAINT acct_G38SchoolIndictors_FK FOREIGN KEY (SchoolYear, SchoolId) REFERENCES acct.SPLSchool(SchoolYear, SchoolId)
 )
 
+GO
 
 
-
-CREATE TABLE acct.SchoolIndictorsHS
+CREATE TABLE acct.HSSchoolIndicators
 (
 
 SchoolYear varchar(7) not null,
 SchoolId varchar(7) not null,
-SmallSchool varchar(1) not null,
-YearsBack tinyint null,
-AchievementLowCut decimal(3,1) null,
-AchievmentHighCut decimal(3,1) null,
-PercentProficient decimal (4,1) null,
-NAchievement int null,
+
+SmallSchoolAchievement varchar(1) not null,
+YearsBackAchievement tinyint null,
+AchievementLowCut tinyint null,
+AchievmentHighCut tinyint null,
+AchievementTests int null,
+AchievementTestsProficient int null,
+PercentProficient tinyint null,
+NAchievement int not null,
+AchievementTestsActual int not null,
+AchievementTestsExpected int not null,
+AchievementParticipationRate decimal(4,1) null,
 AchievementTargetLevel varchar(100) null,
-ReadinessLowCut decimal(3,1) null,
-ReadinessHighCut decimal(3,1) null,
-ReadinessIndexValue decimal(3,1) null,
-NTestedReadiness int null,
-NGraduation int null,
-NReadiness int null,
-ReadinessTargetLevel varchar(100) null,
-EquityLowCutReversed decimal(3,1) null,
-EquityHighCutReversed decimal(3,1) null,
-ChangePercentNonProficient decimal(4,1) null,
-NSubgroup int null,
+
+
+SmallSchoolEquity varchar(1) not null,
+YearsBackEquity tinyint null,
+EquityLowCut tinyint null,
+EquityHighCut tinyint null,
+EquityScore tinyint null,
+NSubgroup int not null,
+EquityTestsActual int not null,
+EquityTestsExpected int not null,
+EqityParticipationRate decimal(4,1) null,
 EquityTargetLevel varchar(100) null,
-ParticipationRateAchievement decimal(4,1) null,
-ParticipationRateTestedReadiness decimal(4,1) null,
+
+GradRate4year decimal(4,1) null,
+NGradRate4year int null,
+GradRateExtended decimal(4,1) null,
+NGradRateExtended int null,
+GradRateImprove decimal(4,1) null,
+GradRateTargetLevel varchar(100) null,
+
+SmallSchoolGrade9Credits varchar(1) not null,
+NGrade9Credits int null,
+NGrade9CreditsMet int null,
+Grade9CreditsPercentMet tinyint null,
+Grade9CreditsPercentMetWeighted decimal(4,1) null,
+Grade9CreditsRequired decimal(4,1) null,
+
+
+SmallSchoolHathEligibile varchar(1) not null,
+NHathEligibile int null,
+HathEligibileMeanScore tinyint null,
+HathEligibileMeanScoreWeighted decimal(4,1) null,
+
+
+SmallSchoolTestedReadiness varchar(1) not null,
+YearsBackTestedReadiness tinyint null,
+TestedReadinessMeanScore tinyint null,
+NTestedReadiness int not null,
+TestedReadinessTestsActual int not null,
+TestedReadinessTestsExpected int not null,
+TestedReadinessParticipationRate decimal(4,1) null,
+TestedReadinessMeanScoreWeighted decimal(4,1) null,
+
+AddReadinessType varchar(20) not null,
+AddReadinessLowCut tinyint null,
+AddReadinessHighCut tinyint null,
+AddReadinessScore tinyint null,
+AddReadinessTargetLevel varchar(100) null,
+
+NAchievementIndictors tinyint not null,
+NReadinessIndictors tinyint not null,
+NIndicators tinyint not null,
+OverallReadinessTargetLevel varchar(100) null,
+AcademicPerformanceTargetLevel varchar(100) null,
 ParticipationRate decimal(4,1) null,
 ParticipationRateLevel varchar(100) null,
-NIndicators tinyint not null,
+
 SPL varchar(100),
-SPLAdjusted varchar(100),
-CONSTRAINT acct_SchoolIndictorsHS_PK PRIMARY KEY (SchoolYear, SchoolId),
-CONSTRAINT acct_SchoolIndictorsHS_FK FOREIGN KEY (SchoolYear, SchoolId) REFERENCES acct.School(SchoolYear, SchoolId)
+SPLAccountability varchar(100),
+
+CONSTRAINT acct_HSSchoolIndictors_PK PRIMARY KEY (SchoolYear, SchoolId),
+CONSTRAINT acct_HSSchoolIndictors_FK FOREIGN KEY (SchoolYear, SchoolId) REFERENCES acct.SPLSchool(SchoolYear, SchoolId)
 )
+GO
 
 
+drop table acct.HSStatsBySubject;
+GO
 
-
-DROP TABLE acct.GradeLevelAchievementHS
-GO 
-
-CREATE TABLE acct.GradeLevelAchievementHS (
+CREATE TABLE acct.HSStatsBySubject (
 
    [Scope] varchar(50) not null,
    SchoolYear varchar(7) not null,
    SchoolId varchar(7) not null,
-   Grade varchar(3) not null,
    Statistic varchar(100) not null,
    [All] decimal(10,1) null,
    Reading decimal(10,1) null,
    Mathematics decimal(10,1) null,
    Science decimal(10,1) null,
+   Writing decimal(10,1) null,
    [Order] bigint not null,
    N int not null,
-   ParticipationRate decimal(4,1) not null
-   CONSTRAINT acct_GradeLevelStatsHS_PK PRIMARY KEY ([Scope],SchoolYear, SchoolId, Grade, Statistic)
+   CONSTRAINT acct_HSStatsBySubject_PK PRIMARY KEY ([Scope], SchoolYear, SchoolId, Statistic)
 )
 GO
 
 
 
-DROP TABLE acct.GradeLevelEquityHS
-GO 
+CREATE NONCLUSTERED INDEX acct_HSStatsBySubject_idx1
+ON acct.HSStatsBySubject (SchoolYear, SchoolId, Statistic)
+GO
 
-CREATE TABLE acct.GradeLevelEquityHS (
-
-   [Scope] varchar(50) not null,
-   SchoolYear varchar(7) not null,
-   SchoolId varchar(7) not null,
-   Grade varchar(3) not null,
-   Statistic varchar(100) not null,
-   [All] decimal(10,1) null,
-   Reading decimal(10,1) null,
-   Mathematics decimal(10,1) null,
-   Science decimal(10,1) null,
-   [Order] bigint not null,
-   N int null,
-   CONSTRAINT acct_GradeLevelEquityHS_PK PRIMARY KEY ([Scope], SchoolYear, SchoolId, Grade, Statistic)
-)
+CREATE NONCLUSTERED INDEX acct_HSStatsBySubject_idx2
+ON acct.HSStatsBySubject ([Order])
 GO
 
 
-
-DROP TABLE acct.ReadinessHS
-GO 
-
-CREATE TABLE acct.ReadinessHS (
-
-   SchoolYear varchar(7) not null,
-   SchoolId varchar(7) not null,
-   TestedReadinessIndex decimal(4,1) not null,
-   NTestedReadiness int not null,
-   GraduationIndex  decimal(4,1) not null,
-   NGraduation int not null,
-   TestedReadinessWeight decimal(3,2) not null,
-   GraduationWeight decimal(3,2) not null,
-   TestedReadinessIndexWeighted decimal(4,1) not null,
-   GraduationIndexWeighted  decimal(4,1) not null,
-   [Order] bigint not null,   
-   CONSTRAINT acct_ReadinessHS_PK PRIMARY KEY (SchoolYear, SchoolId)
-)
+drop table acct.HSStatsByTest;
 GO
 
-
-
-
-DROP TABLE acct.GradeLevelACTSuite
-GO 
-
-CREATE TABLE acct.GradeLevelACTSuite (
+CREATE TABLE acct.HSStatsByTest (
 
    [Scope] varchar(50) not null,
    SchoolYear varchar(7) not null,
@@ -241,27 +239,21 @@ CREATE TABLE acct.GradeLevelACTSuite (
    Explore decimal(10,1) null,
    [Plan] decimal(10,1) null,
    ACT decimal(10,1) null,
-   [Paws Alternate] decimal(10,1) null,
+   Alt decimal(10,1) null,
    [Order] bigint not null,
-   N int null,
-   CONSTRAINT acct_GradeLevelACTSuite_PK PRIMARY KEY ([Scope], SchoolYear, SchoolId, Statistic)
+   N int not null,
+   CONSTRAINT acct_HSStatsByTest_PK PRIMARY KEY ([Scope], SchoolYear, SchoolId, Statistic)
 )
 GO
 
 
 
-drop view acct.SchoolListRated
+CREATE NONCLUSTERED INDEX acct_HSStatsByTest_idx1
+ON acct.HSStatsByTest (SchoolYear, SchoolId, Statistic)
 GO
 
-CREATE VIEW acct.SchoolListRated AS
-select s.*, 
-nhs.SPLAdjusted as [Elementary/Middle SPL], 
-isnull(nhs.NIndicators,0) as [Number of Elementary/Middle Indicators], 
-hs.SPLAdjusted as [High School SPL], 
-isnull(hs.NIndicators,0) as [Number of High School Indicators]
-from
-acct.School s left join 
-acct.SchoolIndictorsNonHS nhs on s.SchoolYear = nhs.SchoolYear and s.SchoolId = nhs.SchoolId left join
-acct.SchoolIndictorsHS hs on s.SchoolYear = hs.SchoolYear and s.SchoolId = hs.SchoolId
---ORDER BY s.SchoolYear, s.DistrictName, s.Name
+CREATE NONCLUSTERED INDEX acct_HSStatsByTest_idx2
+ON acct.HSStatsByTest ([Order])
+GO
+
 
