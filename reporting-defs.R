@@ -49,7 +49,8 @@ produce.aggregates.scoped <- function (df,
                                            N_TESTS=length(x),
                                            N_PROFICIENT=sum(ifelse(x %in% c('3','4'), 1, 0)))
                                        },
-                                       filter = NULL
+                                       filter = NULL,
+                                       fill.val=NA
 )
 {
   school.aggregates <- produce.aggregates(cbind(SCOPE = rep("SCHOOL", nrow(df)), df),
@@ -59,7 +60,8 @@ produce.aggregates.scoped <- function (df,
                                           col.vars,
                                           obs,
                                           value.label,
-                                          aggregator)
+                                          aggregator,
+                                          fill.val)
   
   find.grade.span <- function (x) {
     c(LOW_GRADE=min(as.character(x)),
@@ -87,7 +89,8 @@ produce.aggregates.scoped <- function (df,
                        col.vars,
                        obs,
                        value.label,
-                       aggregator)
+                       aggregator,
+                       fill.val)
   }
   
   #hokey way of keeping some records out of the state average...
@@ -128,7 +131,8 @@ produce.aggregates <- function (df,
                                 aggregator=function (x) 
                                   c(PERCENT_PROFICIENT =round((sum(ifelse(x %in% c('3','4'), 1, 0))/length(x)) * 100, 1),
                                     N_TESTS=length(x),
-                                    N_PROFICIENT=sum(ifelse(x %in% c('3','4'), 1, 0)))
+                                    N_PROFICIENT=sum(ifelse(x %in% c('3','4'), 1, 0))),
+                                fill.val=NA
 )
 {
   
@@ -139,7 +143,7 @@ produce.aggregates <- function (df,
   })
   
   aggregate.combo <- function (combo) {      
-    aggregation <- cast(df.molten[df.molten$variable==obs,], combo.to.formula(combo), aggregator, add.missing=TRUE, fill=NA)      
+    aggregation <- cast(df.molten[df.molten$variable==obs,], combo.to.formula(combo), aggregator, add.missing=TRUE, fill=fill.val)      
     ##need to recast the ids as characters, because add.missing turns everything into a factor
     lapply(combo, function (id) {
       aggregation[[id]] <<- as.character(aggregation[[id]])

@@ -11,7 +11,7 @@ paws.aggregates <- produce.aggregates.scoped(achievement.g38.indicator$students.
                                              value.label = "PERCENT_PROFICIENT",
                                              aggregator=function (x) {
                                                PERCENT_PROFICIENT =round((sum(ifelse(x %in% c('3','4'), 1, 0))/length(x)) * 100, report.precision)
-                                             }
+                                             },
                                              obs="PERFORMANCE_LEVEL",
                                              filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL))
 
@@ -106,7 +106,7 @@ equity.aggregates <- produce.aggregates.scoped(equity.g38.indicator$students.fay
                                                col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "WR")),
                                                obs="STD_SCORE",
                                                value.label="MEAN_STD_SCORE",
-                                               aggregator=function (x) c(MEAN_STD_SCORE=round(mean(x), 1)),
+                                               aggregator=function (x) c(MEAN_STD_SCORE=round(mean(x), report.precision)),
                                                filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
                                                
 )
@@ -303,6 +303,10 @@ act.aggregates <- produce.aggregates.scoped(achievement.act.students,
                                              orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
                                                               GRADE_ENROLLED = c("ALL", "11")),
                                              col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
+                                            value.label = "PERCENT_PROFICIENT",
+                                            aggregator=function (x) {
+                                              PERCENT_PROFICIENT =round((sum(ifelse(x %in% c('3','4'), 1, 0))/length(x)) * 100, report.precision)
+                                            },
                                              obs="PERFORMANCE_LEVEL",
                                             filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL))
 
@@ -351,7 +355,7 @@ hs.equity.aggregates <- produce.aggregates.scoped(hs.equity.students,
                                                   col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
                                                   obs="WY_ACT_SCALE_SCORE",
                                                   value.label="MEAN_WY_ACT_SCORE",
-                                                  aggregator=function (x) c(MEAN_WY_ACT_SCORE=round(mean(x), 1)),
+                                                  aggregator=function (x) c(MEAN_WY_ACT_SCORE=round(mean(x), report.precision)),
                                                   filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
                                                
 )
@@ -392,7 +396,7 @@ head(with(equity.hs.indicator$schools,
 
 
 write.csv(hs.equity.tab.N[hs.equity.tab.N$SCHOOL_YEAR==current.school.year & hs.equity.tab.N$GRADE_ENROLLED=='ALL' &
-                            STATISTIC=='MEAN_WY_ACT_SCORE', !(names(hs.equity.tab.N) %in% "GRADE_ENROLLED")],file="reporting/grade-level-high-school-equity.csv", na="", row.names=FALSE, quote=FALSE)
+                            hs.equity.tab.N$STATISTIC=='MEAN_WY_ACT_SCORE', !(names(hs.equity.tab.N) %in% "GRADE_ENROLLED")],file="reporting/grade-level-high-school-equity.csv", na="", row.names=FALSE, quote=FALSE)
 
 #hs readiness
 
@@ -405,7 +409,7 @@ hs.tested.aggregates <- produce.aggregates.scoped(tested.readiness.indicator$stu
                                                   col.vars = list(TEST_TYPE=c("EXPLORE","PLAN","ACT", "ALT")),
                                                   obs="TESTED_READINESS_INDEX_SCORE",
                                                   value.label="TESTED_READINESS_MEAN_INDEX_SCORE",
-                                                  aggregator=function (x) c(MEAN_INDEX_SCORE=round(mean(x), 1)),
+                                                  aggregator=function (x) c(MEAN_INDEX_SCORE=round(mean(x), report.precision)),
                                                   filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
                                                   
 )
@@ -614,3 +618,79 @@ head(with(achievement.hs.indicator$schools,
 write.csv(hs.act.part.tab.N[hs.act.part.tab.N$SCHOOL_YEAR==current.school.year & 
                               hs.act.part.tab.N$GRADE_ENROLLED=='ALL', !(names(hs.act.part.tab.N) %in% "GRADE_ENROLLED")],
           file="reporting/high-school-act-participation.csv", na="", row.names=FALSE, quote=FALSE)
+
+
+#hathaway subreport
+agg.hath.cat <- function (df, cat="SCORE_CAT") {
+  hathaway.eligibility.for.agg <- df
+  hathaway.eligibility.for.agg$SCHOOL_YEAR <- current.school.year
+  hathaway.eligibility.for.agg$SCHOOL_ID <- hathaway.eligibility.for.agg$EXIT_RECORD_SCHOOL_ID
+  hathaway.eligibility.for.agg$GRADE_ENROLLED <- "12"
+  
+  hathaway.eligibility.for.agg[[cat]] <- sapply(hathaway.eligibility.for.agg[[cat]],
+                                                function (cat) {
+                                                  switch(cat, 
+                                                         "1" = hathcat.labels[1], 
+                                                         "2" = hathcat.labels[2],
+                                                         "3" = hathcat.labels[3],
+                                                         "4" = hathcat.labels[4],
+                                                         "5" = hathcat.labels[5],
+                                                         hathcat.labels[6])
+                                                }, USE.NAMES=FALSE)
+  
+  id.choices <- c(GRADE_ENROLLED="ALL", "ALL")
+  names(id.choices)[2] <- cat 
+  
+  orderings <- list(c("ALL", 
+                      hathcat.labels),                                                 
+                    GRADE_ENROLLED = c("ALL", "12"))
+  
+  names(orderings)[1] <- cat
+  
+  col.vars <- list(hathcat.labels)
+  names(col.vars)[1] <- cat
+  
+  hath.cat.aggregates <- produce.aggregates.scoped(hathaway.eligibility.for.agg,
+                                                   id.choices = id.choices,
+                                                   orderings = orderings,
+                                                   col.vars = col.vars,
+                                                   obs=cat,
+                                                   value.label=paste(cat,"COUNT",sep="_"),
+                                                   aggregator=function (x) length(x),
+                                                   fill.val=0
+  )
+  
+  
+  hath.cat.aggregates <- with(hath.cat.aggregates$tab,
+                              hath.cat.aggregates$tab[GRADE_ENROLLED == "ALL",
+                                                      c("SCOPE", "SCHOOL_YEAR", "SCHOOL_ID",
+                                                        "STATISTIC", "ALL", hathcat.labels, "ORDER")])
+  hath.cat.aggregates[hathcat.labels] <- t(apply(hath.cat.aggregates[c("ALL", hathcat.labels)],
+                                                 c(1),
+                                                 function(row) {
+                                                   round(100 * (row[2:length(row)]/row[1]), report.precision)
+                                                 }))
+  
+  hath.cat.aggregates <- hath.cat.aggregates[,c(which(!(names(hath.cat.aggregates) %in% c("ALL", hathcat.labels))),
+                                                which(names(hath.cat.aggregates) %in% hathcat.labels), 
+                                                which(names(hath.cat.aggregates) %in% "ALL"))]
+  
+  names(hath.cat.aggregates)[ncol(hath.cat.aggregates)] <- 'N'
+  
+  hath.cat.aggregates
+}
+
+hath.cat.aggregates <- do.call(rbind, 
+                               lapply(c("SCORE_CAT", "HATH_CAT","GPA_CAT"), 
+                                      function (cat) agg.hath.cat(hathaway.eligibility, cat)))
+
+#GPA only has four categories
+hath.cat.aggregates$CAT_5 <- ifelse(hath.cat.aggregates$STATISTIC == "GPA_CAT_COUNT",
+                                    NA,
+                                    hath.cat.aggregates$CAT_5)
+head(hath.cat.aggregates[hath.cat.aggregates$STATISTIC == "SCORE_CAT_COUNT",])
+head(hath.cat.aggregates[hath.cat.aggregates$STATISTIC == "HATH_CAT_COUNT",])
+head(hath.cat.aggregates[hath.cat.aggregates$STATISTIC == "GPA_CAT_COUNT",])
+
+write.csv(hath.cat.aggregates[hath.cat.aggregates$SCHOOL_YEAR==current.school.year,],
+          file="reporting/high-school-hathaway-eligibility.csv", na="", row.names=FALSE, quote=FALSE)

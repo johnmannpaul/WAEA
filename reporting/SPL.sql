@@ -142,11 +142,14 @@ EquityTestsExpected int not null,
 EqityParticipationRate decimal(4,1) null,
 EquityTargetLevel varchar(100) null,
 
+GradRateLowCut tinyint null,
+GradRateHighCut tinyint null,
 GradRate4year decimal(4,1) null,
 NGradRate4year int null,
 GradRateExtended decimal(4,1) null,
 NGradRateExtended int null,
 GradRateImprove decimal(4,1) null,
+NGradRate int null,
 GradRateTargetLevel varchar(100) null,
 
 SmallSchoolGrade9Credits varchar(1) not null,
@@ -175,6 +178,7 @@ TestedReadinessMeanScoreWeighted decimal(4,1) null,
 AddReadinessType varchar(20) not null,
 AddReadinessLowCut tinyint null,
 AddReadinessHighCut tinyint null,
+NAddReadiness int null,
 AddReadinessScore tinyint null,
 AddReadinessTargetLevel varchar(100) null,
 
@@ -254,6 +258,39 @@ GO
 
 CREATE NONCLUSTERED INDEX acct_HSStatsByTest_idx2
 ON acct.HSStatsByTest ([Order])
+GO
+
+
+
+drop table acct.HSHathaway
+GO
+
+CREATE TABLE acct.HSHathaway (
+
+   [Scope] varchar(50) not null,
+   SchoolYear varchar(7) not null,
+   SchoolId varchar(7) not null,
+   Statistic varchar(100) not null,
+   [Order] bigint not null,
+   [Cat1] tinyint null,
+   [Cat2] tinyint null,
+   [Cat3] tinyint null,
+   [Cat4] tinyint null,
+   [Cat5] tinyint null,
+   [Undefined] tinyint null,
+   N int not null,
+   CONSTRAINT acct_HSHathaway_PK PRIMARY KEY ([Scope], SchoolYear, SchoolId, Statistic)
+)
+GO
+
+
+
+CREATE NONCLUSTERED INDEX acct_HSHathaway_idx1
+ON acct.HSHathaway (SchoolYear, SchoolId, Statistic)
+GO
+
+CREATE NONCLUSTERED INDEX acct_HSHathaway_idx2
+ON acct.HSHathaway ([Order])
 GO
 
 

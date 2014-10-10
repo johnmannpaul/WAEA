@@ -296,6 +296,14 @@ hs.grad.rate.cuts <- hs.grad.rate.cuts.lookup.year[[current.school.year]]
 hathaway.eligibility.index <- c(40, 70, 80, 90, 100)  
 #hathaway.eligibility.index <- c(0, 30, 50, 80, 100)  
 
+
+hathcat.labels = c("CAT_1",
+                   "CAT_2",
+                   "CAT_3", 
+                   "CAT_4",
+                   "CAT_5",
+                   "Undefined")
+
 ##PJP determines
 additional.readiness.weights <- c(tested=.30,
                                   grade.nine=.30,

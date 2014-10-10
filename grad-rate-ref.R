@@ -45,6 +45,7 @@ grad.rate$CAT_EXTENDED_2013 <- findInterval(grad.rate$GRAD_RATE_EXTENDED , hs.gr
 
 
 grad.rate[c("GRAD_RATE_TYPE", 
+            "GRAD_RATE_N",
             "IMPROVE_TARGET_FOR_MEETS", 
             "IMPROVE_TARGET_FOR_EXCEED", 
             "IMPROVEMENT_TARGET",
@@ -142,10 +143,10 @@ schools <- bind.indicator(schools,
                           grad.rate[, c("SCHOOL_YEAR", "SCHOOL_ID", "LOOK_BACK_YRS_4_YR", 
                                         "EXTENDED_LOOK_BACK_YRS",
                                         "GRAD_RATE_4_YR_2012","GRAD_RATE_4_YR.2012.13", "GRAD_RATE_EXTENDED",
-                                        "COHORT_4_YR_N.2011.12", "COHORT_4_YR_N.2012.13", "COHORT_EXTENDED_N.2012.13",
+                                        "COHORT_4_YR_N.2011.12", "COHORT_4_YR_N.2012.13", "COHORT_EXTENDED_N.2012.13", "GRAD_RATE_N",
                                         "CAT_4_YR_2013", "CAT_EXTENDED_2013",
                                         "IMPROVE_TARGET_FOR_MEETS", "IMPROVE_TARGET_FOR_EXCEED", "IMPROVEMENT_TARGET", "IMPROVE_CAT_2013")],
-                          indicator.labels.min.N = c(N= "COHORT_EXTENDED_N.2012.13", score="IMPROVE_CAT_2013"),
+                          indicator.labels.min.N = c(N= "GRAD_RATE_N", score="IMPROVE_CAT_2013"),
                           min.N.grad) 
 
 #some schools may not have an improvement category for 2013, because 
