@@ -128,7 +128,7 @@ act.2013.14$SCHOOL_YEAR_ORIGINAL <- act.2013.14$SCHOOL_YEAR
 act.2012.13$SCHOOL_YEAR_ORIGINAL <- act.2012.13$SCHOOL_YEAR
 
 act.lookback <- equipercentile.lookback(act.2013.14, act.2012.13)
-
+act.lookback$SCHOOL_YEAR_ORIGINAL <- act.lookback$SCHOOL_YEAR
 
 combos <- unique(act.lookback[c("SUBJECT","GRADE_ENROLLED")])
 act.non.proficient.lookback <- do.call(rbind,

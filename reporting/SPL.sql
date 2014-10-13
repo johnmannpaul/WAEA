@@ -156,13 +156,15 @@ SmallSchoolGrade9Credits varchar(1) not null,
 NGrade9Credits int null,
 NGrade9CreditsMet int null,
 Grade9CreditsPercentMet tinyint null,
-Grade9CreditsPercentMetWeighted decimal(4,1) null,
 Grade9CreditsRequired decimal(4,1) null,
+Grade9CreditsPercentMetWeight tinyint null,
+Grade9CreditsPercentMetWeighted decimal(4,1) null,
 
 
 SmallSchoolHathEligibile varchar(1) not null,
 NHathEligibile int null,
 HathEligibileMeanScore tinyint null,
+HathEligibileMeanScoreWeight tinyint null,
 HathEligibileMeanScoreWeighted decimal(4,1) null,
 
 
@@ -173,6 +175,7 @@ NTestedReadiness int not null,
 TestedReadinessTestsActual int not null,
 TestedReadinessTestsExpected int not null,
 TestedReadinessParticipationRate decimal(4,1) null,
+TestedReadinessMeanScoreWeight tinyint null,
 TestedReadinessMeanScoreWeighted decimal(4,1) null,
 
 AddReadinessType varchar(20) not null,
@@ -277,7 +280,6 @@ CREATE TABLE acct.HSHathaway (
    [Cat3] tinyint null,
    [Cat4] tinyint null,
    [Cat5] tinyint null,
-   [Undefined] tinyint null,
    N int not null,
    CONSTRAINT acct_HSHathaway_PK PRIMARY KEY ([Scope], SchoolYear, SchoolId, Statistic)
 )

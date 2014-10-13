@@ -219,6 +219,17 @@ g38.school.indicators <- with(g38.schools, cbind(g38.schools[,c("SCHOOL_YEAR", "
 write.csv(g38.school.indicators, file="reporting/school-indicators-nonHS.csv", na="", row.names=FALSE, quote=FALSE)
 
 high.schools <- schools[schools$SCHOOL_YEAR==current.school.year & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
+
+lookup.add.readiness.weights <- function (add.readiness.type, subindicator) {
+  lookup <- list(all = c(1,2,3),
+                 `tested only` = c(1),
+                 `tested and Hath only` = c(1,3),
+                 `tested and gd9 only` = c(1,2))
+  
+  round(prop.table(additional.readiness.weights[lookup[[add.readiness.type]]])[subindicator],2)
+    
+}
+
 high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR", "SCHOOL_ID", "HS_ACHIEVEMENT_SMALL_SCHOOL")], 
                                                    HS_ACHIEVEMENT_YEARS_BACK = ifelse(is.na(high.schools[,"HS_ACHIEVEMENT_YEARS_BACK"]),
                                                                                       NA,
@@ -245,15 +256,32 @@ high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR"
                                                    EQUITY_TARGET_LEVEL = ifelse(is.na(high.schools[,c("HS_EQUITY_TARGET_LEVEL")]), 
                                                                                      NA, 
                                                                                      indicator.labels[high.schools[,c("HS_EQUITY_TARGET_LEVEL")]]),
-                                                   
-                                                   high.schools[c("GRAD_RATE_4_YR.2012.13", "COHORT_4_YR_N.2012.13", "GRAD_RATE_EXTENDED", "COHORT_EXTENDED_N.2012.13", "IMPROVEMENT_TARGET")],
+                                                   GRAD_RATE_LOW_CUT = hs.grad.rate.cuts[1],
+                                                   GRAD_RATE_HIGH_CUT = hs.grad.rate.cuts[2],
+                                                   high.schools[c("GRAD_RATE_4_YR.2012.13", "COHORT_4_YR_N.2012.13", "GRAD_RATE_EXTENDED", "COHORT_EXTENDED_N.2012.13", "IMPROVEMENT_TARGET", "GRAD_RATE_N")],
                                                    GRAD_RATE_TARGET_LEVEL = ifelse(is.na(high.schools[,c("IMPROVE_CAT_2013")]), 
                                                                                    NA, 
                                                                                    indicator.labels[high.schools[,c("IMPROVE_CAT_2013")]]),
                                                    high.schools[c("SMALL_SCHOOL_GRADE_NINE_CREDIT", "GRADE_NINE_CREDITS_N", "GRADE_NINE_CREDITS_MET_N", "PERCENT_GD_9_CREDIT_MET", "REQUIRED_GRAD_CREDITS")],
-                                                   PERCENT_GD_9_CREDIT_MET_WEIGHTED = round(additional.readiness.weights["grade.nine"] * high.schools[["PERCENT_GD_9_CREDIT_MET"]],1),
+                                                   
+                                                   with(data.frame("WEIGHT" = sapply(high.schools$HS_ADD_READINESS_TYPE_LABEL,
+                                                                                     function (type) {
+                                                                                       lookup.add.readiness.weights(type,'grade.nine')
+                                                                                     })),
+                                                        cbind(PERCENT_GD_9_CREDIT_MET_WEIGHT = WEIGHT*100, 
+                                                              PERCENT_GD_9_CREDIT_MET_WEIGHTED = round(WEIGHT*high.schools[["PERCENT_GD_9_CREDIT_MET"]],1))),
+                                                   
+                                                                                                      
                                                    high.schools[c("SMALL_SCHOOL_HATH_ELIGIBILITY", "HATH_INDEX_SCORE_N", "HATH_INDEX_SCORE_MEAN")],
-                                                   HATH_INDEX_SCORE_MEAN_WEIGHTED = round(additional.readiness.weights["hathaway"] * high.schools[["HATH_INDEX_SCORE_MEAN"]],1),
+                                                   
+                                                   with(data.frame("WEIGHT" = sapply(high.schools$HS_ADD_READINESS_TYPE_LABEL,
+                                                                                     function (type) {
+                                                                                       lookup.add.readiness.weights(type,'hathaway')
+                                                                                     })),
+                                                        cbind(HATH_INDEX_SCORE_WEIGHT = WEIGHT*100, 
+                                                              HATH_INDEX_SCORE_MEAN_WEIGHTED = round(WEIGHT*high.schools[["HATH_INDEX_SCORE_MEAN"]],1))),
+                                                   
+
                                                    high.schools[c("HS_TESTED_READINESS_SMALL_SCHOOL" )],
                                                    HS_TESTED_READINESS_YEARS_BACK = ifelse(is.na(high.schools[,"HS_TESTED_READINESS_YEARS_BACK"]),
                                                                                            NA,
@@ -263,8 +291,16 @@ high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR"
                                                    high.schools[c("HS_TESTED_READINESS_MEAN", "HS_TESTED_READINESS_N",
                                                                   "HS_TESTED_READINESS_TESTS_ACTUAL_COUNT", "HS_TESTED_READINESS_TESTS_EXPECTED_COUNT",
                                                                   "HS_TESTED_READINESS_PARTICIPATION_RATE")],
-                                                   HS_TESTED_READINESS_WEIGHTED = round(additional.readiness.weights["tested"] * high.schools[["HS_TESTED_READINESS_MEAN"]],1),
-                                                   high.schools[c("HS_ADD_READINESS_TYPE_LABEL", "HS_ADD_READINESS_CUT1", "HS_ADD_READINESS_CUT2",
+                                                   
+                                                   with(data.frame("WEIGHT" = sapply(high.schools$HS_ADD_READINESS_TYPE_LABEL,
+                                                                                     function (type) {
+                                                                                       lookup.add.readiness.weights(type,'tested')
+                                                                                     })),
+                                                        cbind(HS_TESTED_READINESS_MEAN_WEIGHT = WEIGHT*100, 
+                                                              HS_TESTED_READINESS_WEIGHTED = round(WEIGHT*high.schools[["HS_TESTED_READINESS_MEAN"]],1))),
+                                                   
+                                                   
+                                                   high.schools[c("HS_ADD_READINESS_TYPE_LABEL", "HS_ADD_READINESS_CUT1", "HS_ADD_READINESS_CUT2", "HS_ADD_READINESS_N",
                                                                   "HS_ADD_READINESS_SCORE")],
                                                    HS_ADD_READINESS_CAT = ifelse(is.na(high.schools[,c("HS_ADD_READINESS_CAT")]), 
                                                                                  NA, 
@@ -621,7 +657,7 @@ write.csv(hs.act.part.tab.N[hs.act.part.tab.N$SCHOOL_YEAR==current.school.year &
 
 
 #hathaway subreport
-agg.hath.cat <- function (df, cat="SCORE_CAT") {
+agg.hath.cat <- function (df, cat="SCORE_CAT", include.undefined = FALSE) {
   hathaway.eligibility.for.agg <- df
   hathaway.eligibility.for.agg$SCHOOL_YEAR <- current.school.year
   hathaway.eligibility.for.agg$SCHOOL_ID <- hathaway.eligibility.for.agg$EXIT_RECORD_SCHOOL_ID
@@ -640,6 +676,13 @@ agg.hath.cat <- function (df, cat="SCORE_CAT") {
   
   id.choices <- c(GRADE_ENROLLED="ALL", "ALL")
   names(id.choices)[2] <- cat 
+  
+  if (!include.undefined) {
+    
+    hathcat.labels <- hathcat.labels[which(hathcat.labels != "Undefined")]
+    hathaway.eligibility.for.agg <- hathaway.eligibility.for.agg[hathaway.eligibility.for.agg[[cat]] != 'Undefined',]
+    
+  }
   
   orderings <- list(c("ALL", 
                       hathcat.labels),                                                 

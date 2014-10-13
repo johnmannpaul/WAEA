@@ -125,7 +125,7 @@ g38.achieve.lookback <- data.frame(paws.lookback[c("SCHOOL_YEAR","SCHOOL_ID","WI
 
 nrow(paws.lookback)
 nrow(g38.achieve.lookback)
-
+g38.achieve.lookback$SCHOOL_YEAR_ORIGINAL <- g38.achieve.lookback$SCHOOL_YEAR
 head(g38.achieve.lookback)
 
 
@@ -151,5 +151,5 @@ statewide.percents.proficient
 
 cuts.statewide
 
-
+g38.achieve.lookback <- g38.achieve.lookback[,names(g38.achieve.lookback) != "SCHOOL_YEAR_ORIGINAL"]
 save(g38.achieve.lookback, file="data/g38.achieve.lookback.Rdata")
