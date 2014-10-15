@@ -258,11 +258,13 @@ high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR"
                                                                                      indicator.labels[high.schools[,c("HS_EQUITY_TARGET_LEVEL")]]),
                                                    GRAD_RATE_LOW_CUT = hs.grad.rate.cuts[1],
                                                    GRAD_RATE_HIGH_CUT = hs.grad.rate.cuts[2],
-                                                   high.schools[c("GRAD_RATE_4_YR.2012.13", "COHORT_4_YR_N.2012.13", "GRAD_RATE_EXTENDED", "COHORT_EXTENDED_N.2012.13", "IMPROVEMENT_TARGET", "GRAD_RATE_N")],
+                                                   high.schools[c("GRAD_RATE_4_YR_2012", "COHORT_4_YR_N.2011.12", "GRAD_RATE_4_YR.2012.13", "COHORT_4_YR_N.2012.13", "GRAD_RATE_EXTENDED", "COHORT_EXTENDED_N.2012.13", "IMPROVEMENT_TARGET", "GRAD_RATE_N")],
                                                    GRAD_RATE_TARGET_LEVEL = ifelse(is.na(high.schools[,c("IMPROVE_CAT_2013")]), 
                                                                                    NA, 
                                                                                    indicator.labels[high.schools[,c("IMPROVE_CAT_2013")]]),
                                                    high.schools[c("SMALL_SCHOOL_GRADE_NINE_CREDIT", "GRADE_NINE_CREDITS_N", "GRADE_NINE_CREDITS_MET_N", "PERCENT_GD_9_CREDIT_MET", "REQUIRED_GRAD_CREDITS")],
+                                                   
+                                                   REQUIRED_GD_9_CREDITS = high.schools$REQUIRED_GRAD_CREDITS*0.25,
                                                    
                                                    with(data.frame("WEIGHT" = sapply(high.schools$HS_ADD_READINESS_TYPE_LABEL,
                                                                                      function (type) {
@@ -271,7 +273,9 @@ high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR"
                                                         cbind(PERCENT_GD_9_CREDIT_MET_WEIGHT = WEIGHT*100, 
                                                               PERCENT_GD_9_CREDIT_MET_WEIGHTED = round(WEIGHT*high.schools[["PERCENT_GD_9_CREDIT_MET"]],1))),
                                                    
-                                                                                                      
+                                                   PERCENT_GD_9_CREDIT_MET_SUBREPORT = merge(high.schools[c("SCHOOL_YEAR", "SCHOOL_ID")],
+                                                                                             grade.nine.credits.school[c("SCHOOL_YEAR", "SCHOOL_ID", "PERCENT_GD_9_CREDIT_MET")],
+                                                                                             all.x=TRUE)[["PERCENT_GD_9_CREDIT_MET"]],                                                      
                                                    high.schools[c("SMALL_SCHOOL_HATH_ELIGIBILITY", "HATH_INDEX_SCORE_N", "HATH_INDEX_SCORE_MEAN")],
                                                    
                                                    with(data.frame("WEIGHT" = sapply(high.schools$HS_ADD_READINESS_TYPE_LABEL,
@@ -300,7 +304,15 @@ high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR"
                                                               HS_TESTED_READINESS_WEIGHTED = round(WEIGHT*high.schools[["HS_TESTED_READINESS_MEAN"]],1))),
                                                    
                                                    
-                                                   high.schools[c("HS_ADD_READINESS_TYPE_LABEL", "HS_ADD_READINESS_CUT1", "HS_ADD_READINESS_CUT2", "HS_ADD_READINESS_N",
+                                                   high.schools["HS_ADD_READINESS_TYPE_LABEL"], 
+                                                   HS_ADD_READINESS_CUT1 = ifelse(high.schools$HS_ADD_READINESS_TYPE_LABEL=='none',
+                                                          type.1.additional.readiness.cuts[1],
+                                                          high.schools$HS_ADD_READINESS_CUT1), 
+                                                   HS_ADD_READINESS_CUT2 = ifelse(high.schools$HS_ADD_READINESS_TYPE_LABEL=='none',
+                                                                                type.1.additional.readiness.cuts[2],
+                                                                                high.schools$HS_ADD_READINESS_CUT2), 
+                                                   
+                                                   high.schools[c("HS_ADD_READINESS_N",
                                                                   "HS_ADD_READINESS_SCORE")],
                                                    HS_ADD_READINESS_CAT = ifelse(is.na(high.schools[,c("HS_ADD_READINESS_CAT")]), 
                                                                                  NA, 

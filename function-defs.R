@@ -191,7 +191,7 @@ compute.grad.rate.cat <- function (school,cuts, precision, labels) {
     } else { #extended==2
       
       improvement.target <-round((((cuts[2] - prior.year.4yr)/3)+  #for exceeds
-                                    prior.year.4yr))
+                                    prior.year.4yr), precision)
       return(c(ifelse(improvement.target <= current.year.4yr, 2, 1),
                ifelse(improvement.target <= current.year.4yr, current.year.4yr.N, extended.N),
                NA, 

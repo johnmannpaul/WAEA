@@ -55,7 +55,7 @@ WAEASchoolType tinyint not null,
 PairedSchoolId varchar(7) null,
 PairedSchoolName varchar(250),
 SPLAccountability varchar(100),
-CONSTRAINT acct_School_PK Primary Key (SchoolYear, SchoolId)
+CONSTRAINT acct_SPLSchool_PK Primary Key (SchoolYear, SchoolId)
 )
 
 GO
@@ -144,6 +144,8 @@ EquityTargetLevel varchar(100) null,
 
 GradRateLowCut tinyint null,
 GradRateHighCut tinyint null,
+GradRate4yearPrior decimal(4,1) null,
+NGradRate4yearPrior int null,
 GradRate4year decimal(4,1) null,
 NGradRate4year int null,
 GradRateExtended decimal(4,1) null,
@@ -156,10 +158,11 @@ SmallSchoolGrade9Credits varchar(1) not null,
 NGrade9Credits int null,
 NGrade9CreditsMet int null,
 Grade9CreditsPercentMet tinyint null,
-Grade9CreditsRequired decimal(4,1) null,
+GradCreditsRequired decimal(4,1) null,
+Grade9CreditsRequired decimal(5,3) null,
 Grade9CreditsPercentMetWeight tinyint null,
 Grade9CreditsPercentMetWeighted decimal(4,1) null,
-
+Grade9CreditsPercentMetSubReport tinyint null,
 
 SmallSchoolHathEligibile varchar(1) not null,
 NHathEligibile int null,
@@ -294,5 +297,91 @@ GO
 CREATE NONCLUSTERED INDEX acct_HSHathaway_idx2
 ON acct.HSHathaway ([Order])
 GO
+
+
+
+CREATE view acct.G38SPLSummary
+as
+select 
+s.DistrictId, 
+s.DistrictName, 
+s.SchoolId,
+s.Name,
+s.GradesServed,
+i.SPLAccountability,
+i.GrowthTargetLevel,
+i.EquityTargetLevel, 
+i.AchievementTargetLevel,
+i.ParticipationRateLevel,
+p.SPLAdjusted SPLAccountabilityPilot,
+(case p.GrowthTargetLevel 
+when 'Not Meeting Targets' then 'Below Targets'
+else p.GrowthTargetLevel end) GrowthTargetLevelPilot,
+(case p.EquityTargetLevel
+when 'Not Meeting Targets' then 'Below Targets'
+else  p.EquityTargetLevel end) EquityTargetLevelPilot, 
+(case p.AchievementTargetLevel 
+when 'Not Meeting Targets' then 'Below Targets'
+else p.AchievementTargetLevel end) AchievementTargetLevelPilot,
+p.ParticipationRateLevel ParticipationRateLevelPilot,
+(case i.SPLAccountability when 'Exceeding Expectations' then 4
+ when 'Meeting Expectations' then 3
+ when 'Partially Meeting Expectations' then 2
+ when 'Not Meeting Expectations' then 1
+ else NULL end) - 
+ (case p.SPLAdjusted when 'Exceeding Expectations' then 4
+ when 'Meeting Expectations' then 3
+ when 'Partially Meeting Expectations' then 2
+ when 'Not Meeting Expectations' then 1
+ else NULL end) as ChangeInSPL
+from 
+acct.SPLSchool s join
+acct.G38SchoolIndicators i on s.schoolyear=i.schoolyear and s.schoolid=i.schoolid left join
+acct.SchoolIndictorsNonHS p on p.schoolyear=dbo.DeltaSchoolYear(s.SchoolYear,-1) and p.schoolid=i.schoolid 
+
+GO
+
+CREATE view acct.HSSPLSummary
+as
+select 
+s.DistrictId, 
+s.DistrictName, 
+s.SchoolId,
+s.Name,
+s.GradesServed,
+i.SPLAccountability,
+i.AchievementTargetLevel,
+i.EquityTargetLevel,
+i.GradRateTargetLevel,
+i.AddReadinessTargetLevel AdditionalReadinessTargetLevel,
+i.AcademicPerformanceTargetLevel,
+i.OverallReadinessTargetLevel,
+i.ParticipationRateLevel,
+p.SPLAdjusted SPLAccountabilityPilot,
+(case p.AchievementTargetLevel 
+when 'Not Meeting Targets' then 'Below Targets'
+else p.AchievementTargetLevel end) AchievementTargetLevelPilot,
+(case p.ReadinessTargetLevel 
+when 'Not Meeting Targets' then 'Below Targets'
+else p.ReadinessTargetLevel  end) ReadinessTargetLevelPilot,
+(case p.EquityTargetLevel 
+when 'Not Meeting Targets' then 'Below Targets'
+else p.EquityTargetLevel  end) EquityTargetLevelPilot,
+p.ParticipationRateLevel ParticipationRateLevelPilot,
+(case i.SPLAccountability when 'Exceeding Expectations' then 4
+ when 'Meeting Expectations' then 3
+ when 'Partially Meeting Expectations' then 2
+ when 'Not Meeting Expectations' then 1
+ else NULL end) - 
+ (case p.SPLAdjusted when 'Exceeding Expectations' then 4
+ when 'Meeting Expectations' then 3
+ when 'Partially Meeting Expectations' then 2
+ when 'Not Meeting Expectations' then 1
+ else NULL end) as ChangeInSPL
+from 
+acct.SPLSchool s join
+acct.HSSchoolIndicators i on s.schoolyear=i.schoolyear and s.schoolid=i.schoolid left join
+acct.SchoolIndictorsHS p on p.schoolyear=dbo.DeltaSchoolYear(s.SchoolYear,-1) and p.schoolid=i.schoolid 
+
 
 
