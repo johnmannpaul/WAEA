@@ -13,7 +13,8 @@ paws.aggregates <- produce.aggregates.scoped(achievement.g38.indicator$students.
                                                PERCENT_PROFICIENT =round((sum(ifelse(x %in% c('3','4'), 1, 0))/length(x)) * 100, report.precision)
                                              },
                                              obs="PERFORMANCE_LEVEL",
-                                             filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL))
+                                             filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
+                                             schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% nonHS.types,])
 
 
 paws.N <- produce.aggregates.scoped(achievement.g38.indicator$students.fay,
@@ -23,7 +24,10 @@ paws.N <- produce.aggregates.scoped(achievement.g38.indicator$students.fay,
                                     obs="WISER_ID",
                                     value.label="N_TESTERS",
                                     aggregator=function (x) c(N_TESTERS=length(unique(x))),
-                                    filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                    filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
+                                    fill.val=0,
+                                    schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% nonHS.types,]
+                                    
 )
 
 
@@ -64,7 +68,8 @@ growth.aggregates <- produce.aggregates.scoped(growth.g38.indicator$students.fay
                                                aggregator=function (x) 
                                                  c(MGP=median(x),
                                                    N_SGP=length(x)),
-                                               filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                               filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
+                                               schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% nonHS.types,]
                                                )
 
 growth.N <- produce.aggregates.scoped(growth.g38.indicator$students.fay,
@@ -74,7 +79,9 @@ growth.N <- produce.aggregates.scoped(growth.g38.indicator$students.fay,
                                       obs="WISER_ID",
                                       value.label="N_TESTERS",
                                       aggregator=function (x) c(N_TESTERS=length(unique(x))),
-                                      filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                      filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
+                                      fill.val=0,
+                                      schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% nonHS.types,]
 )
 
 
@@ -102,12 +109,13 @@ write.csv(growth.tab.N[growth.tab.N$SCHOOL_YEAR==current.school.year & growth.ta
 ##equity     
 equity.aggregates <- produce.aggregates.scoped(equity.g38.indicator$students.fay,
                                                orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "WR"),                                                 
-                                                                GRADE_ENROLLED = c("ALL", "03", "04", "05", "06", "07", "08")),
+                                                                GRADE_ENROLLED = c("ALL", "03","04", "05", "06", "07", "08")),
                                                col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "WR")),
                                                obs="STD_SCORE",
                                                value.label="MEAN_STD_SCORE",
                                                aggregator=function (x) c(MEAN_STD_SCORE=round(mean(x), report.precision)),
-                                               filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                               filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
+                                               schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% nonHS.types,]
                                                
 )
 
@@ -120,7 +128,9 @@ equity.N <- produce.aggregates.scoped(equity.g38.indicator$students.fay,
                                       aggregator=function (x) {
                                         c(N_TESTERS=length(unique(x)))
                                       },
-                                      filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                      filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
+                                      fill.val=0,
+                                      schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% nonHS.types,]
 )
 
 
@@ -137,7 +147,7 @@ head(with(equity.g38.indicator$schools,
           equity.g38.indicator$schools[WAEA_SCHOOL_TYPE %in% nonHS.types & SCHOOL_YEAR==current.school.year,c("SCHOOL_ID", equity.g38.labels)]),12)
 
 
-equity.tab.N[equity.tab.N$SCHOOL_YEAR==current.school.year & equity.tab.N$SCHOOL_ID=='0101001' & equity.tab.N$STATISTIC == 'MEAN_STD_SCORE',]
+
 
 ##end validation
 
@@ -356,7 +366,9 @@ act.aggregates <- produce.aggregates.scoped(achievement.act.students,
                                               PERCENT_PROFICIENT =round((sum(ifelse(x %in% c('3','4'), 1, 0))/length(x)) * 100, report.precision)
                                             },
                                              obs="PERFORMANCE_LEVEL",
-                                            filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL))
+                                            filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
+                                            schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
+                                            )
 
 
 
@@ -366,7 +378,9 @@ act.N <- produce.aggregates.scoped(achievement.act.students,
                                    col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
                                    obs="WISER_ID",
                                    aggregator=function (x) c(N_TESTERS=length(unique(x))),
-                                   filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                   filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
+                                   fill.val=0,
+                                   schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
 )
 
 
@@ -404,7 +418,8 @@ hs.equity.aggregates <- produce.aggregates.scoped(hs.equity.students,
                                                   obs="WY_ACT_SCALE_SCORE",
                                                   value.label="MEAN_WY_ACT_SCORE",
                                                   aggregator=function (x) c(MEAN_WY_ACT_SCORE=round(mean(x), report.precision)),
-                                                  filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                                  filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
+                                                  schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
                                                
 )
 
@@ -417,7 +432,9 @@ hs.equity.N <- produce.aggregates.scoped(hs.equity.students,
                                       aggregator=function (x) {
                                         c(N_TESTERS=length(unique(x)))
                                       },
-                                      filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                      filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
+                                      fill.val=0,
+                                      schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
 )
 
 
@@ -458,7 +475,8 @@ hs.tested.aggregates <- produce.aggregates.scoped(tested.readiness.indicator$stu
                                                   obs="TESTED_READINESS_INDEX_SCORE",
                                                   value.label="TESTED_READINESS_MEAN_INDEX_SCORE",
                                                   aggregator=function (x) c(MEAN_INDEX_SCORE=round(mean(x), report.precision)),
-                                                  filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                                  filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
+                                                  schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]                                                  
                                                   
 )
 
@@ -473,7 +491,9 @@ hs.tested.N <- produce.aggregates.scoped(tested.readiness.indicator$students.fay
                                          aggregator=function (x) {
                                            c(N_TESTERS=length(unique(x)))
                                          },
-                                         filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL)
+                                         filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
+                                         fill.val=0,
+                                         schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
 )
 
 
@@ -517,7 +537,8 @@ hs.tested.part.aggregates <- produce.aggregates.scoped(tested.readiness.students
                                                   obs="TESTING_STATUS_CODE",
                                                   value.label="TESTED_READINESS_PARTICIPATION",
                                                   aggregator=function (x) c(TESTED_READINESS_PARTICIPATION=round(100*(length(which(x=='T'))/
-                                                                                                     length(which(x %in% c('T','N')))), 1))
+                                                                                                     length(which(x %in% c('T','N')))), 1)),
+                                                  schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
                                                   
 )
 
@@ -530,7 +551,9 @@ hs.tested.part.N <- produce.aggregates.scoped(tested.readiness.students[tested.r
                                               value.label="N_TESTERS",
                                               aggregator=function (x) {
                                                 c(N_TESTERS=length(unique(x)))
-                                              }
+                                              },
+                                              fill.val=0,
+                                              schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
 )
 
 hs.tested.part.tab.N <- merge(hs.tested.part.aggregates$tab, 
@@ -576,7 +599,8 @@ hs.subgroup.part.aggregates <- produce.aggregates.scoped(act.current.year.subgro
                                                          obs="TESTING_STATUS_CODE",
                                                          value.label="HS_SUBGROUP_PARTICIPATION",
                                                          aggregator=function (x) c(HS_SUBGROUP_PARTICIPATION=round(100*(length(which(x=='T'))/
-                                                                                                                             length(which(x %in% c('T','N')))), 1))
+                                                                                                                             length(which(x %in% c('T','N')))), 1)),
+                                                         schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
                                                        
 )
 
@@ -588,7 +612,9 @@ hs.subgroup.part.N <- produce.aggregates.scoped(act.current.year.subgroup.part[a
                                               value.label="N_TESTERS",
                                               aggregator=function (x) {
                                                 c(N_TESTERS=length(unique(x)))
-                                              }
+                                              },
+                                              fill.val=0,
+                                              schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
 )
 
 hs.subgroup.part.tab.N <- merge(hs.subgroup.part.aggregates$tab, 
@@ -626,25 +652,28 @@ achievement.act.students.part$SUBJECT_CODE <- ifelse(achievement.act.students.pa
 table(achievement.act.students.part$SUBJECT_CODE, useNA="ifany")
 
 hs.act.part.aggregates <- produce.aggregates.scoped(achievement.act.students.part,
-                                                         orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
-                                                                          GRADE_ENROLLED = c("ALL", "11")),
-                                                         col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
-                                                         obs="TESTING_STATUS_CODE",
-                                                         value.label="HS_ACT_PARTICIPATION",
-                                                         aggregator=function (x) c(HS_ACT_PARTICIPATION=round(100*(length(which(x=='T'))/
-                                                                                                                          length(which(x %in% c('T','N')))), 1))
+                                                    orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
+                                                                     GRADE_ENROLLED = c("ALL", "11")),
+                                                    col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
+                                                    obs="TESTING_STATUS_CODE",
+                                                    value.label="HS_ACT_PARTICIPATION",
+                                                    aggregator=function (x) c(HS_ACT_PARTICIPATION=round(100*(length(which(x=='T'))/
+                                                                                                                length(which(x %in% c('T','N')))), 1)),
+                                                    schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
                                                          
 )
 
 hs.act.part.N <- produce.aggregates.scoped(achievement.act.students[achievement.act.students.part$TESTING_STATUS_CODE != 'X',],
-                                                orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
-                                                                 GRADE_ENROLLED = c("ALL", "11")),
-                                                col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
-                                                obs="WISER_ID",
-                                                value.label="N_TESTERS",
-                                                aggregator=function (x) {
-                                                  c(N_TESTERS=length(unique(x)))
-                                                }
+                                           orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
+                                                            GRADE_ENROLLED = c("ALL", "11")),
+                                           col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
+                                           obs="WISER_ID",
+                                           value.label="N_TESTERS",
+                                           aggregator=function (x) {
+                                             c(N_TESTERS=length(unique(x)))
+                                           },
+                                           fill.val=0,
+                                           schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
 )
 
 hs.act.part.tab.N <- merge(hs.act.part.aggregates$tab, 
@@ -712,7 +741,8 @@ agg.hath.cat <- function (df, cat="SCORE_CAT", include.undefined = FALSE) {
                                                    obs=cat,
                                                    value.label=paste(cat,"COUNT",sep="_"),
                                                    aggregator=function (x) length(x),
-                                                   fill.val=0
+                                                   fill.val=0,
+                                                   schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
   )
   
   
@@ -723,7 +753,10 @@ agg.hath.cat <- function (df, cat="SCORE_CAT", include.undefined = FALSE) {
   hath.cat.aggregates[hathcat.labels] <- t(apply(hath.cat.aggregates[c("ALL", hathcat.labels)],
                                                  c(1),
                                                  function(row) {
-                                                   round(100 * (row[2:length(row)]/row[1]), report.precision)
+                                                   if(row[1] == 0)
+                                                     rep(NA, length(row)-1)
+                                                   else
+                                                     round(100 * (row[2:length(row)]/row[1]), report.precision)
                                                  }))
   
   hath.cat.aggregates <- hath.cat.aggregates[,c(which(!(names(hath.cat.aggregates) %in% c("ALL", hathcat.labels))),

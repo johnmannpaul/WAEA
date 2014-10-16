@@ -313,7 +313,9 @@ compute.add.readiness.overall <- function (schools, type1.cuts) {
         function (school) {
           type <- school[["HS_ADD_READINESS_TYPE"]]
           if (is.na(type) | type==0)
-            c(NA, NA, NA, NA, NA)
+            c(NA, NA, schools[schools$SCHOOL_YEAR == school[["SCHOOL_YEAR"]] &
+                                schools$SCHOOL_ID == school[["SCHOOL_ID"]],
+                              "HS_TESTED_READINESS_N"], NA, NA)
           else {
             if (type ==1) 
               c(type1.cuts[1],

@@ -50,7 +50,8 @@ produce.aggregates.scoped <- function (df,
                                            N_PROFICIENT=sum(ifelse(x %in% c('3','4'), 1, 0)))
                                        },
                                        filter = NULL,
-                                       fill.val=NA
+                                       fill.val=NA,
+                                       schools = NULL
 )
 {
   school.aggregates <- produce.aggregates(cbind(SCOPE = rep("SCHOOL", nrow(df)), df),
@@ -61,7 +62,8 @@ produce.aggregates.scoped <- function (df,
                                           obs,
                                           value.label,
                                           aggregator,
-                                          fill.val)
+                                          fill.val,
+                                          schools)
   
   find.grade.span <- function (x) {
     c(LOW_GRADE=min(as.character(x)),
@@ -132,7 +134,8 @@ produce.aggregates <- function (df,
                                   c(PERCENT_PROFICIENT =round((sum(ifelse(x %in% c('3','4'), 1, 0))/length(x)) * 100, 1),
                                     N_TESTS=length(x),
                                     N_PROFICIENT=sum(ifelse(x %in% c('3','4'), 1, 0))),
-                                fill.val=NA
+                                fill.val=NA,
+                                schools = NULL
 )
 {
   
@@ -141,6 +144,9 @@ produce.aggregates <- function (df,
   lapply(names(col.vars), function (col) {
     df.molten[[col]] <<- factor(df.molten[[col]], levels=col.vars[[col]])    
   })
+  
+  if (!is.null(schools))
+    df.molten$SCHOOL_ID <- factor(df.molten$SCHOOL_ID, levels=schools$SCHOOL_ID)
   
   aggregate.combo <- function (combo) {      
     aggregation <- cast(df.molten[df.molten$variable==obs,], combo.to.formula(combo), aggregator, add.missing=TRUE, fill=fill.val)      
@@ -184,8 +190,27 @@ produce.aggregates <- function (df,
   names(result.norm)[(length(ids) + 1):ncol(result.norm)] = c("STATISTIC","VALUE")
   
   result.tabbed <- cast(result.norm, sets.to.formula(c(setdiff(ids, names(col.vars)), "STATISTIC"), names(col.vars)))  
+  if (is.null(schools)) {
+    result.tabbed <- result.tabbed[!is.na(result.tabbed$ALL),] #get rid of empty grade levels
+  } else {
+    #get rid of grade levels not falling within the range of school years associated with each school
+    min.grade <- levels(result.tabbed$GRADE_ENROLLED)[2]
+    max.grade <- levels(result.tabbed$GRADE_ENROLLED)[length(levels(result.tabbed$GRADE_ENROLLED))]
+    old.names <- names(result.tabbed)
+    result.tabbed.labeled <- merge(result.tabbed, cbind(schools["SCHOOL_ID"], 
+                                                LOW_GRADE=ifelse(schools$LOW_GRADE %in% c('KG','PK'), '00',
+                                                                 sprintf("%02d",as.integer(schools$LOW_GRADE))), 
+                                                HIGH_GRADE=ifelse(schools$HIGH_GRADE %in% c('KG','PK'), '00',
+                                                                  sprintf("%02d",as.integer(schools$HIGH_GRADE)))))
+    result.tabbed <- with(result.tabbed.labeled,
+                          result.tabbed.labeled[(as.character(GRADE_ENROLLED) >= LOW_GRADE &
+                                                  as.character(GRADE_ENROLLED) <= HIGH_GRADE) | as.character(GRADE_ENROLLED)=='ALL',
+                                                old.names])
+
+    
+  }
   
-  result.tabbed <- result.tabbed[!is.na(result.tabbed$ALL),] #get rid of empty grade levels
+  
   result.norm <- merge(result.norm, result.tabbed[,c(setdiff(ids, names(col.vars)), "STATISTIC")])[,c(ids, "STATISTIC","VALUE")] #get rid of the corresponding rows in the normalized table  
   
   result.tabbed$ORDER <- 1:nrow(result.tabbed)
