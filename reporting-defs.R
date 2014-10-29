@@ -244,6 +244,7 @@ produce.aggregates.norm <- function (df,
   
   aggregate.combo <- function (combo, obs, obs.type, aggregator, value.label) {  
     df.obs <- df.molten[df.molten$variable==obs,] #convert to numeric type if observation is numeric
+        
     if(obs.type == "numeric")
       df.obs$value <- as.numeric(df.obs$value)
     aggregation <- cast(df.obs, combo.to.formula(combo), aggregator, add.missing=add.missing, fill=NA)      

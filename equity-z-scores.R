@@ -62,11 +62,23 @@ achievement.for.equity$CONSOLIDATED_SUBGROUP <- ifelse(is.na(achievement.for.equ
                                                        'T')
 consolidated.subgroup.wide <- reshape(achievement.for.equity[achievement.for.equity$SUBJECT %in% c('Math', 'Reading') &
                                  achievement.for.equity$CONSOLIDATED_SUBGROUP == 'T',
-                               c("WISER_ID", "SUBJECT", "PERFORMANCE_LEVEL", "PRIOR_PERFORMANCE_LEVEL")],
-        v.names=c("PERFORMANCE_LEVEL", "PRIOR_PERFORMANCE_LEVEL"),
+                               c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID", "GRADE_ENROLLED", "TEST_TYPE", "SUBJECT", "PERFORMANCE_LEVEL", "PRIOR_PERFORMANCE_LEVEL", "TESTING_STATUS_CODE",
+                                 "SCHOOL_FULL_ACADEMIC_YEAR", "SCALE_SCORE", "STD_SCORE")],
+        v.names=c("PERFORMANCE_LEVEL", "PRIOR_PERFORMANCE_LEVEL", "TESTING_STATUS_CODE", "SCHOOL_FULL_ACADEMIC_YEAR", "SCALE_SCORE", "STD_SCORE"),
         timevar="SUBJECT",
         idvar="WISER_ID",
         direction="wide")
+
+consolidated.subgroup.wide <- consolidated.subgroup.wide[c("SCHOOL_YEAR", "SCHOOL_ID",
+                                "WISER_ID", "GRADE_ENROLLED", "TEST_TYPE",
+                                "PRIOR_PERFORMANCE_LEVEL.Reading", "PRIOR_PERFORMANCE_LEVEL.Math",
+                                "PERFORMANCE_LEVEL.Reading",  "PERFORMANCE_LEVEL.Math",  
+                                "SCHOOL_FULL_ACADEMIC_YEAR.Reading", "SCHOOL_FULL_ACADEMIC_YEAR.Math",
+                                "TESTING_STATUS_CODE.Reading", "TESTING_STATUS_CODE.Math",
+                                "SCALE_SCORE.Reading", "SCALE_SCORE.Math",
+                                "STD_SCORE.Reading", "STD_SCORE.Math")]
+
+#write.csv(consolidated.subgroup.wide, file="results/statewide-g38-school-consolidated-subgroup-composition.csv", row.names=FALSE, quote=FALSE, na="")
 
 # table(consolidated.subgroup.wide[c("PERFORMANCE_LEVEL.Math",
 #                                    "PERFORMANCE_LEVEL.Reading")],

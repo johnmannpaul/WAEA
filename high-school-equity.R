@@ -37,6 +37,12 @@ plan.prior.year<- cbind(plan.prior.year[,!(names(plan.prior.year) %in% subgroup.
 table(plan.prior.year$SUBGROUP_MATH_HS, plan.prior.year$SUBGROUP_READING_HS, useNA="ifany")
 table(plan.prior.year$SUBGROUP_CONSOLIDATED_HS)
 
+
+hs.subgroup.students <- plan.prior.year[plan.prior.year$SUBGROUP_CONSOLIDATED_HS==1, 
+                                        c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID", 
+                                          "PLAN_SCALE_READING", "PLAN_SCALE_MATHEMATICS", 
+                                          "SUBGROUP_READING_HS","SUBGROUP_MATH_HS")]
+
 #Will limit to Math and Reading.  Also, since the indicator is based on WY_ACT_SCALE_SCORE, this
 #indicator is defined only  for ACT test takers.
 act.current.year <- act.achieve[act.achieve$SUBJECT %in% c("Math", "Reading"),
@@ -57,8 +63,46 @@ act.current.year.subgroup <- merge(act.current.year,
 nrow(act.current.year.subgroup)
 
 
-equity.hs.indicator <- compute.indicator.long(act.current.year.subgroup, 
-                                              act.current.year.subgroup[act.current.year.subgroup$TEST_TYPE == 'ACT',],
+hs.subgroup.students <- plan.prior.year[plan.prior.year$SUBGROUP_CONSOLIDATED_HS==1, 
+                                        c("SCHOOL_ID", "WISER_ID", 
+                                          "PLAN_SCALE_READING", "PLAN_SCALE_MATHEMATICS", 
+                                          "SUBGROUP_READING_HS","SUBGROUP_MATH_HS")]
+
+names(hs.subgroup.students) <- c("PLAN_SCHOOL_ID", "WISER_ID", "PLAN_SCALE.Reading", 
+                                 "PLAN_SCALE.Math",  "BELOW.Reading", "BELOW.Math")
+
+hs.subgroup.students$BELOW.Reading <- ifelse(hs.subgroup.students$BELOW.Reading, 'T', 'F')
+hs.subgroup.students$BELOW.Math <- ifelse(hs.subgroup.students$BELOW.Math, 'T', 'F')
+
+act.current.year.subgroup.wide <- reshape(act.current.year.subgroup[c("WISER_ID","SCHOOL_ID", "TEST_TYPE","SUBJECT", "SCHOOL_FULL_ACADEMIC_YEAR", 
+                                                                      "TESTING_STATUS_CODE", "WY_ACT_SCALE_SCORE")],
+                                          v.names=c("SCHOOL_FULL_ACADEMIC_YEAR", "TESTING_STATUS_CODE", "WY_ACT_SCALE_SCORE"),
+                                          timevar="SUBJECT",
+                                          idvar="WISER_ID",
+                                          direction="wide")
+
+hs.consolidated.subgroup.wide <- merge(act.current.year.subgroup.wide, hs.subgroup.students,
+                                       by="WISER_ID")
+
+hs.consolidated.subgroup.wide <- hs.consolidated.subgroup.wide[c("WISER_ID","SCHOOL_ID", "PLAN_SCHOOL_ID", "TEST_TYPE",                                                                 "PLAN_SCALE.Reading", "PLAN_SCALE.Math", "BELOW.Reading", "BELOW.Math",
+                                                                 "TESTING_STATUS_CODE.Reading", "TESTING_STATUS_CODE.Math",
+                                                                 "SCHOOL_FULL_ACADEMIC_YEAR.Reading", "SCHOOL_FULL_ACADEMIC_YEAR.Math",
+                                                                 "WY_ACT_SCALE_SCORE.Reading", "WY_ACT_SCALE_SCORE.Math")]
+
+names(hs.consolidated.subgroup.wide) <- c("WISER_ID", "ACT_SCHOOL_ID",
+                                          "PLAN_SCHOOL_ID", "ACT_TEST_TYPE", "PLAN_SCALE.Reading",
+                                          "PLAN_SCALE.Math", "PLAN_BELOW.Reading","PLAN_BELOW.Math",
+                                          "ACT_TESTING_STATUS_CODE.Reading",
+                                          "ACT_TESTING_STATUS_CODE.Math", "ACT_SCHOOL_FULL_ACADEMIC_YEAR.Reading",
+                                          "ACT_SCHOOL_FULL_ACADEMIC_YEAR.Math",
+                                          "WY_ACT_SCALE_SCORE.Reading",
+                                          "WY_ACT_SCALE_SCORE.Math")
+head(hs.consolidated.subgroup.wide)
+
+#write.csv(hs.consolidated.subgroup.wide, file="results/statewide-high-school-consolidated-subgroup-composition.csv", row.names=FALSE, quote=FALSE, na="")
+
+equity.hs.indicator <- compute.indicator.long(act.current.year.subgroup, #for participation, include those who may have taken an Alt assessment this year
+                                              act.current.year.subgroup[act.current.year.subgroup$TEST_TYPE == 'ACT',], #for indicator evaluation we can only apply to those who took the standard ACT
                                               schools,
                                               indicator.label="HS_EQUITY",                                         
                                               score.prefix="WY_ACT_SCALE_SCORE",

@@ -663,7 +663,7 @@ hs.act.part.aggregates <- produce.aggregates.scoped(achievement.act.students.par
                                                          
 )
 
-hs.act.part.N <- produce.aggregates.scoped(achievement.act.students[achievement.act.students.part$TESTING_STATUS_CODE != 'X',],
+hs.act.part.N <- produce.aggregates.scoped(achievement.act.students.part[achievement.act.students.part$TESTING_STATUS_CODE != 'X',],
                                            orderings = list(SUBJECT_CODE = c("ALL", "RE","MA","SC", "ENGWRI"),                                                 
                                                             GRADE_ENROLLED = c("ALL", "11")),
                                            col.vars = list(SUBJECT_CODE=c("RE","MA","SC", "ENGWRI")),
