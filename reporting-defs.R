@@ -1,6 +1,10 @@
 library("RODBC")
 library("reshape")
 library("data.table")
+library(devtools)
+
+load_all('C:\\Users\\jpaul\\plyr', reset=TRUE, export_all=TRUE)
+
 sets.to.formula <- function(cols, rows) {
   as.formula(paste( ifelse(length(cols) == 0, ".", do.call(paste, as.list(c(cols, sep="+")))) ,
                     ifelse(length(rows) == 0, ".", do.call(paste, as.list(c(rows, sep="+")))), 
@@ -578,10 +582,10 @@ propagate.to.paired.schools <- function (df, pairings=school.pairing.lookup) {
  
 
 
-factor.data.frame <- function (df, dim.table.specs, scd=c(), school.year.label) {
-
+factor.data.frame <- function (df, dim.table.specs, scd=c(), school.year.label, year.id.offset=0) {
   
-  factor.table <- function (df, cols, id.label, school.year.id=NULL, school.year.id.label=NULL) {
+  
+  factor.table <- function (df, cols, id.label, school.year.id=NULL, school.year.id.label=NULL, id.offset=0) {
     
     
     df.a <- unique(df[cols])
@@ -590,11 +594,11 @@ factor.data.frame <- function (df, dim.table.specs, scd=c(), school.year.label) 
     df.a <- data.table(df.a[do.call(order, lapply(cols, function (x) df.a[[x]])),])
     
     setnames(df.a, seq(1, ncol(df.a)), cols)
-
-        
+    
+    
     #assign a sequence if there are no id columns already defined
     if (length(cols[which(names(cols) == "ID")]) == 0) {
-      df.a <- data.table(seq(1, nrow(df.a)), df.a)
+      df.a <- data.table(seq(1, nrow(df.a)) + id.offset, df.a)
       #and a name
       setnames(df.a, 1, id.label)
       setkeyv(df.a, id.label)
@@ -616,11 +620,11 @@ factor.data.frame <- function (df, dim.table.specs, scd=c(), school.year.label) 
   
   #compute the school year dimension table
   school.year.id.label <- paste(school.year.label, "Id", sep="")  
-  school.year.table = factor.table(df, school.year.label, school.year.id.label)
+  school.year.table = factor.table(df, school.year.label, school.year.id.label, id.offset=year.id.offset)
   
   
   factor.table.year <-   function (j, cols, id.col.label) {
-      factor.table(df[eval(bquote(df[.(school.year.label)] == .(school.year.table[j][[school.year.label]]))),],
+    factor.table(df[eval(bquote(df[.(school.year.label)] == .(school.year.table[j][[school.year.label]]))),],
                  cols, 
                  id.col.label,
                  school.year.table[j][[school.year.id.label]],
@@ -634,26 +638,26 @@ factor.data.frame <- function (df, dim.table.specs, scd=c(), school.year.label) 
     
     if (i %in% scd) {
       result <- do.call(rbind, lapply(seq(1,nrow(school.year.table)),
-                            factor.table.year, cols, id.col.label
-                            ))
+                                      factor.table.year, cols, id.col.label
+      ))
       setkeyv(result, c(school.year.id.label, cols[which(names(cols) == "ID")]))
     } else {
       factor.table(df, cols, id.col.label)
     }
   }
   
-
+  
   #compute the other dimensions indexed by school year to track slowly change over time
   dim.tables <- lapply(seq(1, length(dim.table.specs)), factor.table.years)
   names(dim.tables) <- names(dim.table.specs)
-
+  
   #now school year is just another dimension
   dim.tables <- c(SchoolYear=list(school.year.table), dim.tables)
   dim.table.specs <- c(SchoolYear=school.year.label, dim.table.specs)
   
   #factor out the dimensions
   obs.vals <- names(df)[which(!(names(df) %in% unlist(dim.table.specs)))]
-
+  
   make.filter.expr <- function (col, row, dim) {
     eval(bquote(dim[[.(col)]] == .(row[[col]])))
   }
