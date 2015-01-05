@@ -70,6 +70,7 @@ CREATE TABLE acct.G38SchoolIndicators
 
 SchoolYear varchar(7) not null,
 SchoolId varchar(7) not null,
+WAEASmallSchool varchar(1) not null,
 SmallSchoolAchievement varchar(1) not null,
 YearsBackAchievement tinyint null,
 AchievementLowCut tinyint null,
@@ -81,6 +82,11 @@ NAchievement int null,
 AchievementTestsActual int null,
 AchievementTestsExpected int null,
 AchievementParticipationRate decimal(4,1) null,
+AchievementRequiredTestedLevel1 int not null,
+AchievementRequiredTestedLevel2 int not null,
+AchievmentParticipationCat int not null,
+AchievementParticipationMetLevel1 varchar(10) not null,
+AchievementParticipationMetLevel2 varchar(10) not null,
 AchievementTargetLevel varchar(100) null,
 SmallSchoolGrowth varchar(1) not null,
 YearsBackGrowth tinyint null,
@@ -98,12 +104,20 @@ NSubgroup int null,
 EquityTestsActual int null,
 EquityTestsExpected int null,
 EqityParticipationRate decimal(4,1) null,
+EquityRequiredTestedLevel1 int not null,
+EquityRequiredTestedLevel2 int not null,
+EquityParticipationCat int not null,
+EquityParticipationMetLevel1 varchar(10) not null,
+EquityParticipationMetLevel2 varchar(10) not null,
 EquityTargetLevel varchar(100) null,
 NIndicators tinyint not null,
 ParticipationRate decimal(4,1) null,
 ParticipationRateLevel varchar(100) null,
+ParticipationCat varchar(100) null,
 SPL varchar(100),
 SPLAccountability varchar(100),
+SmallSchoolScore tinyint null,
+SmallSchoolDecision varchar(100) null,
 CONSTRAINT acct_G38SchoolIndictors_PK PRIMARY KEY (SchoolYear, SchoolId),
 CONSTRAINT acct_G38SchoolIndictors_FK FOREIGN KEY (SchoolYear, SchoolId) REFERENCES acct.SPLSchool(SchoolYear, SchoolId)
 )
@@ -116,7 +130,7 @@ CREATE TABLE acct.HSSchoolIndicators
 
 SchoolYear varchar(7) not null,
 SchoolId varchar(7) not null,
-
+WAEASmallSchool varchar(1) not null,
 SmallSchoolAchievement varchar(1) not null,
 YearsBackAchievement tinyint null,
 AchievementLowCut tinyint null,
@@ -128,6 +142,11 @@ NAchievement int not null,
 AchievementTestsActual int not null,
 AchievementTestsExpected int not null,
 AchievementParticipationRate decimal(4,1) null,
+AchievementRequiredTestedLevel1 int not null,
+AchievementRequiredTestedLevel2 int not null,
+AchievmentParticipationCat int not null,
+AchievementParticipationMetLevel1 varchar(10) not null,
+AchievementParticipationMetLevel2 varchar(10) not null,
 AchievementTargetLevel varchar(100) null,
 
 
@@ -140,6 +159,11 @@ NSubgroup int not null,
 EquityTestsActual int not null,
 EquityTestsExpected int not null,
 EqityParticipationRate decimal(4,1) null,
+EquityRequiredTestedLevel1 int not null,
+EquityRequiredTestedLevel2 int not null,
+EquityParticipationCat int not null,
+EquityParticipationMetLevel1 varchar(10) not null,
+EquityParticipationMetLevel2 varchar(10) not null,
 EquityTargetLevel varchar(100) null,
 
 GradRateLowCut tinyint null,
@@ -178,6 +202,11 @@ NTestedReadiness int not null,
 TestedReadinessTestsActual int not null,
 TestedReadinessTestsExpected int not null,
 TestedReadinessParticipationRate decimal(4,1) null,
+TestedReadinessRequiredTestedLevel1 int not null,
+TestedReadinessRequiredTestedLevel2 int not null,
+TestedReadinessParticipationCat int not null,
+TestedReadinessParticipationMetLevel1 varchar(10) not null,
+TestedReadinessParticipationMetLevel2 varchar(10) not null,
 TestedReadinessMeanScoreWeight tinyint null,
 TestedReadinessMeanScoreWeighted decimal(4,1) null,
 
@@ -195,10 +224,12 @@ OverallReadinessTargetLevel varchar(100) null,
 AcademicPerformanceTargetLevel varchar(100) null,
 ParticipationRate decimal(4,1) null,
 ParticipationRateLevel varchar(100) null,
+ParticipationCat varchar(100) null,
 
 SPL varchar(100),
 SPLAccountability varchar(100),
-
+SmallSchoolScore tinyint null,
+SmallSchoolDecision varchar(100) null,
 CONSTRAINT acct_HSSchoolIndictors_PK PRIMARY KEY (SchoolYear, SchoolId),
 CONSTRAINT acct_HSSchoolIndictors_FK FOREIGN KEY (SchoolYear, SchoolId) REFERENCES acct.SPLSchool(SchoolYear, SchoolId)
 )
@@ -299,6 +330,8 @@ ON acct.HSHathaway ([Order])
 GO
 
 
+drop view acct.G38SPLSummary
+GO 
 
 CREATE view acct.G38SPLSummary
 as
@@ -312,7 +345,7 @@ i.SPLAccountability,
 i.GrowthTargetLevel,
 i.EquityTargetLevel, 
 i.AchievementTargetLevel,
-i.ParticipationRateLevel,
+i.ParticipationCat,
 p.SPLAdjusted SPLAccountabilityPilot,
 (case p.GrowthTargetLevel 
 when 'Not Meeting Targets' then 'Below Targets'
@@ -341,6 +374,9 @@ acct.SchoolIndictorsNonHS p on p.schoolyear=dbo.DeltaSchoolYear(s.SchoolYear,-1)
 
 GO
 
+drop view acct.HSSPLSummary
+GO
+
 CREATE view acct.HSSPLSummary
 as
 select 
@@ -356,7 +392,7 @@ i.GradRateTargetLevel,
 i.AddReadinessTargetLevel AdditionalReadinessTargetLevel,
 i.AcademicPerformanceTargetLevel,
 i.OverallReadinessTargetLevel,
-i.ParticipationRateLevel,
+i.ParticipationCat,
 p.SPLAdjusted SPLAccountabilityPilot,
 (case p.AchievementTargetLevel 
 when 'Not Meeting Targets' then 'Below Targets'
@@ -384,4 +420,4 @@ acct.HSSchoolIndicators i on s.schoolyear=i.schoolyear and s.schoolid=i.schoolid
 acct.SchoolIndictorsHS p on p.schoolyear=dbo.DeltaSchoolYear(s.SchoolYear,-1) and p.schoolid=i.schoolid 
 
 
-
+GO

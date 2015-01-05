@@ -51,8 +51,7 @@ produce.aggregates.scoped <- function (df,
                                        },
                                        filter = NULL,
                                        fill.val=NA,
-                                       schools = NULL
-)
+                                       schools = NULL)
 {
   school.aggregates <- produce.aggregates(cbind(SCOPE = rep("SCHOOL", nrow(df)), df),
                                           c("SCOPE", ids.fixed[[1]]),
@@ -135,7 +134,8 @@ produce.aggregates <- function (df,
                                     N_TESTS=length(x),
                                     N_PROFICIENT=sum(ifelse(x %in% c('3','4'), 1, 0))),
                                 fill.val=NA,
-                                schools = NULL
+                                schools = NULL,
+                                paired.schools = school.pairing.lookup[[current.school.year]]
 )
 {
   
@@ -193,15 +193,33 @@ produce.aggregates <- function (df,
   if (is.null(schools)) {
     result.tabbed <- result.tabbed[!is.na(result.tabbed$ALL),] #get rid of empty grade levels
   } else {
-    #get rid of grade levels not falling within the range of school years associated with each school
+    #get rid of grade levels not falling within the range of school years associated with each school    
     min.grade <- levels(result.tabbed$GRADE_ENROLLED)[2]
     max.grade <- levels(result.tabbed$GRADE_ENROLLED)[length(levels(result.tabbed$GRADE_ENROLLED))]
     old.names <- names(result.tabbed)
-    result.tabbed.labeled <- merge(result.tabbed, cbind(schools["SCHOOL_ID"], 
-                                                LOW_GRADE=ifelse(schools$LOW_GRADE %in% c('KG','PK'), '00',
-                                                                 sprintf("%02d",as.integer(schools$LOW_GRADE))), 
-                                                HIGH_GRADE=ifelse(schools$HIGH_GRADE %in% c('KG','PK'), '00',
-                                                                  sprintf("%02d",as.integer(schools$HIGH_GRADE)))))
+    #determine high and low grades for school, taking into consideration pairing
+    low.grade.high.grade <- data.frame(t(apply(schools[c("SCHOOL_ID",  "LOW_GRADE", "HIGH_GRADE")],
+                                               c(1),
+                                               
+                                               function (school) {
+                                                 id <- school[["SCHOOL_ID"]]
+                                                 low <- school[["LOW_GRADE"]]
+                                                 high <- school[["HIGH_GRADE"]]
+                                                 
+                                                 paired.schools <- names(paired.schools)[which(paired.schools==id)]
+                                                 if (length(paired.schools) >= 1) {                                                   
+                                                   lows <- schools[schools$SCHOOL_ID %in% paired.schools, "LOW_GRADE"] 
+                                                   low<-lows[order(sapply(lows, function (l) if (l %in% c('KG','PK')) '00' else sprintf("%02d",as.integer(l))))][1]
+                                                   
+                                                 }
+                                                 
+                                                 c(SCHOOL_ID=id,
+                                                   LOW_GRADE=if (low %in% c('KG','PK')) '00' else sprintf("%02d",as.integer(low)),
+                                                   HIGH_GRADE=if (high %in% c('KG','PK')) '00' else sprintf("%02d",as.integer(high)))                                                 
+                                               })))
+    
+    result.tabbed.labeled <- merge(result.tabbed, low.grade.high.grade)
+    
     result.tabbed <- with(result.tabbed.labeled,
                           result.tabbed.labeled[(as.character(GRADE_ENROLLED) >= LOW_GRADE &
                                                   as.character(GRADE_ENROLLED) <= HIGH_GRADE) | as.character(GRADE_ENROLLED)=='ALL',
@@ -612,10 +630,10 @@ propagate.to.paired.schools <- function (df, pairings=school.pairing.lookup) {
 
 
 
-factor.data.frame <- function (df, dim.table.specs, scd=c(), school.year.label) {
+factor.data.frame <- function (df, dim.table.specs, scd=c(), school.year.label, year.id.offset=0) {
   
   
-  factor.table <- function (df, cols, id.label, school.year.id=NULL, school.year.id.label=NULL) {
+  factor.table <- function (df, cols, id.label, school.year.id=NULL, school.year.id.label=NULL, id.offset=0) {
     
     
     df.a <- unique(df[cols])
@@ -628,7 +646,7 @@ factor.data.frame <- function (df, dim.table.specs, scd=c(), school.year.label) 
     
     #assign a sequence if there are no id columns already defined
     if (length(cols[which(names(cols) == "ID")]) == 0) {
-      df.a <- data.table(seq(1, nrow(df.a)), df.a)
+      df.a <- data.table(seq(1, nrow(df.a)) + id.offset, df.a)
       #and a name
       setnames(df.a, 1, id.label)
       setkeyv(df.a, id.label)
@@ -650,7 +668,7 @@ factor.data.frame <- function (df, dim.table.specs, scd=c(), school.year.label) 
   
   #compute the school year dimension table
   school.year.id.label <- paste(school.year.label, "Id", sep="")  
-  school.year.table = factor.table(df, school.year.label, school.year.id.label)
+  school.year.table = factor.table(df, school.year.label, school.year.id.label, id.offset=year.id.offset)
   
   
   factor.table.year <-   function (j, cols, id.col.label) {
@@ -800,7 +818,7 @@ estimate.mssql.types <- function (df) {
 } 
 
 
-write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL) {
+write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL, append=FALSE, time.var="SchoolYearId") {
   
   if (is.null(uid))
     conn <- odbcConnect(dsn=db.dsn)
@@ -893,28 +911,39 @@ write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL) {
                    names(df.list)[i], 
                    sep=".")
     
-    sqlSave(channel = conn, 
-            dat = data, 
-            tablename = table,
-            rownames = FALSE,
-            safer=FALSE,
-            varTypes = estimate.mssql.types(data))
-    
-    #fact table is presumed to be the last one
-    if (i < length(df.list))
-      add.dim.constraints(data, table)
-    else
-      add.fact.constraints(i, data, table)  
+    #write all tables when not in append mode
+    #write only data for tables that depend on time.var when in append mode
+    if(!append | time.var %in% names(data)) {
+      sqlSave(channel = conn, 
+              dat = data, 
+              tablename = table,
+              rownames = FALSE,
+              safer=FALSE,
+              varTypes = estimate.mssql.types(data),
+              append=append)
+      
+      #only write constraints when not in append mode
+      if (!append) {
+        #fact table is presumed to be the last one
+        if (i < length(df.list))
+          add.dim.constraints(data, table)
+        else
+          add.fact.constraints(i, data, table)  
+      }
+    }
   }
   
-  lapply(rev(names(df.list)), function (table.name) {
-    sqlQuery(channel=conn,
-             query=paste("DROP TABLE", 
-                         paste(db.prefix, 
-                               table.name, 
-                               sep=".")))
-    
-  })
+  #initially drop all tables when not in append mode
+  if (!append) {
+    lapply(rev(names(df.list)), function (table.name) {
+      sqlQuery(channel=conn,
+               query=paste("DROP TABLE", 
+                           paste(db.prefix, 
+                                 table.name, 
+                                 sep=".")))
+      
+    })
+  }
   
   lapply(seq(1: length(df.list)), write.table)
   

@@ -41,6 +41,8 @@ with(schools, schools[SCHOOL_ID=='0301055',]$WAEA_SCHOOL_TYPE <<- 2) #Campbell C
 with(schools, schools[SCHOOL_ID=='0601058',]$WAEA_SCHOOL_TYPE <<- 2) #Bear Lodge High School 
 with(schools, schools[SCHOOL_ID=='1201056',]$WAEA_SCHOOL_TYPE <<- 2) #Kemmerer Alternative School
 with(schools, schools[SCHOOL_ID=='1301058',]$WAEA_SCHOOL_TYPE <<- 2) #Roosevelt High School
+with(schools, schools[SCHOOL_ID=='0301057',]$WAEA_SCHOOL_TYPE <<- 2)
+with(schools, schools[SCHOOL_ID=='0301057',]$GRADES_SERVED <<- '9-12')
 
 
 schools$YEAR <- school.years.to.years(schools$SCHOOL_YEAR)

@@ -23,13 +23,20 @@ CREATE TABLE growth.GrowthDistributionBySchoolScoped(
 	NProficient int NULL,
 	NStudentsAchievement int NULL,
 	NTestsAchievement int NULL,
+  Suppressed tinyint NOT NULL,
+  NStudentsGrowthCap varchar(15) NULL,
+  NStudentsAchievementCap varchar(15) NULL,
+  PProficientCap decimal(5, 2) NULL,
+  PProficientCapOperator varchar(3) NULL,
     CONSTRAINT GrowthDistributionBySchoolScoped_UNQ UNIQUE CLUSTERED (
 	DataScope ASC,
 	SchoolYear ASC,
 	DistrictId ASC,
 	SchoolId ASC,
 	GradeEnrolled ASC,
-	SubjectCode ASC)
+	SubjectCode ASC,
+  Suppressed,
+  PProficientCapOperator)
 )
 
 

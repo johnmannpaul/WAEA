@@ -82,12 +82,19 @@ compute.indicator.long <- function (student.df.participation,
                                                 paired.school)
                                        })
   
+  
+  
   total.participation.labels = sapply(c("TESTS_ACTUAL_COUNT", 
                                         "TESTS_EXPECTED_COUNT", 
+                                        "REQUIRED_TESTED_90",
+                                        "REQUIRED_TESTED_95",
+                                        "PARTICIPATION_LEVEL_MET",
                                         "PARTICIPATION_RATE"),
                                       function (l)
                                         paste(indicator.label, l, sep=label.sep),
                                       USE.NAMES=FALSE)
+  
+  
   
   #count student participation by subject and total
   #limit to schools and years of interest  
@@ -105,11 +112,13 @@ compute.indicator.long <- function (student.df.participation,
                          all=TRUE)
   
   #zero out any NA counts for schools with no participants
-  count.labels <- setdiff(names(participation)[grep("_RATE$", names(participation), invert=TRUE)], school.key)
+  count.labels <- setdiff(names(participation)[grep("_RATE$|_LEVEL_MET$", names(participation), invert=TRUE)], school.key)
   rate.labels <- setdiff(names(participation)[grep("_RATE$", names(participation))], school.key)
-  participation[,c(count.labels, rate.labels)] <- zero.na.rows(participation,
+  level.labels <- setdiff(names(participation)[grep("_LEVEL_MET$", names(participation))], school.key)
+  participation[,c(count.labels, rate.labels,level.labels)] <- zero.na.rows(participation,
                                                count.labels,
-                                               rate.labels)
+                                               rate.labels,
+                                               level.labels)
   
   
   #the indicator is only computed for FAY students

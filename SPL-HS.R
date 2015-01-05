@@ -80,23 +80,33 @@ schools$HS_PARTICIPATION_RATE <- apply(schools[, c("WAEA_SCHOOL_TYPE", hs.partic
                                           else
                                             min(school[hs.participation.labels], na.rm=TRUE)
                                         })
+  
 
 schools$HS_PARTICIPATION_RATE_CAT <- apply(schools[, c("WAEA_SCHOOL_TYPE", hs.participation.labels)],
-                                      c(1),
-                                      function (school) {
-                                        
-                                        if (!(school[["WAEA_SCHOOL_TYPE"]] %in% HS.types))
-                                          NA
-                                        else
-                                          findInterval(min(school[hs.participation.labels], na.rm=TRUE), c(90,95)) + 1
-                                      })
-  
+                                           c(1),
+                                           function (school) {
+                                             
+                                             if (!(school[["WAEA_SCHOOL_TYPE"]] %in% HS.types))
+                                               NA
+                                             else
+                                               findInterval(min(school[hs.participation.labels], na.rm=TRUE), c(90,95)) + 1
+                                           })
+schools$HS_PARTICIPATION_CAT <- apply(schools[, c("WAEA_SCHOOL_TYPE", hs.participation.level.labels)],
+                                       c(1),
+                                       function (school) {
+                                         
+                                         if (!(school[["WAEA_SCHOOL_TYPE"]] %in% HS.types))
+                                           NA
+                                         else
+                                           min(school[hs.participation.level.labels], na.rm=TRUE)
+                                       })
+
 
 schools[schools$SCHOOL_YEAR==current.school.year & 
           schools$WAEA_SCHOOL_TYPE %in% HS.types &
           schools$HS_PARTICIPATION_RATE_CAT==1,c("SCHOOL_ID", "NAME", hs.participation.labels)]
 
-table(schools[c("SCHOOL_YEAR", "HS_PARTICIPATION_RATE_CAT")])
+table(schools[c("SCHOOL_YEAR", "HS_PARTICIPATION_CAT")])
 table(apply(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types &
                       schools$SCHOOL_YEAR==current.school.year, hs.participation.labels],
             c(1),
@@ -104,11 +114,15 @@ table(apply(schools[schools$WAEA_SCHOOL_TYPE %in% HS.types &
               min(school, na.rm=TRUE)))
 
 
-schools$HS_SPL_ACCOUNTABILITY <- apply(schools[,c("HS_SPL", hs.participation.labels)],
+
+schools$HS_SPL_ACCOUNTABILITY_OLD <- apply(schools[,c("HS_SPL", hs.participation.labels)],
+                                           c(1),
+                                           FUN=calc.SPL.accountability.old, "HS_SPL",  hs.participation.labels)
+
+
+schools$HS_SPL_ACCOUNTABILITY <- apply(schools[,c("HS_SPL", "HS_PARTICIPATION_CAT")],
                                         c(1),
-                                        FUN=calc.SPL.accountability, "HS_SPL",  hs.participation.labels)
-
-
+                                        FUN=calc.SPL.accountability, "HS_SPL",  "HS_PARTICIPATION_CAT")
 
 table(schools[c("SCHOOL_YEAR", "HS_SPL_ACCOUNTABILITY")])
 
@@ -119,6 +133,10 @@ schools[!is.na(schools$HS_SPL) & schools$HS_SPL !=  schools$HS_SPL_ACCOUNTABILIT
 schools$ALL_SPL <- apply(schools[,c("G38_SPL", "HS_SPL")],
                                     c(1),
                                     function (scores) scores[order(scores)][1])
+
+schools$ALL_SPL_ACCOUNTABILITY_OLD <- apply(schools[,c("G38_SPL_ACCOUNTABILITY_OLD", "HS_SPL_ACCOUNTABILITY_OLD")],
+                                        c(1),
+                                        function (scores) scores[order(scores)][1])
 
 schools$ALL_SPL_ACCOUNTABILITY <- apply(schools[,c("G38_SPL_ACCOUNTABILITY", "HS_SPL_ACCOUNTABILITY")],
                                     c(1),

@@ -77,8 +77,11 @@ calc.participation.rate <- function (df, subject.labels=c("MATH", "READING", "SC
 calc.participation.rate.long <- function (df,                                           
                                           status.prefix='TESTING_STATUS_CODE',                                           
                                           status.codes=c(exempt='X', participated='T', did.not.participate='N'),                              
-                                          total.participation.labels = c("ACHIEVEMENT_TESTED_HS", "ACHIEVEMENT_PARTICIPANTS_HS", "PARTICIPATION_RATE_ACHIEVEMENT_HS"),
-                                          precision=1)
+                                          total.participation.labels=c("TESTED", "PARTICIPANTS", "REQUIRED_TESTED_90",
+                                                                       "REQUIRED_TESTED_95", "PARTICIPATION_LEVEL_MET",
+                                                                       "PARTICIPATION_RATE"),
+                                          precision=1,
+                                          participation.rates = c(0.9,0.95))
 {  
   
   participation.cols <- c("TESTED","PARTICIPANTS")
@@ -96,23 +99,54 @@ calc.participation.rate.long <- function (df,
                                         c(1),
                                         encode.status)))
   
-  participation.df <- aggregate(participants.df,
+  participation.df.subject <- aggregate(participants.df,
                                 by = list(SCHOOL_YEAR=df$SCHOOL_YEAR,
-                                          SCHOOL_ID=df$SCHOOL_ID),
+                                          SCHOOL_ID=df$SCHOOL_ID,
+                                          SUBJECT_CODE=df$SUBJECT_CODE),
                                 sum)
   
-  
-  
   #do state participation   
-  participation.state.df <- aggregate(participation.df[,participation.cols],
-                                      by=list(SCHOOL_YEAR=participation.df$SCHOOL_YEAR), 
+  participation.df.subject.state <- aggregate(participation.df.subject[,participation.cols],
+                                      by=list(SCHOOL_YEAR=participation.df.subject$SCHOOL_YEAR,
+                                              SUBJECT_CODE=participation.df.subject$SUBJECT_CODE), 
                                       sum)
   
   
-  participation.state.df <- cbind(SCHOOL_ID=rep(state.school.id, nrow(participation.state.df)), participation.state.df)
+  participation.df.subject.state <- cbind(SCHOOL_ID=rep(state.school.id, nrow(participation.df.subject.state)), participation.df.subject.state)
   
-  participation.df <- rbind(participation.df, participation.state.df[,c(names(participation.df))])
+  participation.df.subject <- rbind(participation.df.subject, participation.df.subject.state[,c(names(participation.df.subject))])
   
+  
+  required.participants.labels <- sapply(participation.rates,
+                                         function (r) paste("REQUIRED_TESTED", 100*r, sep="_"))
+  
+  participation.df.subject[required.participants.labels] <- do.call(cbind, lapply(participation.rates, 
+                                                                                    function (rate) {
+                                                                                      floor(rate * participation.df.subject$PARTICIPANTS)
+                                                                                    }))  
+  
+  participation.df <- aggregate(participation.df.subject[c("TESTED", "PARTICIPANTS",
+                                                           "REQUIRED_TESTED_90",
+                                                           "REQUIRED_TESTED_95")],
+                                        by = list(SCHOOL_YEAR=participation.df.subject$SCHOOL_YEAR,
+                                                  SCHOOL_ID=participation.df.subject$SCHOOL_ID),
+                                        sum)
+  
+  
+  
+  
+  ##
+  participation.df["PARTICIPATION_LEVEL_MET"] <- apply(participation.df[c("PARTICIPANTS", "TESTED",
+                                                                          required.participants.labels)],
+                                                       c(1),
+                                                       function (tested) {
+                                                         if (tested[1] == 0) 
+                                                           NA
+                                                         else
+                                                           findInterval(tested[2],
+                                                                        tested[3:length(tested)])+1
+                                                         })
+                                                        
   #tail(participation.df)
   
   
@@ -122,8 +156,9 @@ calc.participation.rate.long <- function (df,
                                                    round((participation.df$TESTED / participation.df$PARTICIPANTS) * 100, 
                                                          precision))                                   
   
+   
   
-  names(participation.df)[3:5] <- total.participation.labels
+  names(participation.df)[3:ncol(participation.df)] <- total.participation.labels
   
   
   participation.df

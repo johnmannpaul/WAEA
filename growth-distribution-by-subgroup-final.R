@@ -14,6 +14,24 @@ conn <- odbcConnect(dsn=db.dsn, uid=rdbms.name, pwd=rdbms.pwd)
 paws.df <- sqlFetch(conn, data.tables.lexicon[[current.school.year]][["growth.by.accountability"]], as.is=as.is.vector(conn, data.tables.lexicon[[current.school.year]][["growth.by.accountability"]]))
 odbcClose(conn)
 
+#passing the records of paired schools to the parent school
+pairings <- school.pairing.lookup[[current.school.year]]
+sapply(names(pairings), function (s) nrow(paws.df[paws.df$SCHOOL_ID==s,]))
+unlist(lapply(pairings, function (s) nrow(paws.df[paws.df$SCHOOL_ID==s,])))
+paws.df$SCHOOL_ID <- sapply(paws.df$SCHOOL_ID,
+                            function(s) {
+                              
+                              paired.s <- pairings[[s]]
+                              if (is.null(paired.s))
+                                s
+                              else
+                                paired.s
+                              
+                            })
+sapply(names(pairings), function (s) nrow(paws.df[paws.df$SCHOOL_ID==s,]))
+unlist(lapply(pairings, function (s) nrow(paws.df[paws.df$SCHOOL_ID==s,])))
+
+
 paws.df$SGP <- as.numeric(paws.df$SGP)
 paws.df$AGP <- as.numeric(paws.df$AGP)
 paws.df$AGP <- ifelse(is.na(paws.df$AGP), NaN, paws.df$AGP)
@@ -115,7 +133,7 @@ with(combo.agg, combo.agg[SCOPE %in% c("STATE") & SCHOOL_YEAR==current.school.ye
 table(combo.agg$SUBGROUP, useNA="ifany")
 combo.agg$SUBGROUP_DESCRIPTION <- unlist(lapply(combo.agg$SUBGROUP, function (x) switch(x,
                                                                                         
-                                                                                        ALL='All Students', 
+                                                                                        All='All Students', 
                                                                                         
                                                                                         CSG="Consolidated Subgroup", 
                                                                                         FRL="Free And Reduced Lunch", 
@@ -219,6 +237,29 @@ table(result$SchoolYear)
 table(result$GradeEnrolled)
 head(result[result$GradeEnrolled=='04',])
 head(result[result$GradeEnrolled=='04' & result$SchoolId=='0101001' & result$Subgroup=='B' & result$SubjectCode=='RE',],50)
+
+
+#paired schools obtain the same values as their parent schools
+sapply(names(pairings), function (s) nrow(result[result$SchoolId==s,]))
+unlist(lapply(pairings, function (s) nrow(result[result$SchoolId==s,])))
+pairing.helper <- function (s) {
+  
+  school.name <- schools[schools$SCHOOL_YEAR == current.school.year & schools$SCHOOL_ID==s,"NAME"]
+  if (length(school.name) == 0)
+    return(NULL)
+  
+  parent.school <- pairings[[s]]
+  parent.recs <-result[result$SchoolId == parent.school,]
+  parent.recs$SchoolId <- s
+  parent.recs$SchoolName <- school.name
+  parent.recs
+}
+result <- rbind(result[!(result$SchoolId %in% names(pairings)),], do.call(rbind, lapply(names(pairings),
+ pairing.helper)))
+
+sapply(names(pairings), function (s) nrow(result[result$SchoolId==s,]))
+unlist(lapply(pairings, function (s) nrow(result[result$SchoolId==s,])))
+
 write.csv(result[result$SchoolYear==current.school.year,c('DataScope'
                                                           ,'DistrictId'
                                                           ,'DistrictName'
@@ -256,7 +297,8 @@ dim.spec <- list(Scope="DataScope",
 factored.result <- factor.data.frame(result,                                      
                                      dim.spec,
                                      c(3),
-                                     "SchoolYear")
+                                     "SchoolYear",
+                                     year.id.offset=3)
 
 #
 disjoint.subgroups <- list(c('A','B','H','I','P','W','Z'),
@@ -266,22 +308,17 @@ disjoint.subgroups <- list(c('A','B','H','I','P','W','Z'),
                            c('IDEA', 'NIDEA'),
                            c('FRL', 'NFRL'))
 
-factored.result$Stats$Suppressed <- ifelse(factored.result$Stats$NStudentsGrowth < 
+#suppress any row with fewer than 10 students with growth scores
+factored.result$Stats$Suppressed <- ifelse(factored.result$Stats$NStudentsGrowth >0 & factored.result$Stats$NStudentsGrowth < 
                                              min.N.growth.report, TRUE, FALSE)
 
 
 
-s <- factored.result[[4]]
-s[s$SchoolId==200,]
-head(result[result$SchoolId=='1601005' & result$SchoolYear=='2012-13' ,])
 
-g <- factored.result[[9]]
-head(g[g$SchoolId=='1601005' & g$SchoolYearId==3,])
-
-#suppress based on complementary subgroups
+#suppress based on complementary subgroups for percent proficient
 require(data.table)
 stats.key <- c("SchoolYearId", "ScopeId", "DistrictId", "SchoolId", 
-               "GradeEnrolled", "StudentMobility", "SubjectCode") 
+               "Subgroup", "GradeEnrolled", "StudentMobility", "SubjectCode") 
 
 stats.table <- data.table(factored.result$Stats,
                           key=stats.key)
@@ -292,24 +329,52 @@ stats.table[SchoolYearId==1 & ScopeId==1 &
               GradeEnrolled=='All' & SubjectCode=='All' & 
               StudentMobility =='All' & Suppressed==1,]
 
-suppress.group <- function (a,b) {
-  any(b[which(a>0)]==0)
-}
+# suppress.group <- function (a,b) {
+#   any(b[which(a>0)]==0)
+# }
 
+suppress.group <- function (s, a) {
+  
+  if (any(s)) 
+    sum(a[which(s)]) > 0 & sum(a[which(s)]) < min.N.growth.report
+  else
+    FALSE
+}
 table(stats.table$Suppressed)
 
 lapply(disjoint.subgroups,
        function (g) {
          stats.table[Subgroup %in% g,
-                     Suppressed:=Suppressed | suppress.group(NStudentsAchievement,PProficient), 
-                     by=key(stats.table)]
+                     Suppressed:=Suppressed | suppress.group(Suppressed,NStudentsGrowth), 
+                     by=c("SchoolYearId", "ScopeId", "DistrictId", "SchoolId", 
+                          "GradeEnrolled", "StudentMobility", "SubjectCode") ]
        }
 )
+
+table(stats.table$Suppressed)
+
+stats.table[StudentMobility %in% c('No','Yes'),
+            Suppressed:=Suppressed | suppress.group(Suppressed,NStudentsGrowth), 
+            by=c("SchoolYearId", "ScopeId", "DistrictId", "SchoolId", 
+                 "Subgroup", "GradeEnrolled", "SubjectCode")]
+
+table(stats.table$Suppressed)
+table(stats.table$GradeEnrolled)
+stats.table[GradeEnrolled %in% c("03", "04", "05", "06", "07", "08"),
+            Suppressed:=Suppressed | suppress.group(Suppressed,NStudentsGrowth), 
+            by=c("SchoolYearId", "ScopeId", "DistrictId", "SchoolId", 
+                 "Subgroup", "StudentMobility", "SubjectCode")]
+
+table(stats.table$Suppressed)
 
 stats.table[SchoolYearId==1 & ScopeId==1 & 
               DistrictId=='0101000' & SchoolId=='All' & 
               GradeEnrolled=='All' & SubjectCode=='All' & 
               StudentMobility =='All',]
+
+
+stats.table[SchoolYearId==1 &
+              DistrictId=='0101000' & SchoolId=='0101005',]
 
 
 stats.table[SchoolYearId==1 & 
@@ -323,13 +388,77 @@ stats.table[SchoolYearId==1 &
 head(stats.table[Suppressed==TRUE,],50)
 table(stats.table$Suppressed)
 
+
+#convert back to data.frame to apply capping
+stats.table <- data.frame(stats.table)
+                                                       
+tail(stats.table[stats.table$SchoolYearId==4 & stats.table$ScopeId==1 & 
+              stats.table$DistrictId=='0101000',],50)
+
+stats.table$NStudentsGrowthCap <- sapply(stats.table$NStudentsGrowth,
+                                         function (a) {
+                                           
+                                           if (a == 0)
+                                             return("0")
+                                           
+                                           low <- if (a < 5) 1 else (a%/%5)*5
+                                           high <- ((a+5)%/%5)*5  - 1
+                                           
+                                           paste(low,high, sep="-")                                                                                                                              
+                                         })
+
+stats.table$NStudentsAchievementCap <- sapply(stats.table$NStudentsAchievement,
+                                         function (a) {
+                                           
+                                           if (a == 0)
+                                             return("0")
+                                           
+                                           low <- if (a < 5) 1 else (a%/%5)*5
+                                           high <- ((a+5)%/%5)*5  - 1
+                                           
+                                           paste(low,high, sep="-")                                                                                                                              
+                                         })
+
+
+stats.table[c("PProficientCap","PProficientCapOperator")] <- t(apply(stats.table[c("NStudentsAchievementCap",
+                                                                                                "PProficient",
+                                                                                                "Suppressed")],
+                                                                             c(1),
+                                                                             function (row) {
+                                                                               par <- as.numeric(row[["PProficient"]])
+                                                                               aac <- row[["NStudentsAchievementCap"]]
+                                                                               suppressd <- as.numeric(row[["Suppressed"]])
+                                                                               
+                                                                               if (is.na(par))
+                                                                                 return(c(NA, NA))
+                                                                               
+                                                                               cap <- switch(aac, `1-4`=100, `5-9`=20, `10-14`=10, `15-19`=6.7, 5)
+                                                                               
+                                                                               if (par <= cap)
+                                                                                 c(cap, "<=")
+                                                                               else {
+                                                                                 
+                                                                                 if (par >= 100-cap)
+                                                                                   c(100-cap, ">=")
+                                                                                 else
+                                                                                   c(par, "==")
+                                                                                 
+                                                                               }                                                                               
+                                                                             }))
+
+stats.table$PProficientCap <- as.numeric(stats.table$PProficientCap)
+
+table(stats.table$PProficientCapOperator, useNA="ifany")
+table(is.na(stats.table$PProficient))
+
+
 stats.table$Suppressed <- as.numeric(stats.table$Suppressed)
-factored.result$Stats <- stats.table[Suppressed==0]
 
-table(factored.result$Stats$Suppressed)
+head(stats.table)
 
-write.csv(factored.result$Stats, file="results/growth-stats-suppressed.csv", na="", row.names=FALSE, quote=FALSE)
-##better have a good network...
-#library("RODBC")
-#write.tables("LocalReportDM", factored.result, "growth", "localreaderwriter", "")
-#write.tables("WIGGUM", factored.result, "growth", "jpaul", "")
+write.csv(stats.table, file=paste("results/growth-stats-suppressed","-",current.school.year,".csv",sep=""), na="", row.names=FALSE, quote=FALSE)
+
+
+factored.result$Stats <- stats.table
+write.tables("OTTO", factored.result, "growth", append=TRUE)
+

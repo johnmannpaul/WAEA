@@ -100,7 +100,9 @@ names(hs.consolidated.subgroup.wide) <- c("WISER_ID", "ACT_SCHOOL_ID",
 head(hs.consolidated.subgroup.wide)
 
 #write.csv(hs.consolidated.subgroup.wide, file="results/statewide-high-school-consolidated-subgroup-composition.csv", row.names=FALSE, quote=FALSE, na="")
-
+act.current.year.subgroup$SUBJECT_CODE <- ifelse(act.current.year.subgroup$SUBJECT=='Math',
+                                                 'MA',
+                                                 'RE')
 equity.hs.indicator <- compute.indicator.long(act.current.year.subgroup, #for participation, include those who may have taken an Alt assessment this year
                                               act.current.year.subgroup[act.current.year.subgroup$TEST_TYPE == 'ACT',], #for indicator evaluation we can only apply to those who took the standard ACT
                                               schools,

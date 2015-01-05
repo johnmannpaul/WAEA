@@ -141,9 +141,9 @@ unmatrixfy.df <- function (df, sep="_", prepend=TRUE) {
 
 
 #replace NA rows with zeros
-zero.na.rows <- function (df, col.labels, rate.labels=NULL) {
+zero.na.rows <- function (df, col.labels, rate.labels=NULL, level.labels=NULL) {
   
-  labels <- c(col.labels, rate.labels)
+  labels <- c(col.labels, rate.labels, level.labels)
   
   if (length(labels) > 1)
     t(apply(df[,labels],
@@ -151,7 +151,8 @@ zero.na.rows <- function (df, col.labels, rate.labels=NULL) {
             function (row) {
               if (sum(is.na(row)) == length(row))
                 c(rep(0, length(col.labels)),
-                  rep(100, length(rate.labels)))
+                  rep(100, length(rate.labels)),
+                  rep(3, length(level.labels)))
               else
                 row                       
             }))
@@ -206,7 +207,32 @@ compute.grad.rate.cat <- function (school,cuts, precision, labels) {
 
 
 
-calc.SPL.accountability <- function (school, SPL.label, participation.labels) {
+calc.SPL.accountability <- function (school, SPL.label, participation.cat.label) {
+  
+  SPL <- school[[SPL.label]]
+  
+  if (is.na(SPL))
+    NA
+  else {
+    
+    participation.cat <- school[[participation.cat.label]]
+    
+    if (participation.cat == 1)
+      1
+    else {
+      
+      if (participation.cat == 2)
+        ifelse(SPL == 1, 1, SPL-1)
+      else
+        SPL                                                                
+    }
+    
+    
+  }
+}
+
+
+calc.SPL.accountability.old <- function (school, SPL.label, participation.labels) {
   
   SPL <- school[[SPL.label]]
   
@@ -230,7 +256,6 @@ calc.SPL.accountability <- function (school, SPL.label, participation.labels) {
     
   }
 }
-
 
 get.filename <- function (file.prefix, directory) {
   results.files <- dir(directory)[grep(paste(file.prefix,"-[0-9]+\\.csv", sep=""), dir(directory))]

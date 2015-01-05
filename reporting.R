@@ -14,7 +14,7 @@ paws.aggregates <- produce.aggregates.scoped(achievement.g38.indicator$students.
                                              },
                                              obs="PERFORMANCE_LEVEL",
                                              filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
-                                             schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% nonHS.types,])
+                                             schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% g38.types,])
 
 
 paws.N <- produce.aggregates.scoped(achievement.g38.indicator$students.fay,
@@ -26,7 +26,7 @@ paws.N <- produce.aggregates.scoped(achievement.g38.indicator$students.fay,
                                     aggregator=function (x) c(N_TESTERS=length(unique(x))),
                                     filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
                                     fill.val=0,
-                                    schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% nonHS.types,]
+                                    schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% g38.types,]
                                     
 )
 
@@ -54,7 +54,7 @@ head(with(achievement.g38.indicator$schools,
 
      
 #propagate results to paired schools
-paws.tab.N <- rbind(paws.tab.N, propagate.to.paired.schools(paws.tab.N))
+paws.tab.N <- rbind(paws.tab.N[!(paws.tab.N$SCHOOL_ID %in% names(school.pairing.lookup[[current.school.year]])),], propagate.to.paired.schools(paws.tab.N))
 write.csv(paws.tab.N[paws.tab.N$SCHOOL_YEAR==current.school.year & paws.tab.N$STATISTIC=='PERCENT_PROFICIENT', ],file="reporting/grade-level-statistics.csv", na="", row.names=FALSE, quote=FALSE)
 
 
@@ -69,7 +69,7 @@ growth.aggregates <- produce.aggregates.scoped(growth.g38.indicator$students.fay
                                                  c(MGP=median(x),
                                                    N_SGP=length(x)),
                                                filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
-                                               schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% nonHS.types,]
+                                               schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% g38.types,]
                                                )
 
 growth.N <- produce.aggregates.scoped(growth.g38.indicator$students.fay,
@@ -81,7 +81,7 @@ growth.N <- produce.aggregates.scoped(growth.g38.indicator$students.fay,
                                       aggregator=function (x) c(N_TESTERS=length(unique(x))),
                                       filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
                                       fill.val=0,
-                                      schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% nonHS.types,]
+                                      schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% g38.types,]
 )
 
 
@@ -102,7 +102,8 @@ head(with(growth.g38.indicator$schools,
 
 
 
-growth.tab.N <- rbind(growth.tab.N, propagate.to.paired.schools(growth.tab.N))
+
+growth.tab.N <- rbind(growth.tab.N[!(growth.tab.N$SCHOOL_ID %in% names(school.pairing.lookup[[current.school.year]])),], propagate.to.paired.schools(growth.tab.N))
 write.csv(growth.tab.N[growth.tab.N$SCHOOL_YEAR==current.school.year & growth.tab.N$STATISTIC=='MGP',],file="reporting/grade-level-statistics-growth.csv", na="", row.names=FALSE, quote=FALSE)     
 
 
@@ -115,7 +116,7 @@ equity.aggregates <- produce.aggregates.scoped(equity.g38.indicator$students.fay
                                                value.label="MEAN_STD_SCORE",
                                                aggregator=function (x) c(MEAN_STD_SCORE=round(mean(x), report.precision)),
                                                filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
-                                               schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% nonHS.types,]
+                                               schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% g38.types,]
                                                
 )
 
@@ -130,7 +131,7 @@ equity.N <- produce.aggregates.scoped(equity.g38.indicator$students.fay,
                                       },
                                       filter=quote(SCHOOL_YEAR==SCHOOL_YEAR_ORIGINAL),
                                       fill.val=0,
-                                      schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% nonHS.types,]
+                                      schools=schools[schools$SCHOOL_ID != state.school.id & schools$WAEA_SCHOOL_TYPE %in% g38.types,]
 )
 
 
@@ -152,8 +153,9 @@ head(with(equity.g38.indicator$schools,
 ##end validation
 
 
-equity.tab.N <- rbind(equity.tab.N, propagate.to.paired.schools(equity.tab.N))
+equity.tab.N <- rbind(equity.tab.N[!(equity.tab.N$SCHOOL_ID %in% names(school.pairing.lookup[[current.school.year]])),], propagate.to.paired.schools(equity.tab.N))
 write.csv(equity.tab.N[equity.tab.N$SCHOOL_YEAR==current.school.year & equity.tab.N$STATISTIC=='MEAN_STD_SCORE',],file="reporting/grade-level-statistics-equity.csv", na="", row.names=FALSE, quote=FALSE)
+
 
      
 #write schools file
@@ -166,69 +168,98 @@ write.csv(cbind(schools[schools$SCHOOL_YEAR==current.school.year,c("SCHOOL_YEAR"
                 na="", row.names=FALSE, quote=FALSE)               
 
 #write school indicators file
-g38.schools <- schools[schools$SCHOOL_YEAR==current.school.year & schools$WAEA_SCHOOL_TYPE %in% c(nonHS.types, paired.types),]
+small.school.review <- read.csv(file="data/small-school-review.csv", colClasses="character")
+small.school.review$SMALL_SCHOOL_SCORE <- as.numeric(small.school.review$SMALL_SCHOOL_SCORE)
 
-g38.school.indicators <- with(g38.schools, cbind(g38.schools[,c("SCHOOL_YEAR", "SCHOOL_ID", "G38_ACHIEVEMENT_ALL_SMALL_SCHOOL")], 
-                                                           G38_ACHIEVEMENT_ALL_YEARS_BACK = ifelse(is.na(g38.schools[,"G38_ACHIEVEMENT_ALL_YEARS_BACK"]),
-                                                                                                   NA,
-                                                                                                   ifelse(g38.schools[,"G38_ACHIEVEMENT_ALL_YEARS_BACK"] < Inf,
-                                                                                                          g38.schools[,"G38_ACHIEVEMENT_ALL_YEARS_BACK"],
-                                                                                                          NA)),
-                                                           ACHIEVEMENT_CUT_1 = g38.achievement.cuts[1],
-                                                           ACHIEVEMENT_CUT_2 = g38.achievement.cuts[2],
-                                                           g38.schools[,c("G38_ACHIEVEMENT_ALL_N_TESTS", "G38_ACHIEVEMENT_ALL_N_PROFICIENT_TESTS", "G38_ACHIEVEMENT_ALL_PERCENT_PROFICIENT", "G38_ACHIEVEMENT_ALL_N",
-                                                                          "G38_ACHIEVEMENT_ALL_TESTS_ACTUAL_COUNT", "G38_ACHIEVEMENT_ALL_TESTS_EXPECTED_COUNT", "G38_ACHIEVEMENT_ALL_PARTICIPATION_RATE")],
-                                                           
-                                                           
-                                                           ACHIEVEMENT_TARGET_LEVEL = ifelse(is.na(g38.schools[,c("G38_ACHIEVEMENT_ALL_TARGET_LEVEL")]), 
-                                                                                             NA, 
-                                                                                             indicator.labels[g38.schools[,c("G38_ACHIEVEMENT_ALL_TARGET_LEVEL")]]),
-                                                           
-                                                           g38.schools[,"G38_GROWTH_SMALL_SCHOOL"],
-                                                           G38_GROWTH_YEARS_BACK = ifelse(is.na(g38.schools[,"G38_GROWTH_YEARS_BACK"]),
-                                                                                          NA,
-                                                                                          ifelse(g38.schools[,"G38_GROWTH_YEARS_BACK"] < Inf,
-                                                                                                 g38.schools[,"G38_GROWTH_YEARS_BACK"],
-                                                                                                 NA)),
-                                                           GROWTH_CUT_1 = g38.growth.cuts[1],
-                                                           GROWTH_CUT_2 = g38.growth.cuts[2],
-                                                           
-                                                           g38.schools[,c("G38_GROWTH_MGP", "G38_GROWTH_N")],
-                                                           
-                                                           GROWTH_TARGET_LEVEL = ifelse(is.na(g38.schools[,c("G38_GROWTH_TARGET_LEVEL")]), 
-                                                                                        NA, 
-                                                                                        indicator.labels[g38.schools[,c("G38_GROWTH_TARGET_LEVEL")]]),
-                                                           
-                                                           g38.schools[,"G38_EQUITY_SMALL_SCHOOL"],
-                                                           G38_EQUITY_YEARS_BACK = ifelse(is.na(g38.schools[,"G38_EQUITY_YEARS_BACK"]),
-                                                                                          NA,
-                                                                                          ifelse(g38.schools[,"G38_EQUITY_YEARS_BACK"] < Inf,
-                                                                                                 g38.schools[,"G38_EQUITY_YEARS_BACK"],
-                                                                                                 NA)),
-                                                           EQUITY_CUT_1 = g38.equity.cuts[1],
-                                                           EQUITY_CUT_2 = g38.equity.cuts[2],
-                                                           
-                                                           g38.schools[,c("G38_EQUITY_MEAN", "G38_EQUITY_N", 
-                                                                          "G38_EQUITY_TESTS_ACTUAL_COUNT", "G38_EQUITY_TESTS_EXPECTED_COUNT", "G38_EQUITY_PARTICIPATION_RATE")],
-                                                           
-                                                           EQUITY_TARGET_LEVEL = ifelse(is.na(g38.schools[,c("G38_EQUITY_TARGET_LEVEL")]), 
-                                                                                        NA, 
-                                                                                        indicator.labels[g38.schools[,c("G38_EQUITY_TARGET_LEVEL")]]),
-                                                           
-                                                           g38.schools[,c("G38_INDICATORS_N", "G38_PARTICIPATION_RATE")],
-                                                           G38_PARTICIPATION_RATE_CAT = ifelse(is.na(g38.schools[, "G38_PARTICIPATION_RATE_CAT"]), 
-                                                                                               NA,
-                                                                                               participation.labels[g38.schools[, "G38_PARTICIPATION_RATE_CAT"]]),
-                                                           SPL = ifelse(is.na(g38.schools[,c("G38_SPL")]), 
-                                                                        NA, 
-                                                                        SPL.labels[g38.schools[,c("G38_SPL")]]),
-                                                           SPL_ACCOUNTABILITY = ifelse(is.na(g38.schools[,c("G38_SPL_ACCOUNTABILITY")]), 
-                                                                                       NA, 
-                                                                                       SPL.labels[g38.schools[,c("G38_SPL_ACCOUNTABILITY")]])))
+g38.schools <- merge(schools[schools$SCHOOL_YEAR==current.school.year & schools$WAEA_SCHOOL_TYPE %in% c(nonHS.types, paired.types),],
+                     small.school.review, all.x=TRUE)
+
+g38.schools$WAEA_SMALL_SCHOOL <- ifelse(is.na(g38.schools$WAEA_SMALL_SCHOOL), 'F', g38.schools$WAEA_SMALL_SCHOOL)
+table(g38.schools$WAEA_SMALL_SCHOOL)
+g38.school.indicators <- with(g38.schools, cbind(g38.schools[,c("SCHOOL_YEAR", "SCHOOL_ID", "WAEA_SMALL_SCHOOL", "G38_ACHIEVEMENT_ALL_SMALL_SCHOOL")], 
+                                                 G38_ACHIEVEMENT_ALL_YEARS_BACK = ifelse(is.na(g38.schools[,"G38_ACHIEVEMENT_ALL_YEARS_BACK"]),
+                                                                                         NA,
+                                                                                         ifelse(g38.schools[,"G38_ACHIEVEMENT_ALL_YEARS_BACK"] < Inf,
+                                                                                                g38.schools[,"G38_ACHIEVEMENT_ALL_YEARS_BACK"],
+                                                                                                NA)),
+                                                 ACHIEVEMENT_CUT_1 = g38.achievement.cuts[1],
+                                                 ACHIEVEMENT_CUT_2 = g38.achievement.cuts[2],
+                                                 g38.schools[,c("G38_ACHIEVEMENT_ALL_N_TESTS", "G38_ACHIEVEMENT_ALL_N_PROFICIENT_TESTS", "G38_ACHIEVEMENT_ALL_PERCENT_PROFICIENT", "G38_ACHIEVEMENT_ALL_N",
+                                                                "G38_ACHIEVEMENT_ALL_TESTS_ACTUAL_COUNT", "G38_ACHIEVEMENT_ALL_TESTS_EXPECTED_COUNT", "G38_ACHIEVEMENT_ALL_PARTICIPATION_RATE", 
+                                                                "G38_ACHIEVEMENT_ALL_REQUIRED_TESTED_95", "G38_ACHIEVEMENT_ALL_REQUIRED_TESTED_90",
+                                                                "G38_ACHIEVEMENT_ALL_PARTICIPATION_LEVEL_MET")],
+                                                 
+                                                 ACHIEVEMENT_PARTICIPATION_LEVEL1 = ifelse(g38.schools$G38_ACHIEVEMENT_ALL_PARTICIPATION_LEVEL_MET >= 3,
+                                                                                           'Met', 'Not Met'),
+                                                 
+                                                 ACHIEVEMENT_PARTICIPATION_LEVEL2 = ifelse(g38.schools$G38_ACHIEVEMENT_ALL_PARTICIPATION_LEVEL_MET >= 2,
+                                                                                           'Met', 'Not Met'),
+                                                 
+                                                 ACHIEVEMENT_TARGET_LEVEL = ifelse(is.na(g38.schools[,c("G38_ACHIEVEMENT_ALL_TARGET_LEVEL")]), 
+                                                                                   NA, 
+                                                                                   indicator.labels[g38.schools[,c("G38_ACHIEVEMENT_ALL_TARGET_LEVEL")]]),
+                                                 
+                                                 g38.schools["G38_GROWTH_SMALL_SCHOOL"],
+                                                 G38_GROWTH_YEARS_BACK = ifelse(is.na(g38.schools[,"G38_GROWTH_YEARS_BACK"]),
+                                                                                NA,
+                                                                                ifelse(g38.schools[,"G38_GROWTH_YEARS_BACK"] < Inf,
+                                                                                       g38.schools[,"G38_GROWTH_YEARS_BACK"],
+                                                                                       NA)),
+                                                 GROWTH_CUT_1 = g38.growth.cuts[1],
+                                                 GROWTH_CUT_2 = g38.growth.cuts[2],
+                                                 
+                                                 g38.schools[,c("G38_GROWTH_MGP", "G38_GROWTH_N")],
+                                                 
+                                                 GROWTH_TARGET_LEVEL = ifelse(is.na(g38.schools[,c("G38_GROWTH_TARGET_LEVEL")]), 
+                                                                              NA, 
+                                                                              indicator.labels[g38.schools[,c("G38_GROWTH_TARGET_LEVEL")]]),
+                                                 
+                                                 g38.schools["G38_EQUITY_SMALL_SCHOOL"],
+                                                 G38_EQUITY_YEARS_BACK = ifelse(is.na(g38.schools[,"G38_EQUITY_YEARS_BACK"]),
+                                                                                NA,
+                                                                                ifelse(g38.schools[,"G38_EQUITY_YEARS_BACK"] < Inf,
+                                                                                       g38.schools[,"G38_EQUITY_YEARS_BACK"],
+                                                                                       NA)),
+                                                 EQUITY_CUT_1 = g38.equity.cuts[1],
+                                                 EQUITY_CUT_2 = g38.equity.cuts[2],
+                                                 
+                                                 g38.schools[,c("G38_EQUITY_MEAN", "G38_EQUITY_N", 
+                                                                "G38_EQUITY_TESTS_ACTUAL_COUNT", "G38_EQUITY_TESTS_EXPECTED_COUNT", "G38_EQUITY_PARTICIPATION_RATE", "G38_EQUITY_REQUIRED_TESTED_95", "G38_EQUITY_REQUIRED_TESTED_90",
+                                                                "G38_EQUITY_PARTICIPATION_LEVEL_MET")],
+                                                 
+                                                 EQUITY_PARTICIPATION_LEVEL1 = ifelse(g38.schools$G38_EQUITY_PARTICIPATION_LEVEL_MET >= 3,
+                                                                                           'Met', 'Not Met'),
+                                                 
+                                                 EQUITY_PARTICIPATION_LEVEL2 = ifelse(g38.schools$G38_EQUITY_PARTICIPATION_LEVEL_MET >= 2,
+                                                                                           'Met', 'Not Met'),
+                                                 EQUITY_TARGET_LEVEL = ifelse(is.na(g38.schools[,c("G38_EQUITY_TARGET_LEVEL")]), 
+                                                                              NA, 
+                                                                              indicator.labels[g38.schools[,c("G38_EQUITY_TARGET_LEVEL")]]),
+                                                 
+                                                 g38.schools[,c("G38_INDICATORS_N", "G38_PARTICIPATION_RATE")],
+                                                 G38_PARTICIPATION_RATE_CAT = ifelse(is.na(g38.schools[, "G38_PARTICIPATION_RATE_CAT"]), 
+                                                                                     NA,
+                                                                                     participation.labels[g38.schools[, "G38_PARTICIPATION_RATE_CAT"]]),
+                                                 G38_PARTICIPATION_CAT = ifelse(is.na(g38.schools[, "G38_PARTICIPATION_CAT"]), 
+                                                                                     NA,
+                                                                                     participation.labels[g38.schools[, "G38_PARTICIPATION_CAT"]]),
+                                                 
+                                                 SPL = ifelse(is.na(g38.schools[,c("G38_SPL")]), 
+                                                              NA, 
+                                                              SPL.labels[g38.schools[,c("G38_SPL")]]),
+                                                 SPL_ACCOUNTABILITY = ifelse(is.na(g38.schools[,c("G38_SPL_ACCOUNTABILITY")]), 
+                                                                             NA, 
+                                                                             SPL.labels[g38.schools[,c("G38_SPL_ACCOUNTABILITY")]]),
+                                                 g38.schools[c("SMALL_SCHOOL_SCORE", "SMALL_SCHOOL_DECISION")]))
 
 write.csv(g38.school.indicators, file="reporting/school-indicators-nonHS.csv", na="", row.names=FALSE, quote=FALSE)
 
-high.schools <- schools[schools$SCHOOL_YEAR==current.school.year & schools$WAEA_SCHOOL_TYPE %in% HS.types,]
+
+high.schools <- merge(schools[schools$SCHOOL_YEAR==current.school.year & schools$WAEA_SCHOOL_TYPE %in% HS.types,],
+                     small.school.review, all.x=TRUE)
+
+high.schools$WAEA_SMALL_SCHOOL <- ifelse(is.na(high.schools$WAEA_SMALL_SCHOOL), 'F', high.schools$WAEA_SMALL_SCHOOL)
+table(high.schools$WAEA_SMALL_SCHOOL)
 
 lookup.add.readiness.weights <- function (add.readiness.type, subindicator) {
   lookup <- list(all = c(1,2,3),
@@ -240,7 +271,7 @@ lookup.add.readiness.weights <- function (add.readiness.type, subindicator) {
     
 }
 
-high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR", "SCHOOL_ID", "HS_ACHIEVEMENT_SMALL_SCHOOL")], 
+high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR", "SCHOOL_ID", "WAEA_SMALL_SCHOOL", "HS_ACHIEVEMENT_SMALL_SCHOOL")], 
                                                    HS_ACHIEVEMENT_YEARS_BACK = ifelse(is.na(high.schools[,"HS_ACHIEVEMENT_YEARS_BACK"]),
                                                                                       NA,
                                                                                       ifelse(high.schools[,"HS_ACHIEVEMENT_YEARS_BACK"] < Inf,
@@ -249,7 +280,15 @@ high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR"
                                                    HS_ACHIEVEMENT_CUT_1_HS = hs.achievement.cuts[1],
                                                    HS_ACHIEVEMENT_CUT_2_HS = hs.achievement.cuts[2],
                                                    high.schools[,c("HS_ACHIEVEMENT_N_TESTS", "HS_ACHIEVEMENT_N_PROFICIENT_TESTS", "HS_ACHIEVEMENT_PERCENT_PROFICIENT", "HS_ACHIEVEMENT_N",
-                                                                   "HS_ACHIEVEMENT_TESTS_ACTUAL_COUNT", "HS_ACHIEVEMENT_TESTS_EXPECTED_COUNT", "HS_ACHIEVEMENT_PARTICIPATION_RATE")],
+                                                                   "HS_ACHIEVEMENT_TESTS_ACTUAL_COUNT", "HS_ACHIEVEMENT_TESTS_EXPECTED_COUNT", "HS_ACHIEVEMENT_PARTICIPATION_RATE", 
+                                                                   "HS_ACHIEVEMENT_REQUIRED_TESTED_95", "HS_ACHIEVEMENT_REQUIRED_TESTED_90",
+                                                                   "HS_ACHIEVEMENT_PARTICIPATION_LEVEL_MET")],
+                                                   
+                                                   ACHIEVEMENT_PARTICIPATION_LEVEL1 = ifelse(high.schools$HS_ACHIEVEMENT_PARTICIPATION_LEVEL_MET >= 3,
+                                                                                             'Met', 'Not Met'),
+                                                   
+                                                   ACHIEVEMENT_PARTICIPATION_LEVEL2 = ifelse(high.schools$HS_ACHIEVEMENT_PARTICIPATION_LEVEL_MET >= 2,
+                                                                                             'Met', 'Not Met'),
                                                    ACHIEVEMENT_TARGET_LEVEL = ifelse(is.na(high.schools[,c("HS_ACHIEVEMENT_TARGET_LEVEL")]), 
                                                                                      NA, 
                                                                                      indicator.labels[high.schools[,c("HS_ACHIEVEMENT_TARGET_LEVEL")]]),
@@ -262,7 +301,15 @@ high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR"
                                                    HS_EQUITY_CUT_1_HS = hs.equity.cuts[1],
                                                    HS_EQUITY_CUT_2_HS = hs.equity.cuts[2],
                                                    high.schools[,c("HS_EQUITY_MEAN", "HS_EQUITY_N", 
-                                                                   "HS_EQUITY_TESTS_ACTUAL_COUNT", "HS_EQUITY_TESTS_EXPECTED_COUNT", "HS_EQUITY_PARTICIPATION_RATE")],
+                                                                   "HS_EQUITY_TESTS_ACTUAL_COUNT", "HS_EQUITY_TESTS_EXPECTED_COUNT", "HS_EQUITY_PARTICIPATION_RATE", 
+                                                                   "HS_EQUITY_REQUIRED_TESTED_95", "HS_EQUITY_REQUIRED_TESTED_90",
+                                                                   "HS_EQUITY_PARTICIPATION_LEVEL_MET")],
+                                                   
+                                                   EQUITY_PARTICIPATION_LEVEL1 = ifelse(high.schools$HS_EQUITY_PARTICIPATION_LEVEL_MET >= 3,
+                                                                                             'Met', 'Not Met'),
+                                                   
+                                                   EQUITY_PARTICIPATION_LEVEL2 = ifelse(high.schools$HS_EQUITY_PARTICIPATION_LEVEL_MET >= 2,
+                                                                                             'Met', 'Not Met'),
                                                    EQUITY_TARGET_LEVEL = ifelse(is.na(high.schools[,c("HS_EQUITY_TARGET_LEVEL")]), 
                                                                                      NA, 
                                                                                      indicator.labels[high.schools[,c("HS_EQUITY_TARGET_LEVEL")]]),
@@ -304,7 +351,15 @@ high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR"
                                                                                                   NA)),
                                                    high.schools[c("HS_TESTED_READINESS_MEAN", "HS_TESTED_READINESS_N",
                                                                   "HS_TESTED_READINESS_TESTS_ACTUAL_COUNT", "HS_TESTED_READINESS_TESTS_EXPECTED_COUNT",
-                                                                  "HS_TESTED_READINESS_PARTICIPATION_RATE")],
+                                                                  "HS_TESTED_READINESS_PARTICIPATION_RATE", 
+                                                                  "HS_TESTED_READINESS_REQUIRED_TESTED_95", "HS_TESTED_READINESS_REQUIRED_TESTED_90",
+                                                                  "HS_TESTED_READINESS_PARTICIPATION_LEVEL_MET")],
+                                                   
+                                                   TESTED_READINESS_PARTICIPATION_LEVEL1 = ifelse(high.schools$HS_TESTED_READINESS_PARTICIPATION_LEVEL_MET >= 3,
+                                                                                        'Met', 'Not Met'),
+                                                   
+                                                   TESTED_READINESS_PARTICIPATION_LEVEL2 = ifelse(high.schools$HS_TESTED_READINESS_PARTICIPATION_LEVEL_MET >= 2,
+                                                                                        'Met', 'Not Met'),
                                                    
                                                    with(data.frame("WEIGHT" = sapply(high.schools$HS_ADD_READINESS_TYPE_LABEL,
                                                                                      function (type) {
@@ -338,12 +393,16 @@ high.school.indicators <- with(high.schools, cbind(high.schools[,c("SCHOOL_YEAR"
                                                    HS_PARTICIPATION_RATE_CAT = ifelse(is.na(high.schools[, "HS_PARTICIPATION_RATE_CAT"]), 
                                                                                       NA,
                                                                                       participation.labels[high.schools[,"HS_PARTICIPATION_RATE_CAT"]]),
+                                                   HS_PARTICIPATION_CAT = ifelse(is.na(high.schools[, "HS_PARTICIPATION_CAT"]), 
+                                                                                      NA,
+                                                                                      participation.labels[high.schools[,"HS_PARTICIPATION_CAT"]]),
                                                    HS_SPL = ifelse(is.na(high.schools[,c("HS_SPL")]), 
                                                                    NA, 
                                                                    SPL.labels[high.schools[,c("HS_SPL")]]),
                                                    HS_SPL_ACCOUNTABILITY = ifelse(is.na(high.schools[,c("HS_SPL_ACCOUNTABILITY")]), 
                                                                                   NA, 
-                                                                                  SPL.labels[high.schools[,c("HS_SPL_ACCOUNTABILITY")]])))
+                                                                                  SPL.labels[high.schools[,c("HS_SPL_ACCOUNTABILITY")]]),
+                                                   high.schools[c("SMALL_SCHOOL_SCORE", "SMALL_SCHOOL_DECISION")]))
 
 write.csv(high.school.indicators, file="reporting/school-indicators-HS.csv", na="", row.names=FALSE, quote=FALSE)
 

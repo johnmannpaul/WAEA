@@ -78,7 +78,7 @@ compute.add.readiness <- function (school,
                                                   "PERCENT_GD_9_CREDIT_MET",
                                                   "HATH_INDEX_SCORE_MEAN"),
                                    N.labels=c("HS_TESTED_READINESS_N",
-                                              "GRADE_NINE_CREDITS_MET_N",
+                                              "GRADE_NINE_CREDITS_N",
                                               "HATH_INDEX_SCORE_N"),
                                    school.labels = c("SCHOOL_YEAR","SCHOOL_ID")) {
   labels <- school[school.labels]
@@ -103,7 +103,7 @@ type.1.additional.readiness <- data.frame(t(apply(schools[schools$SCHOOL_YEAR==c
                                                                                                       "PERCENT_GD_9_CREDIT_MET",
                                                                                                       "HATH_INDEX_SCORE_MEAN",
                                                                                                       "HS_TESTED_READINESS_N",
-                                                                                                      "GRADE_NINE_CREDITS_MET_N",
+                                                                                                      "GRADE_NINE_CREDITS_N",
                                                                                                       "HATH_INDEX_SCORE_N")],
                                                   c(1),
                                                   compute.add.readiness, additional.readiness.weights,
@@ -280,7 +280,7 @@ schools <- compute.add.readiness.for.other.types(schools,
                                                  round(prop.table(additional.readiness.weights[c("tested", "grade.nine")]),2),
                                                  type.1.additional.readiness.cuts,
                                                  c("HS_TESTED_READINESS_MEAN", "PERCENT_GD_9_CREDIT_MET"), 
-                                                 c("HS_TESTED_READINESS_N", "GRADE_NINE_CREDITS_MET_N"))
+                                                 c("HS_TESTED_READINESS_N", "GRADE_NINE_CREDITS_N"))
 
 
 schools[schools$SCHOOL_YEAR==current.school.year &

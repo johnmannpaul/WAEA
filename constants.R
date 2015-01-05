@@ -33,6 +33,8 @@ nonHS.types = c(1,3,4,5)
 HS.types = c(2,4,5)
 paired.types = c(6,7)
 
+g38.types <- union(nonHS.types,paired.types)
+
 state.school.id = '7700000'
 
 type.lookup <- list(`P-5`=1, 
@@ -346,6 +348,9 @@ g38.target.level.labels <- c(achievement="G38_ACHIEVEMENT_ALL_TARGET_LEVEL",
 g38.participation.labels <- c(achievement="G38_ACHIEVEMENT_ALL_PARTICIPATION_RATE",
                               equity="G38_EQUITY_PARTICIPATION_RATE")
 
+g38.participation.level.labels <- c(achievement="G38_ACHIEVEMENT_ALL_PARTICIPATION_LEVEL_MET",
+                              equity="G38_EQUITY_PARTICIPATION_LEVEL_MET")
+
 g38.SPL.labels <- c(unmodified="G38_SPL",
                     accountability="G38_SPL_ACCOUNTABILITY")
 
@@ -375,6 +380,13 @@ hs.participation.labels <- c(achievement="HS_ACHIEVEMENT_PARTICIPATION_RATE",
                              tested.readiness="HS_TESTED_READINESS_PARTICIPATION_RATE",
                              equity="HS_EQUITY_PARTICIPATION_RATE"
 )
+
+
+hs.participation.level.labels <- c(achievement="HS_ACHIEVEMENT_PARTICIPATION_LEVEL_MET",
+                                   tested.readiness="HS_TESTED_READINESS_PARTICIPATION_LEVEL_MET",
+                                   equity="HS_EQUITY_PARTICIPATION_LEVEL_MET"
+)
+
 
 hs.SPL.labels <- c(unmodified="HS_SPL",
                     accountability="HS_SPL_ACCOUNTABILITY")

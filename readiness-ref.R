@@ -73,7 +73,53 @@ readiness.indexed.scores$TESTED_READINESS_INDEX_SCORE <- apply(readiness.indexed
 
 #compute the indicator using the original student frame for participation
 #and the indexed scores frame for scores
-tested.readiness.indicator <- compute.indicator.long(readiness.all.df,
+
+#Give every record a SUBJECT_CODE based on its SUBJECT
+readiness.all.df$SUBJECT_CODE <- sapply(readiness.all.df$SUBJECT,
+                                             function (s) {
+                                               switch(s, 
+                                                      Composite="COMP",
+                                                      Math="MA",
+                                                      Reading="RE",
+                                                      Science="SC",
+                                                      Writing="WR",
+                                                      NA)
+                                             })
+readiness.all.df.part <- readiness.all.df[readiness.all.df$TEST_TYPE %in% readiness.standard.test.types,
+                                          c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID",
+                                            "SUBJECT_CODE","TESTING_STATUS_CODE")]
+
+
+readiness.all.df.alt <- readiness.all.df[grepl("Alternate", readiness.all.df$TEST_TYPE) &
+                                           readiness.all.df$TESTING_STATUS_CODE != 'X',]
+
+
+nrow(unique(readiness.all.df.alt[c("SCHOOL_YEAR", "SCHOOL_ID", "WISER_ID")]))
+
+readiness.all.df.alt.part <- aggregate(readiness.all.df.alt["TESTING_STATUS_CODE"],
+                                       by=list(SCHOOL_YEAR=readiness.all.df.alt$SCHOOL_YEAR,
+                                               SCHOOL_ID=readiness.all.df.alt$SCHOOL_ID,
+                                               WISER_ID=readiness.all.df.alt$WISER_ID),
+                                       FUN=function (g) {
+                                         if (any(g == 'T'))
+                                           'T'
+                                         else
+                                           'N'
+                                       })
+
+nrow(readiness.all.df.alt.part)
+
+nrow(readiness.all.df.part)
+readiness.all.df.part <- rbind(readiness.all.df.part,
+                               data.frame(readiness.all.df.alt.part[c("SCHOOL_YEAR", 
+                                                                  "SCHOOL_ID",
+                                                                  "WISER_ID")],
+                                          SUBJECT_CODE="COMP",
+                                          readiness.all.df.alt.part["TESTING_STATUS_CODE"]))
+
+nrow(readiness.all.df.part)
+
+tested.readiness.indicator <- compute.indicator.long(readiness.all.df.part,
                                                      readiness.indexed.scores,
                                                      schools,
                                                      indicator.label = "HS_TESTED_READINESS",                                                                                    

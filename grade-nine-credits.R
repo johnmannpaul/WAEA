@@ -2,6 +2,9 @@ load(file="data/grade.nine.credits.Rdata")
 table(grade.nine.credits$CREDITS_EARNED, useNA="ifany")
 table(grade.nine.credits$MET_CREDIT_TARGET, useNA="ifany")
 
+grade.nine.credits <- grade.nine.credits[grade.nine.credits$WAEA_EXEMPT=='F',]
+
+
 #should be equal.  No duplicate wiser_ids 
 length(grade.nine.credits$WISER_ID)
 length(unique(grade.nine.credits$WISER_ID))

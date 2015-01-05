@@ -42,9 +42,9 @@ update.results.nonHS <- function (school.year, adjusted=report.adjusted.SPLs, la
                            c(1),
                            FUN=calc.SPL.nonHS )
   
-  schools$G38_SPL_ACCOUNTABILITY <<- apply(schools[,c("G38_SPL", g38.participation.labels)],
+  schools$G38_SPL_ACCOUNTABILITY <<- apply(schools[,c("G38_SPL", "G38_PARTICIPATION_CAT")],
                                           c(1),
-                                          FUN=calc.SPL.accountability, "G38_SPL",  g38.participation.labels)
+                                          FUN=calc.SPL.accountability, "G38_SPL",  "G38_PARTICIPATION_CAT")
   
   #propagate G38 values to paired schools (none of these schools are paired with schools serving 12th grade)
   g38.accountability.labels <- names(schools)[grep("^G38_", names(schools))]
@@ -160,9 +160,9 @@ update.results.HS <- function (school.year, adjusted=report.adjusted.SPLs, label
                                      hs.overall.target.level.labels)], c(1),
                           calc.SPL.HS)
   
-  schools$HS_SPL_ACCOUNTABILITY <<- apply(schools[,c("HS_SPL", hs.participation.labels)],
+  schools$HS_SPL_ACCOUNTABILITY <<- apply(schools[,c("HS_SPL", "HS_PARTICIPATION_CAT")],
                                          c(1),
-                                         FUN=calc.SPL.accountability, "HS_SPL",  hs.participation.labels)
+                                         FUN=calc.SPL.accountability, "HS_SPL",  "HS_PARTICIPATION_CAT")
   
   
 

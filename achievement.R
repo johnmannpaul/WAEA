@@ -5,6 +5,8 @@ g38.achieve.all <- rbind(g38.achieve.lookback,g38.achieve)
 
 table(g38.achieve.all[c("SCHOOL_YEAR", "TEST_TYPE")], useNA="ifany")
 
+
+
 achievement.g38.indicator <- compute.indicator.long(g38.achieve.all, 
                                                     g38.achieve.all,
                                                     schools,

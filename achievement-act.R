@@ -2,8 +2,30 @@ load(file="data/ACT/act.achieve.Rdata")
 load(file="data/ACT/act.lookback.Rdata")
 load(file="data/ACT/paws.lookback.2yr.Rdata")
 
+
+
+###begin correction
+writing.updates <- read.csv(file="data/11th-writing-not-prof-to-prof-student-ids.csv", colClasses=c("character"), header=FALSE)
+names(writing.updates) <- "WISER_ID"
+
 act.achieve <- rbind(paws.lookback.2yr, act.lookback, act.achieve)
-table(act.achieve$SCHOOL_YEAR)
+table(with(act.achieve, act.achieve[WISER_ID %in% writing.updates$WISER_ID & SUBJECT_CODE=='ENGWRI', "PERFORMANCE_LEVEL"]))
+table(act.achieve[act.achieve$SUBJECT_CODE=='ENGWRI',"PERFORMANCE_LEVEL"])
+
+act.achieve$PERFORMANCE_LEVEL <- ifelse(act.achieve$WISER_ID %in% writing.updates$WISER_ID & act.achieve$SUBJECT_CODE=='ENGWRI',
+                                        3,
+                                        act.achieve$PERFORMANCE_LEVEL)
+
+table(act.achieve[act.achieve$SUBJECT_CODE=='ENGWRI',"PERFORMANCE_LEVEL"])
+###end correction
+
+#The ALT writing test has been encoded as SUBJECT_CODE WR,  this is an unecesssary distinction.
+#For accountability purposes this writing test is lumped together with the standar writing test
+#which has been encoded as SUBJECT_CODE ENGWRI.  We choose to recode all WRs as ENGWRIs.
+act.achieve$SUBJECT_CODE <- ifelse(act.achieve$SUBJECT_CODE == "WR",
+                                   "ENGWRI",
+                                   act.achieve$SUBJECT_CODE)
+
 achievement.hs.indicator <- compute.indicator.long(act.achieve, 
                                                    act.achieve,
                                                    schools,

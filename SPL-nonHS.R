@@ -78,10 +78,27 @@ schools$G38_PARTICIPATION_RATE_CAT <- apply(schools[, c("WAEA_SCHOOL_TYPE", g38.
                                                findInterval(min(school[g38.participation.labels], na.rm=TRUE), c(90,95)) + 1
                                            })
 
+schools$G38_PARTICIPATION_CAT <- apply(schools[, c("WAEA_SCHOOL_TYPE", g38.participation.level.labels)],
+                                            c(1),
+                                            function (school) {
+                                              
+                                              if (!(school[["WAEA_SCHOOL_TYPE"]] %in% nonHS.types))
+                                                NA
+                                              else
+                                                min(school[g38.participation.level.labels], na.rm=TRUE)
+                                            })
 
-schools$G38_SPL_ACCOUNTABILITY <- apply(schools[,c("G38_SPL", g38.participation.labels)],
+
+schools$G38_SPL_ACCOUNTABILITY_OLD <- apply(schools[,c("G38_SPL", g38.participation.labels)],
+                                            c(1),
+                                            FUN=calc.SPL.accountability.old, "G38_SPL",  g38.participation.labels)
+
+
+schools$G38_SPL_ACCOUNTABILITY <- apply(schools[,c("G38_SPL", "G38_PARTICIPATION_CAT")],
                          c(1),
-                         FUN=calc.SPL.accountability, "G38_SPL",  g38.participation.labels)
+                         FUN=calc.SPL.accountability, "G38_SPL",  "G38_PARTICIPATION_CAT")
+
+
 
 schools[!is.na(schools$G38_SPL) & schools$G38_SPL !=  schools$G38_SPL_ACCOUNTABILITY,]
 

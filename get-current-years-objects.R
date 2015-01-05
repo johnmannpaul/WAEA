@@ -51,8 +51,6 @@ current.schools.enrollment <- sqlQuery(conn, query=make.query(object.name(model.
 current.act.suite.readiness <- sqlFetch(conn, data.tables.lexicon[[current.school.year]][["act.suite.readiness"]], as.is=as.is.vector(names(act.suite.readiness)))
 
 
-grade.nine.columns <- sqlColumns(conn, data.tables.lexicon[[current.school.year]][["grade.nine.credits"]])
-grade.nine.credits <- sqlFetch(conn, data.tables.lexicon[[current.school.year]][["grade.nine.credits"]], as.is=as.is.vector(grade.nine.columns$COLUMN_NAME))
 
 grade.nine.columns <- sqlColumns(conn, data.tables.lexicon[[current.school.year]][["grade.nine.credits"]])
 grade.nine.credits <- sqlFetch(conn, data.tables.lexicon[[current.school.year]][["grade.nine.credits"]], as.is=as.is.vector(grade.nine.columns$COLUMN_NAME))
