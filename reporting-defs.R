@@ -1,5 +1,6 @@
 library("RODBC")
 library("reshape")
+require(plyr)
 library("data.table")
 library(devtools)
 
@@ -749,16 +750,23 @@ estimate.mssql.types <- function (df) {
       if (is.numeric(df[[x]])) {
         col <- df[[x]]
         all.ints <- is.int(col[which(!is.na(col))])
+        is.bit <- all.ints & any(col == 0) & any(col == 1) & all(between(col[which(!is.na(col))],0,1)) #kind of a guess: both zeros and ones (and maybe nulls) and that's all
         integral.digits <- num.int.digits(col)
         fractional.digits <- num.int.digits(as.numeric(unlist(lapply(col, function (x) strsplit(as.character(x), ".", fixed=TRUE)[[1]][2]))))
         
-        if (all.ints) 
+        if (is.bit)
+          "bit"
+        else if (all.ints) 
           "int"
         else
           paste("decimal", "(", integral.digits+fractional.digits, ",", fractional.digits, ")", sep="")
         
         
-      } else {
+      } 
+      else if (is.logical(df[[x]])) {
+        "bit"
+      }
+      else {
         NULL
       }
     }
@@ -770,19 +778,19 @@ estimate.mssql.types <- function (df) {
 } 
 
 
-write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL) {
+write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL, other.fact.key=NULL) {
   
   if (is.null(uid))
     conn <- odbcConnect(dsn=db.dsn)
   else
     conn <- odbcConnect(db.dsn, uid, pwd)
   
-  make.key.list <- function (dim.tables) {
-    do.call(paste, c(as.list(Reduce(union, sapply(dim.tables, function (t) key(t)))), sep=", "))
+  make.key.list <- function (dim.tables, other.cols = NULL) {
+    do.call(paste, c(as.list(Reduce(union, c(other.cols, sapply(dim.tables, function (t) key(t))))), sep=", "))
     
   }
   
-  alter.nullability <- function (dim, table.name) {
+  alter.nullability <- function (dim, table.name, other.cols = NULL) {
     alter.key <- function (pk.col) {
       cols <- sqlColumns(conn, table.name)
       pk.data.type <- cols[cols$COLUMN_NAME==pk.col, "TYPE_NAME"]
@@ -798,6 +806,7 @@ write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL) {
     }
     
     lapply(key(dim), alter.key)
+    sapply(other.cols, alter.key)
     
   }
   
@@ -813,7 +822,7 @@ write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL) {
                          ")"))      
   }
   
-  add.fact.constraints <- function (n, facts, facts.table.name) 
+  add.fact.constraints <- function (n, facts, facts.table.name, other.cols) 
   {
     
     foreign.keys <- function (i) {
@@ -821,7 +830,7 @@ write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL) {
       dim.table <- df.list[[i]]
       dim.table.name <- names(df.list)[i]
       dim.table.id <- make.key.list(list(dim.table))
-      alter.nullability(dim.table, facts.table.name)
+      alter.nullability(dim.table, facts.table.name, other.cols)
       sqlQuery(channel=conn,
                query=paste("ALTER TABLE", 
                            facts.table.name, 
@@ -852,7 +861,7 @@ write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL) {
                          facts.table.name, 
                          "ADD CONSTRAINT", 
                          do.call(paste, c(as.list(strsplit(facts.table.name, ".", TRUE)[[1]]), "PK", sep="_")), 
-                         "PRIMARY KEY (", make.key.list(df.list[1:(n-1)]) , ")"))
+                         "PRIMARY KEY (", make.key.list(df.list[1:(n-1)], other.fact.key) , ")"))
     
   }
   
@@ -863,6 +872,15 @@ write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL) {
                    names(df.list)[i], 
                    sep=".")
     
+    data <- do.call(data.frame,
+                    sapply(names(data),
+                           function (n) {
+                             
+                             if (class(data[[n]]) == 'logical')
+                               as.numeric(data[[n]])
+                             else
+                               data[[n]]
+                           }, simplify = FALSE, USE.NAMES = TRUE))
     sqlSave(channel = conn, 
             dat = data, 
             tablename = table,
@@ -874,7 +892,7 @@ write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL) {
     if (i < length(df.list))
       add.dim.constraints(data, table)
     else
-      add.fact.constraints(i, data, table)  
+      add.fact.constraints(i, data, table, other.fact.key)  
   }
   
   lapply(rev(names(df.list)), function (table.name) {
@@ -891,3 +909,401 @@ write.tables <- function (db.dsn, df.list, db.prefix, uid=NULL, pwd=NULL) {
   odbcClose(conn)
 }
 
+
+suppress.groups <- function (suppress.dt, Ncol, col.groups, min.N=10, All.label="All"){
+  
+  
+  suppressed.label <- paste("Suppressed", Ncol, sep=".")
+  marked.label <- paste("Marked", Ncol, sep=".")
+  
+  #suppress all the rows that don't meet min.N on Ncol
+  suppress.dt[, c(suppressed.label) := get(Ncol) > 0 & get(Ncol) < min.N]  
+  
+  
+  suppress.group <- function (s, a) {
+    
+    if (any(s)) 
+      sum(a[which(s)]) > 0 & sum(a[which(s)]) < min.N
+    else
+      FALSE
+  }
+  
+  
+  suppress.helper <- function (g, col.name) {
+    suppress.dt[get(col.name) %in% g,
+                c(suppressed.label) := get(suppressed.label) | (suppress.group(get(suppressed.label),get(Ncol)) & get(Ncol) > 0), 
+                by=eval(setdiff(key(suppress.dt), col.name)) ]  #not sure why we have to do eval(setdiff(...
+  }
+  
+  suppress.partition <- function (col.name) {           
+    lapply(col.groups[[col.name]], #one iteration per partition
+           suppress.helper, col.name
+    )
+  }
+  #apply secondary supressession to partitions with suppressed parts
+  lapply(names(col.groups), #one iteration per partitioned column
+         suppress.partition 
+  )
+  
+  
+  #table(suppress.dt[,get(suppressed.label)])
+  
+  
+  #Now we have to go back through and suppress the rest of those groups that had some of their members suppressed.
+  #First we'll mark them for suppression in order to draw a comparison with what is already suppressed, and then suppress them. 
+  mark.group <- function (comps,supp, Ns) {
+    
+    #order the group with 'All' first
+    supp.ordered <- supp[c(which(comps == All.label), which(comps != All.label))]
+    Ns.ordered <- Ns[c(which(comps == All.label), which(comps != All.label))]
+    Ns.suppressed <- sum(Ns.ordered[which(supp.ordered[seq(supp.ordered) > 1] == 1) + 1])
+    
+    if((!supp.ordered[1] & sum(supp.ordered[seq(supp.ordered) > 1]) == 1) |  #'All' is not suppressed but excatly one subcategory is suppressed, no matter its size
+         (!supp.ordered[1] &  0 < Ns.suppressed & Ns.suppressed < min.N) |  #'All' is not suppressed and the sum of the populations of the suppressed partitions is less then the minimum
+         (supp.ordered[1] & sum(supp.ordered[seq(supp.ordered) > 1]) == 0))  #'All' is suppressed but no subcategories are suppressed
+      supp[which(comps != All.label)] <- TRUE
+    
+    supp
+    
+  }
+  
+  suppress.dt[,c(marked.label) :=FALSE]
+  
+  
+  mark.helper <- function (g, col.name) {
+    suppress.dt[get(col.name) %in% c(All.label,g),
+                c(marked.label) := get(marked.label) | (mark.group(get(col.name), get(suppressed.label), get(Ncol)) & get(Ncol) > 0), 
+                by=eval(setdiff(key(suppress.dt), col.name)) ]  #not sure why we have to do eval(setdiff(...
+  }
+  
+  mark.partition <- function (col.name) {           
+    lapply(col.groups[[col.name]], #one iteration per partition
+           mark.helper, col.name
+    )
+  }
+  
+  lapply(names(col.groups), #one iteration per partitioned column
+         mark.partition
+  )
+  #table(suppress.dt[,c(suppressed.label, marked.label), with=FALSE], useNA="ifany")
+  
+  #Supress the marked ones
+  suppress.dt[,c(suppressed.label):= get(suppressed.label) | get(marked.label),]
+  suppress.dt
+  
+}
+
+
+compute.growth.subgroups <- function (assess.df, growth.df, schools, pairings, min.N.growth.report=10, round.to = 1, growthCuts = c(35, 65), year.id.offset=0) {
+  
+  paws.agg.sg <- aggregate.subgroup.combos.product(assess.df,
+                                                   subgroups.intersecting = list(SCHOOL_FULL_ACADEMIC_YEAR=c(T='Yes', F="No")
+                                                   ),
+                                                   subgroups.nonintersecting = list(STUDENT_LUNCH=c(T='FRL', F='NFRL'),
+                                                                                    IDEA_CURRENT_YEAR=c(T='IDEA', F='NIDEA'),                                                        
+                                                                                    CONSOLIDATED_SUBGROUP=c(T='CSG', F='NCSG'),
+                                                                                    ADVANCED_SUBGROUP=c(T='ASG', F='NASG'),
+                                                                                    ELL_CURRENT_YEAR=c(T='ELL', F='NELL'),
+                                                                                    ETHNICITY=NA,
+                                                                                    GENDER=NA,
+                                                                                    TESTING_STATUS_CODE=c(T='All')
+                                                   ),
+                                                   obs=c(STANDARD_PAWS_PERF_LEVEL="character",WISER_ID="character"))
+  
+  
+  
+  
+  
+  growth.agg.sg <- aggregate.subgroup.combos.product( growth.df[!is.na(growth.df$SGP),],
+                                                      subgroups.intersecting = list(SCHOOL_FULL_ACADEMIC_YEAR=c(T='Yes', F="No")
+                                                      ),
+                                                      subgroups.nonintersecting = list(STUDENT_LUNCH=c(T='FRL', F='NFRL'),
+                                                                                       IDEA_CURRENT_YEAR=c(T='IDEA', F='NIDEA'),                                                        
+                                                                                       CONSOLIDATED_SUBGROUP=c(T='CSG', F='NCSG'),
+                                                                                       ADVANCED_SUBGROUP=c(T='ASG', F='NASG'),
+                                                                                       ELL_CURRENT_YEAR=c(T='ELL', F='NELL'),
+                                                                                       ETHNICITY=NA,
+                                                                                       GENDER=NA,
+                                                                                       TESTING_STATUS_CODE=c(T='All')
+                                                      ),
+                                                      obs=c(SGP="numeric",AGP="numeric",WISER_ID="character"),
+                                                      FUN=c(
+                                                        function (x) 
+                                                          c(NLowGrowth = sum(ifelse(x <= growthCuts[1], 1, 0)),
+                                                            NTypicalGrowth = sum(ifelse(growthCuts[1] < x & x <= growthCuts[2], 1, 0)),
+                                                            NHighGrowth = sum(ifelse(growthCuts[2] < x, 1, 0)),
+                                                            NGrowth=length(x),
+                                                            PLowGrowth = if (length(x) == 0) NA else round((sum(ifelse(x <= growthCuts[1], 1, 0))/length(x))*100,round.to),
+                                                            PTypicalGrowth = if (length(x) == 0) NA else round((sum(ifelse(growthCuts[1] < x & x <= growthCuts[2], 1, 0))/length(x))*100,round.to),
+                                                            PHighGrowth = if (length(x) == 0) NA else round((sum(ifelse(growthCuts[2] < x, 1, 0))/length(x))*100,round.to),
+                                                            MGP = if (length(x) == 0) NA else median(x)),
+                                                        MAGP=function (x) {
+                                                          if (length(x) == 0) NA else median(x)
+                                                        },
+                                                        N_STUDENTS=function (x) {
+                                                          length(unique(x))
+                                                        }))
+  
+  
+  
+  
+  combo.agg <- merge (paws.agg.sg, growth.agg.sg, by=c("SCOPE","SCHOOL_YEAR", "GRADE_ENROLLED", "SUBGROUP", "SUBJECT_CODE", "DISTRICT_ID", "SCHOOL_ID", "SCHOOL_FULL_ACADEMIC_YEAR"), all.x=TRUE)
+  
+  combo.agg[,c("NLowGrowth", "NTypicalGrowth", "NHighGrowth", "NGrowth", 
+               
+               "PLowGrowth", "PTypicalGrowth", "PHighGrowth", "MGP", "MAGP", "N_STUDENTS.y")] <- data.frame(t(apply(combo.agg[,c("NLowGrowth", "NTypicalGrowth", "NHighGrowth", "NGrowth", 
+                                                                                                                                 "PLowGrowth", "PTypicalGrowth", "PHighGrowth", "MGP", "MAGP", "N_STUDENTS.y")], c(1),                                                                                      
+                                                                                                                    FUN=function (row) {
+                                                                                                                      if (all(is.na(row)))
+                                                                                                                        c(0,0,0,0,NA,NA,NA,NA, NA,0)
+                                                                                                                      
+                                                                                                                      else
+                                                                                                                        row                                                          
+                                                                                                                    })))
+  #rename the two n_students columns
+  names(combo.agg)[names(combo.agg) %in% c("N_STUDENTS.x", "N_STUDENTS.y")] <- c("N_STUDENTS_ACHIEVEMENT", "N_STUDENTS_GROWTH")
+  
+  
+  
+  
+  combo.agg <- with(combo.agg, combo.agg[!(SCOPE %in% c("STATE_DISTRICT")),])
+  combo.agg$SCOPE <- ifelse(combo.agg$SCOPE == "STATE_SCHOOL", "STATE", combo.agg$SCOPE)
+  
+  
+  #need to get in district name, school name, subject description
+  combo.agg$SUBJECT_DESCRIPTION <- unlist(lapply(combo.agg$SUBJECT_CODE, function (s) { switch(as.character(s), RE="Reading", MA="Mathematics", "Reading & Math") }))
+  
+  
+  
+  
+  combo.agg$SUBGROUP_DESCRIPTION <- unlist(lapply(combo.agg$SUBGROUP, function (x) switch(x,
+                                                                                          
+                                                                                          All='All Students', 
+                                                                                          ASG="Advanced Sugroup",
+                                                                                          NASG="Not Advanced Sugroup",
+                                                                                          CSG="Consolidated Subgroup", 
+                                                                                          FRL="Free And Reduced Lunch", 
+                                                                                          IDEA="Students with Disabilities",
+                                                                                          NCSG="Not Consolidated Subgroup",
+                                                                                          NFRL="Not Free and Reduced Lunch",
+                                                                                          NIDEA="Students without Disabilities",
+                                                                                          ELL="English Language Learner",
+                                                                                          NELL="Not English Language Learner",
+                                                                                          M="Male",
+                                                                                          F="Female",
+                                                                                          A="Asian",
+                                                                                          B="Black (not Hispanic)",
+                                                                                          H="Hispanic",
+                                                                                          I="American Indian/Alaska Native",
+                                                                                          P="Native Hawaiian/Pacific Islander",
+                                                                                          W="White (not Hispanic)",
+                                                                                          Z="Two or More Races",
+                                                                                          NA)))
+  
+  
+  
+  combo.agg <- merge(combo.agg, schools[,c("SCHOOL_YEAR", "SCHOOL_ID", "NAME")], all.x=TRUE)
+  combo.agg <- merge(combo.agg, unique(schools[,c("SCHOOL_YEAR", "DISTRICT_ID", "DISTRICT_NAME")]), all.x=TRUE)
+  
+  combo.agg <- with(combo.agg, combo.agg[(SCOPE == 'SCHOOL' & !is.na(NAME)) | (SCOPE == 'DISTRICT' & !is.na(DISTRICT_NAME)) | SCOPE=='STATE',])  #
+  
+  
+  #assign 'All Schools' and 'All Districts' descriptors
+  combo.agg[combo.agg$SCHOOL_ID=='All',]$NAME <- 'All Schools'
+  combo.agg[combo.agg$DISTRICT_ID=='All',]$DISTRICT_NAME <- 'All Districts'
+  
+  
+  
+  #GRADE_ENROLLED is an ordered factor (should look into this)
+  combo.agg$GRADE_DESCRIPTION <- unlist(lapply(combo.agg$GRADE_ENROLLED, function (x) switch(as.character(x),
+                                                                                             All="All Grades",
+                                                                                             `03`="Third Grade", 
+                                                                                             `04`="Fourth Grade", 
+                                                                                             `05`="Fifth Grade", 
+                                                                                             `06`="Sixth Grade", 
+                                                                                             `07`="Seventh Grade",
+                                                                                             `08`="Eigth Grade",
+                                                                                             NA)))
+  
+  
+  combo.agg$SCHOOL_FAY_DESCRIPTION <- unlist(lapply(combo.agg$SCHOOL_FULL_ACADEMIC_YEAR, function (x) switch(x,
+                                                                                                             All="All Students",
+                                                                                                             Yes="Full Academic Year Only", 
+                                                                                                             No="Not Full Academic Year Only",
+                                                                                                             NA)))
+  
+  result <- combo.agg[,c("SCOPE", "DISTRICT_ID", "DISTRICT_NAME", "SCHOOL_ID", "NAME",
+                         "SCHOOL_YEAR", "GRADE_ENROLLED", "GRADE_DESCRIPTION", "SUBGROUP", "SUBGROUP_DESCRIPTION", "SCHOOL_FULL_ACADEMIC_YEAR", "SCHOOL_FAY_DESCRIPTION",
+                         "SUBJECT_CODE", "SUBJECT_DESCRIPTION", 
+                         "NLowGrowth", "NTypicalGrowth", "NHighGrowth", "NGrowth", "N_STUDENTS_GROWTH",
+                         
+                         "PLowGrowth", "PTypicalGrowth", "PHighGrowth", "MGP", "MAGP",
+                         
+                         "PERCENT_PROFICIENT", "N_PROFICIENT", "N_STUDENTS_ACHIEVEMENT", "N_TESTS")]
+  
+  
+  names(result) <- c("DataScope"
+                     ,"DistrictId"
+                     ,"DistrictName"
+                     ,"SchoolId"
+                     ,"SchoolName"
+                     ,"SchoolYear"
+                     ,"GradeEnrolled"
+                     ,"GradeDescription"
+                     ,"Subgroup"
+                     ,"SubgroupDescription"
+                     ,"StudentMobility"
+                     ,"StudentMobilityDescription"
+                     ,"SubjectCode"
+                     ,"Subject"
+                     ,"NLowGrowth"
+                     ,"NTypicalGrowth"
+                     ,"NHighGrowth"
+                     ,"NGrowthScores"
+                     ,"NStudentsGrowth"
+                     ,"PLowGrowth"
+                     ,"PTypicalGrowth"
+                     ,"PHighGrowth"
+                     ,"MGP"
+                     ,"MAGP"
+                     ,"PProficient"
+                     ,"NProficient"
+                     ,"NStudentsAchievement"
+                     ,"NTestsAchievement")
+  
+  
+  
+  
+  #paired schools obtain the same values as their parent schools
+  pairing.helper <- function (s) {
+    
+    school.name <- schools[schools$SCHOOL_YEAR == current.school.year & schools$SCHOOL_ID==s,"NAME"]
+    if (length(school.name) == 0)
+      return(NULL)
+    
+    parent.school <- pairings[[s]]
+    parent.recs <-result[result$SchoolId == parent.school,]
+    parent.recs$SchoolId <- s
+    parent.recs$SchoolName <- school.name
+    parent.recs
+  }
+  
+  
+  result <- rbind(result[!(result$SchoolId %in% names(pairings)),], do.call(rbind, lapply(names(pairings),
+                                                                                          pairing.helper)))
+  
+  dim.spec <- list(Scope="DataScope", 
+                   District=c(ID="DistrictId", "DistrictName"), 
+                   School=c(ID="SchoolId", "SchoolName"), 
+                   Grade=c(ID="GradeEnrolled", "GradeDescription"), 
+                   Subgroup=c(ID="Subgroup", "SubgroupDescription"), 
+                   Mobility=c(ID="StudentMobility", "StudentMobilityDescription"),
+                   Subject=c(ID="SubjectCode", "Subject"))
+  
+  factored.result <- factor.data.frame(result,                                      
+                                       dim.spec,
+                                       c(3),
+                                       "SchoolYear",
+                                       year.id.offset)
+    
+  
+  stats.key <- c("SchoolYearId", "ScopeId", "DistrictId", "SchoolId", 
+                 "Subgroup", "GradeEnrolled", "StudentMobility", "SubjectCode") 
+  
+  stats.table <- data.table(factored.result$Stats,
+                            key=stats.key)
+  
+  suppress.groups(stats.table, 
+                  "NStudentsGrowth", 
+                  list(Subgroup=list(c('A','B','H','I','P','W','Z'),
+                                     c('ASG', 'NASG'),
+                                     c('CSG', 'NCSG'),
+                                     c('ELL', 'NELL'),
+                                     c('M','F'),
+                                     c('IDEA', 'NIDEA'),
+                                     c('FRL', 'NFRL')),
+                       StudentMobility=list(c('No','Yes')), 
+                       GradeEnrolled=list(c("03", "04", "05", "06", "07", "08"))))
+  
+  suppress.groups(stats.table, 
+                  "NStudentsAchievement", 
+                  list(Subgroup=list(c('A','B','H','I','P','W','Z'),
+                                     c('ASG', 'NASG'),
+                                     c('CSG', 'NCSG'),
+                                     c('ELL', 'NELL'),
+                                     c('M','F'),
+                                     c('IDEA', 'NIDEA'),
+                                     c('FRL', 'NFRL')),
+                       StudentMobility=list(c('No','Yes')), 
+                       GradeEnrolled=list(c("03","04", "05", "06", "07", "08"))))  
+  
+  stats.table[,Suppressed := Suppressed.NStudentsGrowth | Suppressed.NStudentsAchievement]
+  #convert back to data.frame to apply capping
+  stats.table <- data.frame(stats.table)[,names(stats.table)[grep('^Marked', names(stats.table), invert=TRUE)]]
+    
+  stats.table$NStudentsGrowthCap <- sapply(stats.table$NStudentsGrowth,
+                                           function (a) {
+                                             
+                                             if (a == 0)
+                                               return("0")
+                                             
+                                             low <- if (a < 5) 1 else (a%/%5)*5
+                                             high <- ((a+5)%/%5)*5  - 1
+                                             
+                                             paste(low,high, sep="-")                                                                                                                              
+                                           })
+  
+  stats.table$NStudentsAchievementCap <- sapply(stats.table$NStudentsAchievement,
+                                                function (a) {
+                                                  
+                                                  if (a == 0)
+                                                    return("0")
+                                                  
+                                                  low <- if (a < 5) 1 else (a%/%5)*5
+                                                  high <- ((a+5)%/%5)*5  - 1
+                                                  
+                                                  paste(low,high, sep="-")                                                                                                                              
+                                                })
+  
+  
+  stats.table[c("PProficientCap","PProficientCapOperator")] <- t(apply(stats.table[c("NStudentsAchievementCap",
+                                                                                     "PProficient",
+                                                                                     "Suppressed")],
+                                                                       c(1),
+                                                                       function (row) {
+                                                                         par <- as.numeric(row[["PProficient"]])
+                                                                         aac <- row[["NStudentsAchievementCap"]]
+                                                                         suppressd <- as.numeric(row[["Suppressed"]])
+                                                                         
+                                                                         if (is.na(par))
+                                                                           return(c(NA, NA))
+                                                                         
+                                                                         cap <- switch(aac, `1-4`=100, `5-9`=20, `10-14`=10, `15-19`=6.7, 5)
+                                                                         
+                                                                         if (par <= cap)
+                                                                           c(cap, "<=")
+                                                                         else {
+                                                                           
+                                                                           if (par >= 100-cap)
+                                                                             c(100-cap, ">=")
+                                                                           else
+                                                                             c(par, "==")
+                                                                           
+                                                                         }                                                                               
+                                                                       }))
+  
+  stats.table$PProficientCap <- as.numeric(stats.table$PProficientCap)
+  
+  
+  
+  stats.table$Suppressed <- as.numeric(stats.table$Suppressed)
+  
+  
+  
+  
+  
+  
+  factored.result$Stats <- stats.table
+  
+  list(result=result, factored.result=factored.result)
+}

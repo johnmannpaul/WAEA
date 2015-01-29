@@ -317,7 +317,7 @@ table(stats.table$Suppressed)
 lapply(disjoint.subgroups,
        function (g) {
          stats.table[Subgroup %in% g,
-                     Suppressed:=Suppressed | suppress.group(Suppressed,NStudentsGrowth), 
+                     Suppressed:=Suppressed | (suppress.group(Suppressed,NStudentsGrowth) & NStudentsGrowth > 0), 
                      by=c("SchoolYearId", "ScopeId", "DistrictId", "SchoolId", 
                           "GradeEnrolled", "StudentMobility", "SubjectCode") ]
        }
@@ -326,14 +326,14 @@ lapply(disjoint.subgroups,
 table(stats.table$Suppressed)
 
 stats.table[StudentMobility %in% c('No','Yes'),
-            Suppressed:=Suppressed | suppress.group(Suppressed,NStudentsGrowth), 
+            Suppressed:=Suppressed | (suppress.group(Suppressed,NStudentsGrowth) & NStudentsGrowth > 0), 
             by=c("SchoolYearId", "ScopeId", "DistrictId", "SchoolId", 
                  "Subgroup", "GradeEnrolled", "SubjectCode")]
 
 table(stats.table$Suppressed)
 table(stats.table$GradeEnrolled)
 stats.table[GradeEnrolled %in% c("03", "04", "05", "06", "07", "08"),
-            Suppressed:=Suppressed | suppress.group(Suppressed,NStudentsGrowth), 
+            Suppressed:=Suppressed | (suppress.group(Suppressed,NStudentsGrowth)  & NStudentsGrowth > 0), 
             by=c("SchoolYearId", "ScopeId", "DistrictId", "SchoolId", 
                  "Subgroup", "StudentMobility", "SubjectCode")]
 
@@ -361,8 +361,63 @@ head(stats.table[Suppressed==TRUE,],50)
 table(stats.table$Suppressed)
 
 
+#Now we have to go back through and suppress the rest of those groups that had some of their members suppressed.
+#First we'll mark them for suppression in order to draw a comparison with what is already suppressed, and then suppress them. 
+mark.group <- function (comps,supp) {
+  #   if(any(a<N.suppress))    
+  #     sum(a[which(a<N.suppress)]) > 0 & sum(a[which(a<N.suppress)]) < N.suppress
+  #   else
+  #     FALSE
+  
+  
+  #order the grou
+  supp.ordered <- supp[c(which(comps == 'All'), which(comps != 'All'))]
+  
+  if(!supp.ordered[1] & sum(supp.ordered[seq(supp.ordered) > 1]) == 1)
+    supp[which(comps != 'All')] <- TRUE
+  
+  supp
+  
+}
+
+table(stats.table$Suppressed)
+
+stats.table[,Marked:=FALSE]
+
+lapply(disjoint.subgroups,
+       function (g) {
+         stats.table[Subgroup %in% c('All', g),
+                     Marked:=Marked | (mark.group(Subgroup, Suppressed)  & NStudentsGrowth > 0), 
+                     by=c("SchoolYearId", "ScopeId", "DistrictId", "SchoolId", 
+                          "GradeEnrolled", "StudentMobility", "SubjectCode") ]
+       }
+)
+
+
+table(stats.table[,list(Suppressed, Marked)], useNA="ifany")
+
+
+
+stats.table[StudentMobility %in% c('All', 'No','Yes'),
+            Marked:=Marked | (mark.group(StudentMobility, Suppressed)  & NStudentsGrowth > 0), 
+            by=c("SchoolYearId", "ScopeId", "DistrictId", "SchoolId", 
+                 "Subgroup", "GradeEnrolled", "SubjectCode")]
+
+table(stats.table[,list(Suppressed, Marked)], useNA="ifany")
+
+
+stats.table[GradeEnrolled %in% c('All', "03", "04", "05", "06", "07", "08"),
+            Marked:=Marked | (mark.group(GradeEnrolled, Suppressed)  & NStudentsGrowth > 0),  
+            by=c("SchoolYearId", "ScopeId", "DistrictId", "SchoolId", 
+                 "Subgroup", "StudentMobility", "SubjectCode")]
+
+table(stats.table[,list(Suppressed, Marked)], useNA="ifany")
+
+#Supress the marked ones
+stats.table[,Suppressed:=Suppressed | Marked,]
+table(stats.table[,Suppressed])
 #convert back to data.frame to apply capping
-stats.table <- data.frame(stats.table)
+stats.table <- data.frame(stats.table)[,!(names(stats.table) %in% 'Marked')]
 
 tail(stats.table[stats.table$SchoolYearId==4 & stats.table$ScopeId==1 & 
                    stats.table$DistrictId=='0101000',],50)
