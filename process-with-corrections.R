@@ -3,7 +3,7 @@ source("process-multiyear-subgroup.R")
 
 schools.multiyear.subgroup <- schools 
 consolidated.subgroup.df.multiyear <- consolidated.subgroup.df
-
+equity.multiyear <- equity
 
 source("process.R") #this is the original result
 
@@ -53,8 +53,15 @@ other.smalls <- merge(small.schools, small.schools.subgroup, by=c("SCHOOL_YEAR",
 consolidated.subgroup.df.orig.keep <-  merge(with(schools, schools[is.na(YEARS_BACK_EQUITY), c("SCHOOL_YEAR", "SCHOOL_ID")]),
                                              consolidated.subgroup.df)
 
+equity.orig.keep <- merge(with(schools, schools[is.na(YEARS_BACK_EQUITY), c("SCHOOL_YEAR", "SCHOOL_ID")]),
+                          equity)
+
 consolitdated.subgroup.df.corrected.keep <- merge(with(schools, schools[!is.na(YEARS_BACK_EQUITY), c("SCHOOL_YEAR", "SCHOOL_ID")]),
                                                   consolidated.subgroup.df.multiyear)
+
+equity.corrected.keep <- merge(with(schools, schools[!is.na(YEARS_BACK_EQUITY), c("SCHOOL_YEAR", "SCHOOL_ID")]),
+                               equity.multiyear)
+
 #this is the number of records we added 
 nrow(with(consolitdated.subgroup.df.corrected.keep, consolitdated.subgroup.df.corrected.keep[SCHOOL_YEAR==current.school.year & SCHOOL_YEAR != SCHOOL_YEAR_ORIGINAL,]))
 
@@ -69,4 +76,8 @@ consolitdated.subgroup.df.corrected.keep$EXCLUDE_FROM_STATE_AVERAGE <- ifelse(co
 consolidated.subgroup.df <- rbind(consolidated.subgroup.df.orig.keep,
                                   consolitdated.subgroup.df.corrected.keep)
 
+#so that put.cuts.nonHS still works in services.R, even though changing the cut scores fairly meaningless at this
+#point
+equity <- rbind(equity.orig.keep,
+                equity.corrected.keep)
 #then run reporting
